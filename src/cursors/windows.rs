@@ -21,7 +21,7 @@ impl StaticWindowsCursor {
     Self { images }
   }
 
-  /// Writes a [CUR] file to the writer.
+  /// Writes a CUR file to the writer.
   pub fn write<W: Write>(self, mut writer: W) -> IoResult<()> {
     let images_len = self.images.len();
 
@@ -86,7 +86,7 @@ impl AnimatedWindowsCursor {
     Self { frames, steps }
   }
 
-  /// Writes an [ANI] file to the writer.
+  /// Writes an ANI file to the writer.
   pub fn write<W: Write>(self, mut writer: W) -> IoResult<()> {
     let header_chunk =
       Self::header_chunk(self.frames.len() as u32, self.steps.len() as u32)?;
