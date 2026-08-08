@@ -2,5 +2,17 @@
 name = "precursor"
 version = "0.1.0"
 edition = "2024"
+description = "precursor is a tool for building cross-platform cursor themes"
 
 [dependencies]
+byteorder = "1.5.0"
+png = "0.18.1"
+toml = "1.1.4"
+
+[dependencies.clap]
+version = "4.6.5"
+features = ["derive"]
+
+[dependencies.serde]
+version = "1.0.229"
+features = ["derive"]
