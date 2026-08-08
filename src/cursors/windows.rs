@@ -5,7 +5,7 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use crate::cursors::{CursorDuration, CursorImage};
 
 pub struct StaticWindowsCursor {
-  entries: Vec<CursorImage>,
+  images: Vec<CursorImage>,
 }
 
 impl StaticWindowsCursor {
@@ -13,27 +13,27 @@ impl StaticWindowsCursor {
   ///
   /// # Panics
   /// Panics if the vector length exceeds `16::MAX` bytes.
-  pub const fn new(entries: Vec<CursorImage>) -> Self {
-    if entries.len() > u16::MAX as usize {
-      panic!("entries length should not exceed u16::MAX")
+  pub const fn new(images: Vec<CursorImage>) -> Self {
+    if images.len() > u16::MAX as usize {
+      panic!("images length should not exceed u16::MAX")
     }
 
-    Self { entries }
+    Self { images }
   }
 
   /// Writes a [CUR] file to the writer.
   pub fn write<W: Write>(self, mut writer: W) -> IoResult<()> {
-    let entries_len = self.entries.len();
+    let images_len = self.images.len();
 
     writer.write_u16::<LittleEndian>(0)?; // reserved
     writer.write_u16::<LittleEndian>(2)?; // type
-    writer.write_u16::<LittleEndian>(entries_len as u16)?; // entry count
+    writer.write_u16::<LittleEndian>(images_len as u16)?; // image count
 
-    let mut buffer_offset = 6 + 16 * (entries_len as u32);
+    let mut buffer_offset = 6 + 16 * (images_len as u32);
 
-    for entry in self.entries.iter() {
-      let hotspot = entry.hotspot();
-      let size = entry.size();
+    for image in self.images.iter() {
+      let hotspot = image.hotspot();
+      let size = image.size();
 
       // a zero value indicates a size >= 256
       let size = if size > 255 { 0 } else { size as u8 };
@@ -45,7 +45,7 @@ impl StaticWindowsCursor {
       writer.write_u16::<LittleEndian>(hotspot.0)?; // hotspot x
       writer.write_u16::<LittleEndian>(hotspot.1)?; // hotspot y
 
-      let buffer_len = entry.buffer().len() as u32;
+      let buffer_len = image.buffer().len() as u32;
 
       writer.write_u32::<LittleEndian>(buffer_len)?; // buffer length
       writer.write_u32::<LittleEndian>(buffer_offset)?; // buffer offset
@@ -53,8 +53,8 @@ impl StaticWindowsCursor {
       buffer_offset += buffer_len;
     }
 
-    for entry in self.entries {
-      writer.write_all(&entry.into_buffer())?;
+    for image in self.images {
+      writer.write_all(&image.into_buffer())?;
     }
 
     Ok(())
