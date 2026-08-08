@@ -67,11 +67,21 @@ pub struct AnimatedWindowsCursor {
 }
 
 impl AnimatedWindowsCursor {
+  // chunk identifiers in order of appearance
+  const RIFF: &'static [u8] = b"RIFF";
+  const ACON: &'static [u8] = b"ACON";
+  const ANIH: &'static [u8] = b"anih";
+  const RATE: &'static [u8] = b"rate";
+  const SEQU: &'static [u8] = b"seq ";
+  const LIST: &'static [u8] = b"LIST";
+  const FRAM: &'static [u8] = b"fram";
+  const ICON: &'static [u8] = b"icon";
+
   /// Creates a new animated windows cursor.
   ///
   /// # Panics
   /// Panics if either of the vectors' lengths exceed `u32::MAX` bytes, or if
-  /// there are more frames than steps.
+  /// the number of frames is greater than the number of steps.
   pub const fn new(
     frames: Vec<StaticWindowsCursor>,
     steps: Vec<(u32, CursorDuration)>,
@@ -105,10 +115,10 @@ impl AnimatedWindowsCursor {
       + sequence_chunk.len()
       + frames_chunk.len();
 
-    writer.write_all(b"RIFF")?;
+    writer.write_all(Self::RIFF)?;
     writer.write_u32::<LittleEndian>(data_len as u32)?;
 
-    writer.write_all(b"ACON")?;
+    writer.write_all(Self::ACON)?;
     writer.write_all(&header_chunk)?;
     writer.write_all(&rates_chunk)?;
     writer.write_all(&sequence_chunk)?;
@@ -121,7 +131,7 @@ impl AnimatedWindowsCursor {
   fn header_chunk(num_frames: u32, num_steps: u32) -> IoResult<Vec<u8>> {
     let mut chunk = Vec::with_capacity(40);
 
-    chunk.write_all(b"anih")?;
+    chunk.write_all(Self::ANIH)?;
     chunk.write_u32::<LittleEndian>(36)?; // header size
     chunk.write_u32::<LittleEndian>(num_frames)?;
     chunk.write_u32::<LittleEndian>(num_steps)?;
@@ -152,7 +162,7 @@ impl AnimatedWindowsCursor {
   fn sequence_chunk(sequence: Vec<u32>) -> IoResult<Vec<u8>> {
     let mut chunk = Vec::with_capacity(8 + 4 * sequence.len());
 
-    chunk.write_all(b"seq ")?;
+    chunk.write_all(Self::SEQU)?;
 
     for seq in sequence {
       chunk.write_u32::<LittleEndian>(seq)?;
@@ -175,13 +185,13 @@ impl AnimatedWindowsCursor {
 
     let data_len = icon_buffers.iter().fold(4, |acc, buf| acc + 4 + buf.len());
 
-    chunk.write_all(b"LIST")?;
+    chunk.write_all(Self::LIST)?;
     chunk.write_u32::<LittleEndian>(data_len as u32)?;
 
-    chunk.write_all(b"fram")?;
+    chunk.write_all(Self::FRAM)?;
 
     for icon_buf in icon_buffers {
-      chunk.write_all(b"icon")?;
+      chunk.write_all(Self::ICON)?;
       chunk.write_all(&icon_buf)?;
     }
 
