@@ -12,7 +12,7 @@ impl StaticWindowsCursor {
   /// Creates a new static windows cursor.
   ///
   /// # Panics
-  /// Panics if the vector length exceeds `16::MAX` bytes.
+  /// Panics if the number of images exceeds `u16::MAX` bytes.
   pub const fn new(images: Vec<CursorImage>) -> Self {
     if images.len() > u16::MAX as usize {
       panic!("images length should not exceed u16::MAX")
@@ -23,13 +23,13 @@ impl StaticWindowsCursor {
 
   /// Writes a CUR file to the writer.
   pub fn write<W: Write>(self, mut writer: W) -> IoResult<()> {
-    let images_len = self.images.len();
+    let num_images = self.images.len();
 
     writer.write_u16::<LittleEndian>(0)?; // reserved
     writer.write_u16::<LittleEndian>(2)?; // type
-    writer.write_u16::<LittleEndian>(images_len as u16)?; // image count
+    writer.write_u16::<LittleEndian>(num_images as u16)?;
 
-    let mut buffer_offset = 6 + 16 * (images_len as u32);
+    let mut buffer_offset = 6 + 16 * (num_images as u32);
 
     for image in self.images.iter() {
       let hotspot = image.hotspot();
@@ -42,13 +42,13 @@ impl StaticWindowsCursor {
       writer.write_u8(size)?; // height
       writer.write_u8(0)?; // ignored
       writer.write_u8(0)?; // reserved
-      writer.write_u16::<LittleEndian>(hotspot.0)?; // hotspot x
-      writer.write_u16::<LittleEndian>(hotspot.1)?; // hotspot y
+      writer.write_u16::<LittleEndian>(hotspot.0)?;
+      writer.write_u16::<LittleEndian>(hotspot.1)?;
 
       let buffer_len = image.buffer().len() as u32;
 
-      writer.write_u32::<LittleEndian>(buffer_len)?; // buffer length
-      writer.write_u32::<LittleEndian>(buffer_offset)?; // buffer offset
+      writer.write_u32::<LittleEndian>(buffer_len)?;
+      writer.write_u32::<LittleEndian>(buffer_offset)?;
 
       buffer_offset += buffer_len;
     }
@@ -80,7 +80,7 @@ impl AnimatedWindowsCursor {
   /// Creates a new animated windows cursor.
   ///
   /// # Panics
-  /// Panics if either of the vectors' lengths exceed `u32::MAX` bytes, or if
+  /// Panics if the number of frames or steps exceeds `u32::MAX` bytes, or if
   /// the number of frames is greater than the number of steps.
   pub const fn new(
     frames: Vec<StaticWindowsCursor>,
@@ -127,7 +127,7 @@ impl AnimatedWindowsCursor {
     Ok(())
   }
 
-  /// Creates an `anih` chunk.
+  /// Creates a header chunk.
   fn header_chunk(num_frames: u32, num_steps: u32) -> IoResult<Vec<u8>> {
     let mut chunk = Vec::with_capacity(40);
 
@@ -145,7 +145,7 @@ impl AnimatedWindowsCursor {
     Ok(chunk)
   }
 
-  /// Creates a `rate` chunk.
+  /// Creates a rate chunk.
   fn rates_chunk(rates: Vec<CursorDuration>) -> IoResult<Vec<u8>> {
     let mut chunk = Vec::with_capacity(8 + 4 * rates.len());
 
@@ -158,7 +158,7 @@ impl AnimatedWindowsCursor {
     Ok(chunk)
   }
 
-  /// Creates a `seq ` chunk.
+  /// Creates a sequence chunk.
   fn sequence_chunk(sequence: Vec<u32>) -> IoResult<Vec<u8>> {
     let mut chunk = Vec::with_capacity(8 + 4 * sequence.len());
 
@@ -171,7 +171,7 @@ impl AnimatedWindowsCursor {
     Ok(chunk)
   }
 
-  /// Creates a `fram` chunk.
+  /// Creates a frames chunk.
   fn frames_chunk(frames: Vec<StaticWindowsCursor>) -> IoResult<Vec<u8>> {
     let mut chunk = Vec::new();
 
