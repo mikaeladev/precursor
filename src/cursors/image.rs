@@ -11,8 +11,8 @@ pub struct CursorImage {
   size: u16,
   /// Hotspot co-ordinates.
   hotspot: (u16, u16),
-  /// Image buffer.
-  buffer: Vec<u8>,
+  /// RGBA buffer.
+  rgba: Vec<u8>,
 }
 
 impl CursorImage {
@@ -21,9 +21,9 @@ impl CursorImage {
     self.hotspot
   }
 
-  /// Returns a slice to the underlying image buffer.
-  pub const fn buffer(&self) -> &[u8] {
-    self.buffer.as_slice()
+  /// Returns a slice to the underlying RGBA buffer.
+  pub const fn rgba(&self) -> &[u8] {
+    self.rgba.as_slice()
   }
 
   /// Returns the width/height of the image in pixels.
@@ -31,9 +31,14 @@ impl CursorImage {
     self.size
   }
 
-  /// Consumes the struct and returns the underlying image buffer.
-  pub fn into_buffer(self) -> Vec<u8> {
-    self.buffer
+  /// Consumes the struct and returns the underlying RGBA buffer.
+  pub fn into_rgba(self) -> Vec<u8> {
+    self.rgba
+  }
+
+  /// Consumes the struct and returns a PNG file buffer.
+  pub fn into_png(self) -> IoResult<Vec<u8>> {
+    Self::encode_png(self.size as u32, &self.rgba)
   }
 
   /// Creates a cursor image from a PNG file.
@@ -43,20 +48,19 @@ impl CursorImage {
     buf_reader: BufReader<File>,
   ) -> IoResult<Self> {
     let rgba = Self::decode_png(buf_reader)?;
-    let buffer = Self::encode_png(size as u32, &rgba)?;
 
     Ok(Self {
       size,
       hotspot,
-      buffer,
+      rgba,
     })
   }
 
-  /// Decodes a PNG file to an 8-bit RGBA buffer.
+  /// Decodes a PNG file to an RGBA buffer.
   fn decode_png(buf_reader: BufReader<File>) -> IoResult<Vec<u8>> {
     let mut decoder = Decoder::new(buf_reader);
 
-    // strip or expand to 8-bit rgba/ga
+    // strip or expand to rgba/ga
     let transform = Transformations::ALPHA | Transformations::STRIP_16;
     decoder.set_transformations(transform);
 
@@ -73,13 +77,14 @@ impl CursorImage {
     match reader.output_color_type().0 {
       ColorType::Rgba => Ok(frame_buffer),
       ColorType::GrayscaleAlpha => {
-        let pixel_count = frame_buffer.len() / 2;
+        let num_pixels = frame_buffer.len() / 2;
 
-        let mut rgba = vec![0u8; pixel_count * 4];
+        let mut rgba = Vec::with_capacity(num_pixels * 4);
 
-        for i in 0..pixel_count {
+        for i in 0..num_pixels {
           let value = frame_buffer[2 * i];
           let alpha = frame_buffer[2 * i + 1];
+
           rgba.extend_from_slice(&[value, value, value, alpha]);
         }
 
@@ -89,7 +94,7 @@ impl CursorImage {
     }
   }
 
-  /// Encodes an 8-bit RGBA buffer into a PNG file.
+  /// Encodes an RGBA buffer as a PNG file.
   fn encode_png(size: u32, rgba: &[u8]) -> IoResult<Vec<u8>> {
     let mut buffer = Vec::with_capacity((size as usize) ^ 2 * 4);
     let mut encoder = Encoder::new(&mut buffer, size, size);

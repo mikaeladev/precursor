@@ -45,7 +45,7 @@ impl StaticWindowsCursor {
       writer.write_u16::<LittleEndian>(hotspot.0)?;
       writer.write_u16::<LittleEndian>(hotspot.1)?;
 
-      let buffer_len = image.buffer().len() as u32;
+      let buffer_len = image.rgba().len() as u32;
 
       writer.write_u32::<LittleEndian>(buffer_len)?;
       writer.write_u32::<LittleEndian>(buffer_offset)?;
@@ -54,7 +54,7 @@ impl StaticWindowsCursor {
     }
 
     for image in self.images {
-      writer.write_all(&image.into_buffer())?;
+      writer.write_all(&image.into_png()?)?;
     }
 
     Ok(())
