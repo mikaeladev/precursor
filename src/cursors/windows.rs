@@ -68,14 +68,14 @@ pub struct AnimatedWindowsCursor {
 
 impl AnimatedWindowsCursor {
   // chunk identifiers in order of appearance
-  const RIFF: &'static [u8] = b"RIFF";
-  const ACON: &'static [u8] = b"ACON";
-  const ANIH: &'static [u8] = b"anih";
-  const RATE: &'static [u8] = b"rate";
-  const SEQU: &'static [u8] = b"seq ";
-  const LIST: &'static [u8] = b"LIST";
-  const FRAM: &'static [u8] = b"fram";
-  const ICON: &'static [u8] = b"icon";
+  const RIFF: &[u8] = b"RIFF";
+  const ACON: &[u8] = b"ACON";
+  const ANIH: &[u8] = b"anih";
+  const RATE: &[u8] = b"rate";
+  const SEQU: &[u8] = b"seq ";
+  const LIST: &[u8] = b"LIST";
+  const FRAM: &[u8] = b"fram";
+  const ICON: &[u8] = b"icon";
 
   /// Creates a new animated windows cursor.
   ///
