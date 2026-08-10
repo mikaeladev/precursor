@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 use crate::config::Config;
-use crate::cursors::{CursorImage, CursorType, StaticWindowsCursor};
+use crate::cursors::{CursorImage, CursorType, StaticWindowsCursor, XCursor};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -141,6 +141,14 @@ fn main() -> IoResult<()> {
             } else {
               cursor_path.set_extension("ani");
 
+              todo!()
+            }
+          }
+          CursorType::Xcursor => {
+            if is_static {
+              XCursor::new(vec![], cursor_images.to_vec())
+                .write(File::create(cursor_path)?)?
+            } else {
               todo!()
             }
           }

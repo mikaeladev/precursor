@@ -1,10 +1,12 @@
 mod image;
 mod windows;
+mod xcursor;
 
 use clap::ValueEnum;
 
 pub use image::*;
 pub use windows::*;
+pub use xcursor::*;
 
 #[derive(Clone, Debug, PartialEq, ValueEnum)]
 pub enum CursorType {
@@ -20,6 +22,8 @@ pub enum CursorDuration {
 }
 
 impl CursorDuration {
+  pub const ZERO: Self = CursorDuration::Milliseconds(0);
+
   /// Converts the duration to a millisecond value.
   pub const fn milliseconds(self) -> u32 {
     match self {

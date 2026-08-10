@@ -6,6 +6,7 @@ description = "precursor is a tool for building cross-platform cursor themes"
 
 [dependencies]
 byteorder = "1.5.0"
+num_enum = "0.7.6"
 png = "0.18.1"
 toml = "1.1.4"
 

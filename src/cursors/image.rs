@@ -36,6 +36,17 @@ impl CursorImage {
     self.rgba
   }
 
+  /// Consumes the struct and returns a BGRA buffer.
+  pub fn into_bgra(self) -> Vec<u8> {
+    let mut bgra = self.into_rgba();
+
+    for chunk in bgra.as_chunks_mut::<4>().0 {
+      chunk.swap(0, 2);
+    }
+
+    bgra
+  }
+
   /// Consumes the struct and returns a PNG file buffer.
   pub fn into_png(self) -> IoResult<Vec<u8>> {
     Self::encode_png(self.size as u32, &self.rgba)
