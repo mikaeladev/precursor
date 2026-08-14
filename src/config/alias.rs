@@ -13,31 +13,31 @@ pub enum PlatformAlias {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct PlatformAliasError;
+pub struct ParsePlatformAliasError;
 
 const ERROR_MSG: &str =
   "string prepended by either 'linux:', 'macos:', or 'windows:'";
 
-impl StdError for PlatformAliasError {}
+impl StdError for ParsePlatformAliasError {}
 
-impl Display for PlatformAliasError {
+impl Display for ParsePlatformAliasError {
   fn fmt(&self, formatter: &mut Formatter<'_>) -> FmtResult {
     formatter.write_str(&format!("expected a {ERROR_MSG}"))
   }
 }
 
 impl FromStr for PlatformAlias {
-  type Err = PlatformAliasError;
+  type Err = ParsePlatformAliasError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    if s.starts_with("linux:") {
+    if let Some(s) = s.strip_prefix("linux:") {
       Ok(Self::Linux(s.to_string()))
-    } else if s.starts_with("macos:") {
+    } else if let Some(s) = s.strip_prefix("macos:") {
       Ok(Self::Macos(s.to_string()))
-    } else if s.starts_with("windows:") {
+    } else if let Some(s) = s.strip_prefix("windows:") {
       Ok(Self::Windows(s.to_string()))
     } else {
-      Err(PlatformAliasError)
+      Err(ParsePlatformAliasError)
     }
   }
 }
@@ -58,8 +58,31 @@ impl<'de> Deserialize<'de> for PlatformAlias {
       }
     }
 
-    const VARIANTS: &[&str] = &["Linux", "Macos", "Windows"];
+    de.deserialize_str(PlatformAliasVisitor)
+  }
+}
 
-    de.deserialize_enum("PlatformAlias", VARIANTS, PlatformAliasVisitor)
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_platform_alias_from_str() {
+    assert_eq!(
+      PlatformAlias::from_str("linux:test"),
+      Ok(PlatformAlias::Linux("test".into())),
+    );
+    assert_eq!(
+      PlatformAlias::from_str("macos:test"),
+      Ok(PlatformAlias::Macos("test".into())),
+    );
+    assert_eq!(
+      PlatformAlias::from_str("windows:test"),
+      Ok(PlatformAlias::Windows("test".into())),
+    );
+    assert_eq!(
+      PlatformAlias::from_str("test"),
+      Err(ParsePlatformAliasError)
+    );
   }
 }

@@ -26,7 +26,7 @@ impl<'de> Deserialize<'de> for LocaleString {
       type Value = LocaleString;
 
       fn expecting(&self, formatter: &mut Formatter) -> FmtResult {
-        formatter.write_str("string or map")
+        formatter.write_str("locale string (string or map of strings)")
       }
 
       fn visit_str<E: DeError>(self, value: &str) -> Result<Self::Value, E> {

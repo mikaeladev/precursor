@@ -2,28 +2,30 @@ use std::io::{Result as IoResult, Write};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use crate::cursors::{CursorDuration, CursorImage};
+use crate::cursors::Cursor;
+use crate::images::PngImage;
 
-pub struct StaticWindowsCursor {
-  images: Vec<CursorImage>,
-}
+pub struct WindowsCursor<'c, 'i>(&'c Cursor<'i>);
 
-impl StaticWindowsCursor {
-  /// Creates a new static windows cursor.
-  ///
-  /// # Panics
-  /// Panics if the number of images exceeds `u16::MAX` bytes.
-  pub const fn new(images: Vec<CursorImage>) -> Self {
-    if images.len() > u16::MAX as usize {
-      panic!("images length should not exceed u16::MAX")
+impl WindowsCursor<'_, '_> {
+  pub fn write<W: Write>(self, writer: W) -> IoResult<()> {
+    if self.0.frames.len() == 1 {
+      self.write_cur(writer)
+    } else {
+      self.write_ani(writer)
     }
-
-    Self { images }
   }
 
   /// Writes a CUR file to the writer.
-  pub fn write<W: Write>(self, mut writer: W) -> IoResult<()> {
-    let num_images = self.images.len();
+  fn write_cur<W: Write>(self, mut writer: W) -> IoResult<()> {
+    let WindowsCursor(Cursor {
+      frames,
+      metadata: _,
+    }) = self;
+
+    let frame = frames.first().expect("first frame should exist");
+
+    let num_images = frame.images.len();
 
     writer.write_u16::<LittleEndian>(0)?; // reserved
     writer.write_u16::<LittleEndian>(2)?; // type
@@ -31,21 +33,27 @@ impl StaticWindowsCursor {
 
     let mut buffer_offset = 6 + 16 * (num_images as u32);
 
-    for image in self.images.iter() {
-      let hotspot = image.hotspot();
-      let size = image.size();
+    let mut image_bufs = Vec::with_capacity(num_images);
 
-      // a zero value indicates a size >= 256
-      let size = if size > 255 { 0 } else { size as u8 };
+    for image in frame.images {
+      let nominal = image.nominal;
+      let nominal = if nominal > 255 { 0 } else { nominal as u8 };
 
-      writer.write_u8(size)?; // width
-      writer.write_u8(size)?; // height
+      writer.write_u8(nominal)?;
+      writer.write_u8(nominal)?;
+
       writer.write_u8(0)?; // ignored
       writer.write_u8(0)?; // reserved
-      writer.write_u16::<LittleEndian>(hotspot.0)?;
-      writer.write_u16::<LittleEndian>(hotspot.1)?;
 
-      let buffer_len = image.rgba().len() as u32;
+      writer.write_u16::<LittleEndian>(image.hotspot.x)?;
+      writer.write_u16::<LittleEndian>(image.hotspot.y)?;
+
+      let mut image_buf = Vec::with_capacity(image.rgba.len() + 92);
+      image_buf.write_all(&PngImage::from(image.rgba.clone()).encode()?)?;
+
+      let buffer_len = image_buf.len() as u32;
+
+      image_bufs.push(image_buf);
 
       writer.write_u32::<LittleEndian>(buffer_len)?;
       writer.write_u32::<LittleEndian>(buffer_offset)?;
@@ -53,148 +61,93 @@ impl StaticWindowsCursor {
       buffer_offset += buffer_len;
     }
 
-    for image in self.images {
-      writer.write_all(&image.into_png()?)?;
+    for image_buf in image_bufs {
+      writer.write_all(&image_buf)?;
     }
 
     Ok(())
-  }
-}
-
-pub struct AnimatedWindowsCursor {
-  frames: Vec<StaticWindowsCursor>,
-  steps: Vec<(u32, CursorDuration)>,
-}
-
-impl AnimatedWindowsCursor {
-  // chunk identifiers in order of appearance
-  const RIFF: &[u8] = b"RIFF";
-  const ACON: &[u8] = b"ACON";
-  const ANIH: &[u8] = b"anih";
-  const RATE: &[u8] = b"rate";
-  const SEQU: &[u8] = b"seq ";
-  const LIST: &[u8] = b"LIST";
-  const FRAM: &[u8] = b"fram";
-  const ICON: &[u8] = b"icon";
-
-  /// Creates a new animated windows cursor.
-  ///
-  /// # Panics
-  /// Panics if the number of frames or steps exceeds `u32::MAX` bytes, or if
-  /// the number of frames is greater than the number of steps.
-  pub const fn new(
-    frames: Vec<StaticWindowsCursor>,
-    steps: Vec<(u32, CursorDuration)>,
-  ) -> Self {
-    let frames_len = frames.len() as u32;
-    let steps_len = steps.len() as u32;
-
-    if frames_len > steps_len {
-      panic!("should not be more frames than steps")
-    }
-
-    Self { frames, steps }
   }
 
   /// Writes an ANI file to the writer.
-  pub fn write<W: Write>(self, mut writer: W) -> IoResult<()> {
-    let header_chunk =
-      Self::header_chunk(self.frames.len() as u32, self.steps.len() as u32)?;
+  fn write_ani<W: Write>(self, mut writer: W) -> IoResult<()> {
+    // chunk identifiers in order of appearance
+    const RIFF: &'static [u8] = b"RIFF";
+    const ACON: &'static [u8] = b"ACON";
+    const ANIH: &'static [u8] = b"anih";
+    const RATE: &'static [u8] = b"rate";
+    const SEQU: &'static [u8] = b"seq ";
+    const LIST: &'static [u8] = b"LIST";
+    const FRAM: &'static [u8] = b"fram";
+    const ICON: &'static [u8] = b"icon";
 
-    let rates_chunk =
-      Self::rates_chunk(self.steps.iter().map(|s| s.1).collect())?;
+    let WindowsCursor(Cursor { frames, metadata }) = self;
 
-    let sequence_chunk =
-      Self::sequence_chunk(self.steps.iter().map(|s| s.0).collect())?;
+    let num_frames = frames.len();
 
-    let frames_chunk = Self::frames_chunk(self.frames)?;
-
-    let data_len = 4
-      + header_chunk.len()
-      + rates_chunk.len()
-      + sequence_chunk.len()
-      + frames_chunk.len();
-
-    writer.write_all(Self::RIFF)?;
-    writer.write_u32::<LittleEndian>(data_len as u32)?;
-
-    writer.write_all(Self::ACON)?;
-    writer.write_all(&header_chunk)?;
-    writer.write_all(&rates_chunk)?;
-    writer.write_all(&sequence_chunk)?;
-    writer.write_all(&frames_chunk)?;
-
-    Ok(())
-  }
-
-  /// Creates a header chunk.
-  fn header_chunk(num_frames: u32, num_steps: u32) -> IoResult<Vec<u8>> {
-    let mut chunk = Vec::with_capacity(40);
-
-    chunk.write_all(Self::ANIH)?;
-    chunk.write_u32::<LittleEndian>(36)?; // header size
-    chunk.write_u32::<LittleEndian>(num_frames)?;
-    chunk.write_u32::<LittleEndian>(num_steps)?;
-    chunk.write_u32::<LittleEndian>(0)?; // width (unused)
-    chunk.write_u32::<LittleEndian>(0)?; // height (unused)
-    chunk.write_u32::<LittleEndian>(0)?; // colour depth (unused)
-    chunk.write_u32::<LittleEndian>(0)?; // num planes (unused)
-    chunk.write_u32::<LittleEndian>(0)?; // default rate
-    chunk.write_u32::<LittleEndian>(1)?; // sequence flag
-
-    Ok(chunk)
-  }
-
-  /// Creates a rate chunk.
-  fn rates_chunk(rates: Vec<CursorDuration>) -> IoResult<Vec<u8>> {
-    let mut chunk = Vec::with_capacity(8 + 4 * rates.len());
-
-    chunk.write_all(b"rate")?;
-
-    for rate in rates {
-      chunk.write_u32::<LittleEndian>(rate.jiffies())?;
-    }
-
-    Ok(chunk)
-  }
-
-  /// Creates a sequence chunk.
-  fn sequence_chunk(sequence: Vec<u32>) -> IoResult<Vec<u8>> {
-    let mut chunk = Vec::with_capacity(8 + 4 * sequence.len());
-
-    chunk.write_all(Self::SEQU)?;
-
-    for seq in sequence {
-      chunk.write_u32::<LittleEndian>(seq)?;
-    }
-
-    Ok(chunk)
-  }
-
-  /// Creates a frames chunk.
-  fn frames_chunk(frames: Vec<StaticWindowsCursor>) -> IoResult<Vec<u8>> {
-    let mut chunk = Vec::new();
-
-    let mut icon_buffers = Vec::with_capacity(frames.len());
+    let mut icon_buffers = Vec::with_capacity(num_frames);
 
     for frame in frames {
+      let cursor = WindowsCursor(&Cursor {
+        frames: vec![frame.clone()],
+        metadata: metadata.clone(),
+      });
+
       let mut icon_buf = Vec::new();
-      frame.write(&mut icon_buf)?;
+      cursor.write_cur(&mut icon_buf)?;
+
       icon_buffers.push(icon_buf);
     }
 
-    let data_len = icon_buffers.iter().fold(4, |acc, buf| acc + 4 + buf.len());
+    let list_data_len =
+      icon_buffers.iter().fold(4, |acc, buf| acc + 4 + buf.len());
 
-    chunk.write_all(Self::LIST)?;
-    chunk.write_u32::<LittleEndian>(data_len as u32)?;
+    let data_len = 68 + (8 * num_frames) + list_data_len;
 
-    chunk.write_all(Self::FRAM)?;
+    writer.write_all(RIFF)?;
+    writer.write_u32::<LittleEndian>(data_len as u32)?;
 
-    for icon_buf in icon_buffers {
-      chunk.write_all(Self::ICON)?;
-      chunk.write_all(&icon_buf)?;
+    writer.write_all(ACON)?;
+
+    writer.write_all(ANIH)?;
+    writer.write_u32::<LittleEndian>(36)?; // header size
+    writer.write_u32::<LittleEndian>(num_frames as u32)?;
+    writer.write_u32::<LittleEndian>(num_frames as u32)?;
+    writer.write_u32::<LittleEndian>(0)?; // width (unused)
+    writer.write_u32::<LittleEndian>(0)?; // height (unused)
+    writer.write_u32::<LittleEndian>(0)?; // colour depth (unused)
+    writer.write_u32::<LittleEndian>(0)?; // num planes (unused)
+    writer.write_u32::<LittleEndian>(0)?; // default rate
+    writer.write_u32::<LittleEndian>(1)?; // sequence flag
+
+    writer.write_all(RATE)?;
+
+    for frame in frames.iter() {
+      let duration = frame.duration.expect("duration should not be None");
+      writer.write_u32::<LittleEndian>(duration.jiffies())?;
     }
 
-    Ok(chunk)
+    writer.write_all(SEQU)?;
+
+    for index in 0..=num_frames {
+      writer.write_u32::<LittleEndian>(index as u32)?;
+    }
+
+    writer.write_all(LIST)?;
+    writer.write_u32::<LittleEndian>(list_data_len as u32)?;
+
+    writer.write_all(FRAM)?;
+
+    for icon_buf in icon_buffers {
+      writer.write_all(ICON)?;
+      writer.write_all(&icon_buf)?;
+    }
+
+    Ok(())
+  }
+}
+
+impl<'c, 'i> From<&'c Cursor<'i>> for WindowsCursor<'c, 'i> {
+  fn from(value: &'c Cursor<'i>) -> Self {
+    Self(value)
   }
 }

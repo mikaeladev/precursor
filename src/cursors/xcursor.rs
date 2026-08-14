@@ -3,49 +3,14 @@ use std::io::{Result as IoResult, Write};
 use byteorder::{LittleEndian, WriteBytesExt};
 use num_enum::IntoPrimitive;
 
-use crate::cursors::{CursorDuration, CursorImage};
+use crate::cursors::{Cursor, CursorDuration, CursorHotspot};
+use crate::images::RgbaImage;
 
-#[derive(Clone, Copy, IntoPrimitive)]
-#[repr(u32)]
-pub enum XCursorChunkType {
-  Comment = 0xfffe0001,
-  Image = 0xfffd0002,
-}
+pub struct XCursor<'c, 'i>(&'c Cursor<'i>);
 
-#[derive(Clone, Copy, IntoPrimitive)]
-#[repr(u32)]
-pub enum XCursorCommentType {
-  Copyright = 1,
-  License = 2,
-  Other = 3,
-}
-
-pub struct XCursor {
-  comments: Vec<(XCursorCommentType, Box<str>)>,
-  images: Vec<CursorImage>,
-}
-
-impl XCursor {
-  /// Creates a new x cursor.
-  ///
-  /// # Panics
-  /// Panics if the combined number of comments and images exceeds `u32::MAX`
-  /// bytes.
-  pub const fn new(
-    comments: Vec<(XCursorCommentType, Box<str>)>,
-    images: Vec<CursorImage>,
-  ) -> Self {
-    if images.len() > u32::MAX as usize {
-      panic!(
-        "combined number of comments and images should not exceed u32::MAX"
-      )
-    }
-
-    Self { comments, images }
-  }
-
+impl XCursor<'_, '_> {
   /// Signature of the Xcursor file.
-  pub const FILE_SIGNATURE: &[u8] = b"Xcur";
+  pub const FILE_SIGNATURE: &'static [u8] = b"Xcur";
   /// Length of the file header in bytes.
   pub const FILE_HEADER: u32 = 16;
   /// Version of the Xcursor file.
@@ -53,25 +18,29 @@ impl XCursor {
 
   /// Writes an Xcursor file to the writer.
   pub fn write<W: Write>(self, mut writer: W) -> IoResult<()> {
-    let num_comments = self.comments.len();
-    let num_images = self.images.len();
+    let Cursor {
+      frames,
+      metadata: _,
+    } = self.0;
 
-    let mut chunks = Vec::with_capacity(num_comments + num_images);
+    let num_comment_chunks = 0;
 
-    for (subtype, value) in self.comments {
-      chunks.push((
-        XCursorChunkType::Comment,
-        subtype.into(),
-        Self::comment_chunk(subtype, value)?,
-      ));
-    }
+    let num_image_chunks =
+      frames.iter().fold(0, |acc, frame| acc + frame.images.len());
 
-    for image in self.images {
-      chunks.push((
-        XCursorChunkType::Image,
-        image.size() as u32,
-        Self::image_chunk(image, None)?,
-      ));
+    let mut chunks = Vec::with_capacity(num_comment_chunks + num_image_chunks);
+
+    for frame in frames {
+      for image in frame.images {
+        let chunk = Self::image_chunk(
+          image.nominal,
+          image.hotspot,
+          frame.duration,
+          image.rgba,
+        )?;
+
+        chunks.push((XCursorChunkType::Image, image.nominal, chunk));
+      }
     }
 
     let num_chunks = chunks.len() as u32;
@@ -83,9 +52,9 @@ impl XCursor {
 
     let mut buffer_offset = Self::FILE_HEADER + 12 * num_chunks;
 
-    for (chunk_type, chunk_subtype_or_size, chunk) in chunks.iter() {
+    for (chunk_type, chunk_subtype_or_nominal, chunk) in chunks.iter() {
       writer.write_u32::<LittleEndian>((*chunk_type).into())?;
-      writer.write_u32::<LittleEndian>(*chunk_subtype_or_size)?;
+      writer.write_u32::<LittleEndian>(*chunk_subtype_or_nominal)?;
       writer.write_u32::<LittleEndian>(buffer_offset)?;
 
       buffer_offset += chunk.len() as u32;
@@ -131,27 +100,48 @@ impl XCursor {
 
   /// Creates an image chunk.
   fn image_chunk(
-    image: CursorImage,
-    duration: impl Into<Option<CursorDuration>>,
+    nominal: u32,
+    hotspot: CursorHotspot,
+    duration: Option<CursorDuration>,
+    image: &RgbaImage,
   ) -> IoResult<Vec<u8>> {
     let mut chunk = Vec::with_capacity(Self::IMAGE_HEADER as usize);
 
-    let image_size = image.size() as u32;
-    let image_hotspot = image.hotspot();
-    let image_duration = duration.into().unwrap_or(CursorDuration::ZERO);
+    let cursor_duration = duration.unwrap_or(CursorDuration::ZERO);
 
     chunk.write_u32::<LittleEndian>(Self::IMAGE_HEADER)?;
     chunk.write_u32::<LittleEndian>(XCursorChunkType::Image.into())?;
-    chunk.write_u32::<LittleEndian>(image_size)?; // nominal
+    chunk.write_u32::<LittleEndian>(nominal)?;
     chunk.write_u32::<LittleEndian>(Self::IMAGE_VERSION)?;
-    chunk.write_u32::<LittleEndian>(image_size)?; // width
-    chunk.write_u32::<LittleEndian>(image_size)?; // height
-    chunk.write_u32::<LittleEndian>(image_hotspot.0 as u32)?;
-    chunk.write_u32::<LittleEndian>(image_hotspot.1 as u32)?;
-    chunk.write_u32::<LittleEndian>(image_duration.milliseconds())?;
+    chunk.write_u32::<LittleEndian>(image.width())?;
+    chunk.write_u32::<LittleEndian>(image.height())?;
+    chunk.write_u32::<LittleEndian>(hotspot.x as u32)?;
+    chunk.write_u32::<LittleEndian>(hotspot.y as u32)?;
+    chunk.write_u32::<LittleEndian>(cursor_duration.milliseconds())?;
 
-    chunk.write_all(&image.into_bgra())?;
+    chunk.write_all(&image.to_owned().into_bgra())?;
 
     Ok(chunk)
   }
+}
+
+impl<'c, 'i> From<&'c Cursor<'i>> for XCursor<'c, 'i> {
+  fn from(value: &'c Cursor<'i>) -> Self {
+    Self(value)
+  }
+}
+
+#[derive(Clone, Copy, IntoPrimitive)]
+#[repr(u32)]
+enum XCursorChunkType {
+  Comment = 0xfffe0001,
+  Image = 0xfffd0002,
+}
+
+#[derive(Clone, Copy, IntoPrimitive)]
+#[repr(u32)]
+enum XCursorCommentType {
+  Copyright = 1,
+  License = 2,
+  Other = 3,
 }

@@ -1,164 +1,108 @@
+mod args;
 mod config;
 mod cursors;
+mod error;
+mod images;
 
 use std::env::current_dir;
-use std::fs::{File, read_to_string};
-use std::io::{BufReader, Result as IoResult};
-use std::path::PathBuf;
+use std::fs::File;
+use std::io::{ErrorKind as IoErrorKind, read_to_string};
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
 
+use crate::args::*;
 use crate::config::Config;
-use crate::cursors::{CursorImage, CursorType, StaticWindowsCursor, XCursor};
+use crate::cursors::*;
+use crate::error::Error;
+use crate::images::PngImage;
 
-#[derive(Parser)]
-#[command(version, about, long_about = None)]
-#[command(propagate_version = true)]
-struct Args {
-  #[command(subcommand)]
-  command: Command,
-}
-
-#[derive(Subcommand)]
-enum Command {
-  /// Build a cursor file.
-  #[command(visible_alias = "b")]
-  Build {
-    /// Paths to asset files.
-    #[arg(num_args = 1..)]
-    asset_paths: Vec<PathBuf>,
-
-    /// Types of cursors to build, delimited by ','.
-    #[arg(short = 't', long = "type", num_args = 1.., value_delimiter = ',', required = true)]
-    cursor_types: Vec<CursorType>,
-
-    /// Name of the cursor.
-    #[arg(short = 'n', long = "name")]
-    cursor_name: String,
-
-    /// Nominal width/height of the cursor.
-    #[arg(short = 's', long = "size")]
-    nominal_size: usize,
-
-    /// Hotspot co-ordinate for the x-axis.
-    #[arg(short = 'X', long = "hotx", default_value_t = 0)]
-    hotspot_x: usize,
-
-    /// Hotspot co-ordinate for the y-axis.
-    #[arg(short = 'Y', long = "hoty", default_value_t = 0)]
-    hotspot_y: usize,
-
-    /// Where to output the built cursor file(s).
-    ///
-    /// If multiple types are provided, this will be treated as a directory.
-    #[arg(short = 'o', long = "output")]
-    target_path: Option<PathBuf>,
-  },
-
-  /// Check a config file for syntax errors.
-  #[command(visible_alias = "c")]
-  Check {
-    /// Path to the config file.
-    #[clap(default_value = "./precursor.toml")]
-    config_path: PathBuf,
-  },
-
-  /// Extract image frame(s) from a cursor file.
-  #[command(visible_alias = "x")]
-  Extract {
-    /// Path to the cursor file.
-    cursor_path: PathBuf,
-
-    /// Image frame(s) to extract by indices (0-based).
-    frames: Option<u32>,
-  },
-
-  /// Inspect a cursor file for metadata.
-  #[command(visible_alias = "i")]
-  Inspect {
-    /// Path to the cursor file.
-    cursor_path: PathBuf,
-  },
-}
-
-fn main() -> IoResult<()> {
-  let args = Args::parse();
+fn main() -> Result<(), Error> {
+  let args = Cli::parse();
 
   match args.command {
     Command::Build {
-      asset_paths,
+      input,
+      output,
       cursor_types,
-      cursor_name,
-      nominal_size,
-      hotspot_x,
-      hotspot_y,
-      target_path,
+      cursor_args,
     } => {
-      let is_static = true; // always true for now
+      let input_reader = input.open()?;
 
-      let output_path = match target_path {
+      let target_path = match output {
         Some(path) => (path, cursor_types.len() != 1),
         None => (current_dir()?, true),
       };
 
-      let mut cursor_images = Vec::with_capacity(asset_paths.len());
-
-      for asset_path in asset_paths {
-        let asset_reader = BufReader::new(File::open(&asset_path)?);
-
-        // assume PNG for testing purposes
-        let cursor_image = CursorImage::from_png(
-          nominal_size as u16,
-          (hotspot_x as u16, hotspot_y as u16),
-          asset_reader,
-        )?;
-
-        cursor_images.push(cursor_image);
-      }
-
-      if let (path, is_dir) = &output_path
+      if let (path, is_dir) = &target_path
         && *is_dir
         && !path.is_dir()
       {
-        // TODO: handle elegantly
-        panic!("output directory not found")
+        return Err(IoErrorKind::NotADirectory.into());
       }
 
-      for cursor_type in cursor_types {
-        let mut cursor_path = output_path.0.clone();
+      if let Some(BuildCursorArgs {
+        name,
+        size,
+        hotspot,
+      }) = cursor_args
+      {
+        // assume a single PNG for testing purposes
+        let rgba = PngImage::decode(input_reader)?.into();
 
-        if output_path.1 {
-          cursor_path.push(&cursor_name);
-        }
+        let image = CursorImage {
+          nominal: size as u32,
+          hotspot,
+          rgba: &rgba,
+        };
 
-        match cursor_type {
-          CursorType::Windows => {
-            if is_static {
+        let frame = CursorFrame {
+          images: &[image],
+          duration: None,
+        };
+
+        let cursor = Cursor {
+          frames: vec![frame],
+          metadata: None,
+        };
+
+        for cursor_type in cursor_types {
+          let mut cursor_path = target_path.0.clone();
+
+          if target_path.1 {
+            cursor_path.push(&name);
+          }
+
+          match cursor_type {
+            CursorType::Windows => {
               cursor_path.set_extension("cur");
-
-              StaticWindowsCursor::new(cursor_images.to_vec())
-                .write(File::create(cursor_path)?)?;
-            } else {
-              cursor_path.set_extension("ani");
-
-              todo!()
+              WindowsCursor::from(&cursor).write(File::create(cursor_path)?)?;
             }
-          }
-          CursorType::Xcursor => {
-            if is_static {
-              XCursor::new(vec![], cursor_images.to_vec())
-                .write(File::create(cursor_path)?)?
-            } else {
-              todo!()
+            CursorType::Xcursor => {
+              XCursor::from(&cursor).write(File::create(cursor_path)?)?;
             }
+            _ => todo!(),
           }
-          _ => todo!(),
         }
-      }
+      } else {
+        let config_str = read_to_string(input_reader)?;
+        let config = toml::from_str::<Config>(&config_str)?;
+
+        for (name, cursor) in config.cursors {
+          let mut cursor_path = target_path.0.clone();
+
+          if target_path.1 {
+            cursor_path.push(&name);
+          }
+
+          todo!()
+        }
+      };
     }
 
-    Command::Check { config_path } => {
-      let config_str = read_to_string(config_path)?;
+    Command::Check { input } => {
+      let input_reader = input.open()?;
+
+      let config_str = read_to_string(input_reader)?;
       let config = toml::from_str::<Config>(&config_str);
 
       match config {
@@ -168,13 +112,13 @@ fn main() -> IoResult<()> {
     }
 
     Command::Extract {
-      cursor_path: _,
+      input: _,
       frames: _,
     } => {
       todo!()
     }
 
-    Command::Inspect { cursor_path: _ } => {
+    Command::Inspect { input: _ } => {
       todo!()
     }
   }
