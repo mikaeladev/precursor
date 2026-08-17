@@ -6,9 +6,9 @@ use num_enum::IntoPrimitive;
 use crate::cursors::{Cursor, CursorDuration, CursorHotspot};
 use crate::images::RgbaImage;
 
-pub struct XCursor<'c, 'i>(&'c Cursor<'i>);
+pub struct XCursor<'c>(&'c Cursor);
 
-impl XCursor<'_, '_> {
+impl XCursor<'_> {
   /// Signature of the Xcursor file.
   pub const FILE_SIGNATURE: &'static [u8] = b"Xcur";
   /// Length of the file header in bytes.
@@ -31,12 +31,12 @@ impl XCursor<'_, '_> {
     let mut chunks = Vec::with_capacity(num_comment_chunks + num_image_chunks);
 
     for frame in frames {
-      for image in frame.images {
+      for image in frame.images.iter() {
         let chunk = Self::image_chunk(
           image.nominal,
           image.hotspot,
           frame.duration,
-          image.rgba,
+          &image.rgba,
         )?;
 
         chunks.push((XCursorChunkType::Image, image.nominal, chunk));
@@ -119,14 +119,14 @@ impl XCursor<'_, '_> {
     chunk.write_u32::<LittleEndian>(hotspot.y as u32)?;
     chunk.write_u32::<LittleEndian>(cursor_duration.milliseconds())?;
 
-    chunk.write_all(&image.to_owned().into_bgra())?;
+    chunk.write_all(&image.to_bgra())?;
 
     Ok(chunk)
   }
 }
 
-impl<'c, 'i> From<&'c Cursor<'i>> for XCursor<'c, 'i> {
-  fn from(value: &'c Cursor<'i>) -> Self {
+impl<'c> From<&'c Cursor> for XCursor<'c> {
+  fn from(value: &'c Cursor) -> Self {
     Self(value)
   }
 }

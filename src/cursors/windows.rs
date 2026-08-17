@@ -3,11 +3,10 @@ use std::io::{Result as IoResult, Write};
 use byteorder::{LittleEndian, WriteBytesExt};
 
 use crate::cursors::Cursor;
-use crate::images::PngImage;
 
-pub struct WindowsCursor<'c, 'i>(&'c Cursor<'i>);
+pub struct WindowsCursor<'c>(&'c Cursor);
 
-impl WindowsCursor<'_, '_> {
+impl WindowsCursor<'_> {
   pub fn write<W: Write>(self, writer: W) -> IoResult<()> {
     if self.0.frames.len() == 1 {
       self.write_cur(writer)
@@ -35,7 +34,7 @@ impl WindowsCursor<'_, '_> {
 
     let mut image_bufs = Vec::with_capacity(num_images);
 
-    for image in frame.images {
+    for image in frame.images.iter() {
       let nominal = image.nominal;
       let nominal = if nominal > 255 { 0 } else { nominal as u8 };
 
@@ -49,7 +48,7 @@ impl WindowsCursor<'_, '_> {
       writer.write_u16::<LittleEndian>(image.hotspot.y)?;
 
       let mut image_buf = Vec::with_capacity(image.rgba.len() + 92);
-      image_buf.write_all(&PngImage::from(image.rgba.clone()).encode()?)?;
+      image_buf.write_all(&image.rgba.encode_png()?)?;
 
       let buffer_len = image_buf.len() as u32;
 
@@ -146,8 +145,8 @@ impl WindowsCursor<'_, '_> {
   }
 }
 
-impl<'c, 'i> From<&'c Cursor<'i>> for WindowsCursor<'c, 'i> {
-  fn from(value: &'c Cursor<'i>) -> Self {
+impl<'c> From<&'c Cursor> for WindowsCursor<'c> {
+  fn from(value: &'c Cursor) -> Self {
     Self(value)
   }
 }

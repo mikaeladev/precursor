@@ -37,19 +37,37 @@ impl RgbaImage {
     self.rgba.len()
   }
 
-  /// Consumes the image and returns an RGBA buffer.
+  /// Extracts a slice containing the entire RGBA buffer.
+  pub const fn as_rgba(&self) -> &[u8] {
+    self.rgba.as_slice()
+  }
+
+  /// Copies the contents of the RGBA buffer into a new buffer.
+  #[allow(dead_code)]
+  pub fn to_rgba(&self) -> Vec<u8> {
+    self.rgba.to_vec()
+  }
+
+  /// Consumes the struct and returns the RGBA buffer.
+  #[allow(dead_code)]
   pub fn into_rgba(self) -> Vec<u8> {
     self.rgba
   }
 
-  /// Consumes the image and returns a BGRA buffer.
+  /// Creates a new BGRA buffer from the RGBA buffer.
+  pub fn to_bgra(&self) -> Vec<u8> {
+    let chunks = self.rgba.as_chunks::<4>().0;
+    let map = chunks.iter().flat_map(|c| [c[2], c[1], c[0], c[3]]);
+    map.collect()
+  }
+
+  /// Consumes the struct and returns a BGRA buffer.
+  #[allow(dead_code)]
   pub fn into_bgra(self) -> Vec<u8> {
     let mut bgra = self.into_rgba();
-
     for chunk in bgra.as_chunks_mut::<4>().0 {
       chunk.swap(0, 2);
     }
-
     bgra
   }
 }

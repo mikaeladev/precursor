@@ -6,21 +6,28 @@ use serde::Deserialize;
 
 use crate::images::RgbaImage;
 
-pub struct Cursor<'i> {
-  pub frames: Vec<CursorFrame<'i>>,
+pub struct Cursor {
+  pub frames: Vec<CursorFrame>,
   pub metadata: Option<CursorMetadata>,
 }
 
+impl Cursor {
+  pub const fn is_animated(&self) -> bool {
+    self.frames.len() != 1
+  }
+}
+
 #[derive(Clone)]
-pub struct CursorFrame<'i> {
-  pub images: &'i [CursorImage<'i>],
+pub struct CursorFrame {
+  pub images: Vec<CursorImage>,
   pub duration: Option<CursorDuration>,
 }
 
-pub struct CursorImage<'i> {
+#[derive(Clone)]
+pub struct CursorImage {
   pub nominal: u32,
   pub hotspot: CursorHotspot,
-  pub rgba: &'i RgbaImage,
+  pub rgba: RgbaImage,
 }
 
 #[derive(Clone, Copy, Deserialize)]
@@ -38,6 +45,11 @@ impl CursorDuration {
   /// Returns the duration as a jiffy value.
   pub const fn jiffies(self) -> u32 {
     self.0 / (1000 / 60)
+  }
+
+  /// Creates a new duration from a millisecond value.
+  pub const fn from_milliseconds(value: u32) -> Self {
+    Self(value)
   }
 }
 

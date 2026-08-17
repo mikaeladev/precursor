@@ -8,11 +8,9 @@ use png::{
 
 use crate::images::RgbaImage;
 
-pub struct PngImage(RgbaImage);
-
-impl PngImage {
-  /// Decodes a PNG file.
-  pub fn decode(reader: BufReader<File>) -> IoResult<Self> {
+impl RgbaImage {
+  /// Decodes a PNG image into an RGBA image.
+  pub fn decode_png(reader: BufReader<File>) -> IoResult<Self> {
     let mut decoder = Decoder::new(reader);
 
     // strip or expand to rgba/ga
@@ -54,16 +52,13 @@ impl PngImage {
       _ => unreachable!(),
     };
 
-    Ok(Self(RgbaImage::new(width, height, rgba)))
+    Ok(RgbaImage::new(width, height, rgba))
   }
 
-  /// Encodes a PNG file.
-  pub fn encode(self) -> IoResult<Vec<u8>> {
-    let inner = self.0;
-
-    let width = inner.width();
-    let height = inner.height();
-    let rgba = inner.into_rgba();
+  /// Encodes an RGBA image into a PNG image.
+  pub fn encode_png(&self) -> IoResult<Vec<u8>> {
+    let width = self.width();
+    let height = self.height();
 
     let capacity = width as usize * height as usize * 4;
 
@@ -76,21 +71,9 @@ impl PngImage {
 
     let mut writer = encoder.write_header()?;
 
-    writer.write_image_data(&rgba)?;
+    writer.write_image_data(self.as_rgba())?;
     writer.finish()?;
 
     Ok(buffer)
-  }
-}
-
-impl From<RgbaImage> for PngImage {
-  fn from(value: RgbaImage) -> Self {
-    Self(value)
-  }
-}
-
-impl From<PngImage> for RgbaImage {
-  fn from(value: PngImage) -> Self {
-    value.0
   }
 }

@@ -3,10 +3,9 @@ use std::fs::File;
 use std::io::{BufReader, Result as IoResult, stdin};
 use std::path::PathBuf;
 
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 
-use crate::cursors::CursorHotspot;
-
+/// Precursor is a tool for building cross-platform cursor themes.
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 #[command(propagate_version = true)]
@@ -15,63 +14,46 @@ pub struct Cli {
   pub command: Command,
 }
 
-#[derive(Args)]
-pub struct BuildCursorArgs {
-  /// Name of the cursor.
-  #[arg(short = 'n', long = "name", requires_all = [ "size", "hotspot" ], required = false)]
-  pub name: String,
-
-  /// Width/height of the cursor.
-  #[arg(short = 's', long = "size", requires_all = [ "name", "hotspot" ], required = false)]
-  pub size: u16,
-
-  /// Hotspot co-ordinates along the x and y axes.
-  #[arg(
-    short = 'H',
-    long = "hotspot",
-    value_name = "X,Y",
-    requires_all = [ "name", "size" ],
-    required = false
-  )]
-  pub hotspot: CursorHotspot,
-}
-
 #[derive(Subcommand)]
 pub enum Command {
-  /// Build some cursor files.
+  /// Build cursor files.
   #[command(visible_alias = "b")]
+  #[group(id = "types", multiple = true, required = true)]
   Build {
-    /// Path to an input file, or '-' for stdin.
-    ///
-    /// Input files may be either configs (.toml) or assets (.png). If an asset
-    /// is passed, it must also be accompanied by '--name', '--size', and
-    /// '--hotspot'.
-    #[arg(group = "build-type")]
+    /// Path to a config file, or '-' for stdin.
+    #[clap(default_value = "./precursor.toml")]
     input: InputArg,
 
-    /// Where to output the built cursors.
-    ///
-    /// If multiple types are provided, this is assumed to be a directory.
-    #[arg(short = 'o', long = "output")]
-    output: Option<PathBuf>,
+    /// Specify the directory in which to create the cursors.
+    #[arg(short = 't', long, value_name = "DIRECTORY")]
+    target_directory: Option<PathBuf>,
 
-    /// Types of cursors to build (delimited by ',').
-    #[arg(short = 't', long = "types", value_name = "TYPES", num_args = 1.., value_delimiter = ',', required = true)]
-    cursor_types: Vec<CursorType>,
+    /// Build scalable cursors.
+    #[arg(short = 's', long, group = "types", conflicts_with = "all")]
+    scalable: bool,
 
-    #[command(flatten)]
-    cursor_args: Option<BuildCursorArgs>,
+    /// Build windows cursors.
+    #[arg(short = 'w', long, group = "types", conflicts_with = "all")]
+    windows: bool,
+
+    /// Build X11 cursors.
+    #[arg(short = 'x', long, group = "types", conflicts_with = "all")]
+    xcursor: bool,
+
+    /// Build all cursor types (i.e. -swx).
+    #[arg(short = 'A', long, group = "types")]
+    all: bool,
   },
 
-  /// Check a config file for syntax errors.
+  /// Check a config file for errors.
   #[command(visible_alias = "c")]
   Check {
-    /// Path to the config file, or '-' for stdin.
+    /// Path to a config file, or '-' for stdin.
     #[clap(default_value = "./precursor.toml")]
     input: InputArg,
   },
 
-  /// Extract image frame(s) from a cursor file.
+  /// Extract frames from a cursor.
   #[command(visible_alias = "x")]
   Extract {
     /// Path to the cursor file, or '-' for stdin.
@@ -81,7 +63,7 @@ pub enum Command {
     frames: Option<u32>,
   },
 
-  /// Inspect a cursor file for metadata.
+  /// Inspect a cursor for metadata.
   #[command(visible_alias = "i")]
   Inspect {
     /// Path to the cursor file, or '-' for stdin.
@@ -129,11 +111,4 @@ impl From<OsString> for InputArg {
       Self::Path(PathBuf::from(value))
     }
   }
-}
-
-#[derive(Clone, Debug, PartialEq, ValueEnum)]
-pub enum CursorType {
-  Scalable,
-  Windows,
-  Xcursor,
 }

@@ -1,8 +1,10 @@
-use std::error::Error as StdError;
-use std::fmt::{Display, Error as FmtError, Formatter, Result as FmtResult};
-use std::io::{Error as IoError, ErrorKind as IoErrorKind};
+use std::fmt::{Display, Formatter};
 
-use toml::de::Error as TomlError;
+pub use std::error::Error as StdError;
+pub use std::fmt::{Error as FmtError, Result as FmtResult};
+pub use std::io::{Error as IoError, ErrorKind as IoErrorKind};
+
+pub use toml::de::Error as TomlError;
 
 #[derive(Debug)]
 pub enum Error {
