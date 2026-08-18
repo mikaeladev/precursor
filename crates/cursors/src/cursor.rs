@@ -2,9 +2,8 @@ use std::error::Error as StdError;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::str::FromStr;
 
+use crate_images::RgbaImage;
 use serde::Deserialize;
-
-use crate::images::RgbaImage;
 
 pub struct Cursor {
   pub frames: Vec<CursorFrame>,

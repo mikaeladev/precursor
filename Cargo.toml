@@ -1,19 +1,31 @@
-[package]
-name = "precursor"
+[workspace]
+resolver = "3"
+members = [
+  "crates/config",
+  "crates/cursors",
+  "crates/images",
+  "crates/precursor",
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
-description = "precursor is a tool for building cross-platform cursor themes"
+license = "GPL-3.0-or-later"
 
-[dependencies]
+[workspace.dependencies]
+crate_config.path = "crates/config"
+crate_cursors.path = "crates/cursors"
+crate_images.path = "crates/images"
+
 byteorder = "1.5.0"
 num_enum = "0.7.6"
 png = "0.18.1"
 toml = "1.1.4"
 
-[dependencies.clap]
+[workspace.dependencies.clap]
 version = "4.6.5"
 features = ["derive"]
 
-[dependencies.serde]
+[workspace.dependencies.serde]
 version = "1.0.229"
 features = ["derive"]

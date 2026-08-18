@@ -1,10 +1,10 @@
 use std::io::{Result as IoResult, Write};
 
 use byteorder::{LittleEndian, WriteBytesExt};
+use crate_images::RgbaImage;
 use num_enum::IntoPrimitive;
 
-use crate::cursors::{Cursor, CursorDuration, CursorHotspot};
-use crate::images::RgbaImage;
+use crate::{Cursor, CursorDuration, CursorHotspot};
 
 pub struct XCursor<'c>(&'c Cursor);
 

@@ -2,7 +2,7 @@ use std::io::{Result as IoResult, Write};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use crate::cursors::Cursor;
+use crate::Cursor;
 
 pub struct WindowsCursor<'c>(&'c Cursor);
 

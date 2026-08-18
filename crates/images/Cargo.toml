@@ -1,0 +1,8 @@
+[package]
+name = "crate_images"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+png.workspace = true

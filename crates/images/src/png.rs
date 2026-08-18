@@ -6,7 +6,7 @@ use png::{
   Transformations,
 };
 
-use crate::images::RgbaImage;
+use crate::RgbaImage;
 
 impl RgbaImage {
   /// Decodes a PNG image into an RGBA image.

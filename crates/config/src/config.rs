@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
+use crate_cursors::{CursorDuration, CursorHotspot};
 use serde::Deserialize;
 
-use crate::config::{AssetConfig, LocaleString, PlatformAlias};
-use crate::cursors::{CursorDuration, CursorHotspot};
+use crate::{AssetConfig, LocaleString, PlatformAlias};
 
 #[derive(Deserialize)]
 pub struct Config {

@@ -1,8 +1,5 @@
 mod args;
-mod config;
-mod cursors;
 mod error;
-mod images;
 
 use std::env::current_dir;
 use std::fs::{File, metadata};
@@ -10,12 +7,13 @@ use std::io::{BufReader, ErrorKind as IoErrorKind, read_to_string};
 use std::path::PathBuf;
 
 use clap::Parser;
+use crate_config::{Config, CursorConfig};
+use crate_cursors::formats::{WindowsCursor, XCursor};
+use crate_cursors::{Cursor, CursorDuration, CursorFrame, CursorImage};
+use crate_images::RgbaImage;
 
 use crate::args::{Cli, Command};
-use crate::config::{Config, CursorConfig};
-use crate::cursors::*;
 use crate::error::{Error, IoError};
-use crate::images::RgbaImage;
 
 fn main() -> Result<(), Error> {
   let args = Cli::parse();
