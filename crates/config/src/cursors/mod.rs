@@ -7,6 +7,7 @@ pub use asset::*;
 pub use frame::*;
 
 use crate_cursors::{CursorDuration, CursorHotspot};
+
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, PartialEq)]

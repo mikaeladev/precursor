@@ -6,11 +6,12 @@ use std::fs::{File, metadata};
 use std::io::{BufReader, ErrorKind as IoErrorKind, read_to_string};
 use std::path::PathBuf;
 
-use clap::Parser;
 use crate_config::*;
 use crate_cursors::formats::{WindowsCursor, XCursor};
 use crate_cursors::{Cursor, CursorDuration, CursorFrame, CursorImage};
-use crate_images::RgbaImage;
+use crate_images::{PngImage, RasterImage};
+
+use clap::Parser;
 
 use crate::args::{Cli, Command};
 use crate::error::{Error, IoError};
@@ -111,12 +112,12 @@ fn cursor_from_config(cursor_config: CursorConfig) -> Result<Cursor, Error> {
 
       // TODO: separate asset decoding/transform logic
       let png_reader = BufReader::new(File::open(&asset.path)?);
-      let png_image = RgbaImage::decode_png(png_reader)?;
+      let raster = RasterImage::decode_png(png_reader)?;
 
       let image = CursorImage {
         nominal,
         hotspot,
-        rgba: png_image,
+        raster,
       };
 
       // TODO: scale image for various DPIs
@@ -162,12 +163,12 @@ fn cursor_from_config(cursor_config: CursorConfig) -> Result<Cursor, Error> {
 
         // TODO: separate asset decoding/transform logic
         let png_reader = BufReader::new(File::open(&asset_config.path)?);
-        let png_image = RgbaImage::decode_png(png_reader)?;
+        let raster = RasterImage::decode_png(png_reader)?;
 
         let image = CursorImage {
           nominal: frame.nominal.unwrap_or(nominal),
           hotspot: frame.hotspot.unwrap_or(hotspot),
-          rgba: png_image,
+          raster,
         };
 
         // TODO: scale image for various DPIs

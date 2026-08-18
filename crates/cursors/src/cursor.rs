@@ -2,7 +2,8 @@ use std::error::Error as StdError;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::str::FromStr;
 
-use crate_images::RgbaImage;
+use crate_images::RasterImage;
+
 use serde::Deserialize;
 
 pub struct Cursor {
@@ -26,7 +27,7 @@ pub struct CursorFrame {
 pub struct CursorImage {
   pub nominal: u32,
   pub hotspot: CursorHotspot,
-  pub rgba: RgbaImage,
+  pub raster: RasterImage,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]

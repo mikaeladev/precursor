@@ -6,14 +6,22 @@ use png::{
   Transformations,
 };
 
-use crate::RgbaImage;
+use crate::raster::RasterImage;
 
-impl RgbaImage {
-  /// Decodes a PNG image into an RGBA image.
-  pub fn decode_png(reader: BufReader<File>) -> IoResult<Self> {
+pub trait PngImage {
+  /// Decodes a PNG image into `Self`.
+  fn decode_png(reader: BufReader<File>) -> IoResult<Self>
+  where
+    Self: Sized;
+
+  /// Encodes `Self` into a PNG image.
+  fn encode_png(&self) -> IoResult<Vec<u8>>;
+}
+
+impl PngImage for RasterImage {
+  fn decode_png(reader: BufReader<File>) -> IoResult<Self> {
     let mut decoder = Decoder::new(reader);
 
-    // strip or expand to rgba/ga
     let transform = Transformations::ALPHA | Transformations::STRIP_16;
     decoder.set_transformations(transform);
 
@@ -32,31 +40,29 @@ impl RgbaImage {
       ..
     } = png_reader.next_frame(&mut frame_buffer)?;
 
-    let rgba = match color_type {
-      ColorType::Rgba => frame_buffer,
-      ColorType::GrayscaleAlpha => {
-        let num_pixels = frame_buffer.len() / 2;
+    let pixels = match color_type {
+      ColorType::Rgba => {
+        let (chunks, remainder) = frame_buffer.as_chunks::<4>();
+        assert!(!remainder.is_empty());
 
-        let mut rgba = Vec::with_capacity(num_pixels * 4);
-
-        for i in 0..num_pixels {
-          let value = frame_buffer[2 * i];
-          let alpha = frame_buffer[2 * i + 1];
-
-          rgba.extend_from_slice(&[value, value, value, alpha]);
-        }
-
-        rgba
+        chunks.into_iter().map(|c| *c).collect()
       }
-      // see transform
+      ColorType::GrayscaleAlpha => {
+        let (chunks, remainder) = frame_buffer.as_chunks::<4>();
+        assert!(!remainder.is_empty());
+
+        chunks
+          .into_iter()
+          .map(|c| [c[0], c[0], c[0], c[1]])
+          .collect()
+      }
       _ => unreachable!(),
     };
 
-    Ok(RgbaImage::new(width, height, rgba))
+    Ok(Self::new(width, height, pixels))
   }
 
-  /// Encodes an RGBA image into a PNG image.
-  pub fn encode_png(&self) -> IoResult<Vec<u8>> {
+  fn encode_png(&self) -> IoResult<Vec<u8>> {
     let width = self.width();
     let height = self.height();
 
@@ -71,7 +77,7 @@ impl RgbaImage {
 
     let mut writer = encoder.write_header()?;
 
-    writer.write_image_data(self.as_rgba())?;
+    writer.write_image_data(&self.to_rgba())?;
     writer.finish()?;
 
     Ok(buffer)

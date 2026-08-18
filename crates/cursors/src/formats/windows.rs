@@ -1,5 +1,7 @@
 use std::io::{Result as IoResult, Write};
 
+use crate_images::PngImage;
+
 use byteorder::{LittleEndian, WriteBytesExt};
 
 use crate::Cursor;
@@ -47,8 +49,10 @@ impl WindowsCursor<'_> {
       writer.write_u16::<LittleEndian>(image.hotspot.x)?;
       writer.write_u16::<LittleEndian>(image.hotspot.y)?;
 
-      let mut image_buf = Vec::with_capacity(image.rgba.len() + 92);
-      image_buf.write_all(&image.rgba.encode_png()?)?;
+      let mut image_buf = // FIXME: 92 is magic
+        Vec::with_capacity(image.raster.pixels().len() * 4 + 92);
+
+      image_buf.write_all(&image.raster.encode_png()?)?;
 
       let buffer_len = image_buf.len() as u32;
 

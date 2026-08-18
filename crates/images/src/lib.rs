@@ -1,4 +1,5 @@
 mod png;
-mod rgba;
+mod raster;
 
-pub use rgba::*;
+pub use png::*;
+pub use raster::*;

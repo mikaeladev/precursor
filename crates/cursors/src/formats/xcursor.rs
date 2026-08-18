@@ -1,7 +1,8 @@
 use std::io::{Result as IoResult, Write};
 
+use crate_images::RasterImage;
+
 use byteorder::{LittleEndian, WriteBytesExt};
-use crate_images::RgbaImage;
 use num_enum::IntoPrimitive;
 
 use crate::{Cursor, CursorDuration, CursorHotspot};
@@ -36,7 +37,7 @@ impl XCursor<'_> {
           image.nominal,
           image.hotspot,
           frame.duration,
-          &image.rgba,
+          &image.raster,
         )?;
 
         chunks.push((XCursorChunkType::Image, image.nominal, chunk));
@@ -103,7 +104,7 @@ impl XCursor<'_> {
     nominal: u32,
     hotspot: CursorHotspot,
     duration: Option<CursorDuration>,
-    image: &RgbaImage,
+    raster: &RasterImage,
   ) -> IoResult<Vec<u8>> {
     let mut chunk = Vec::with_capacity(Self::IMAGE_HEADER as usize);
 
@@ -113,13 +114,13 @@ impl XCursor<'_> {
     chunk.write_u32::<LittleEndian>(XCursorChunkType::Image.into())?;
     chunk.write_u32::<LittleEndian>(nominal)?;
     chunk.write_u32::<LittleEndian>(Self::IMAGE_VERSION)?;
-    chunk.write_u32::<LittleEndian>(image.width())?;
-    chunk.write_u32::<LittleEndian>(image.height())?;
+    chunk.write_u32::<LittleEndian>(raster.width())?;
+    chunk.write_u32::<LittleEndian>(raster.height())?;
     chunk.write_u32::<LittleEndian>(hotspot.x as u32)?;
     chunk.write_u32::<LittleEndian>(hotspot.y as u32)?;
     chunk.write_u32::<LittleEndian>(cursor_duration.milliseconds())?;
 
-    chunk.write_all(&image.to_bgra())?;
+    chunk.write_all(&raster.to_bgra())?;
 
     Ok(chunk)
   }
