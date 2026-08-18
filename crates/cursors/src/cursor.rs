@@ -29,7 +29,7 @@ pub struct CursorImage {
   pub rgba: RgbaImage,
 }
 
-#[derive(Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
 #[serde(transparent)]
 pub struct CursorDuration(u32);
 
@@ -52,7 +52,7 @@ impl CursorDuration {
   }
 }
 
-#[derive(Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
 pub struct CursorHotspot {
   pub x: u16,
   pub y: u16,

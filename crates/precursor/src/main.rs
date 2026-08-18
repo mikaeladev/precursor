@@ -7,7 +7,7 @@ use std::io::{BufReader, ErrorKind as IoErrorKind, read_to_string};
 use std::path::PathBuf;
 
 use clap::Parser;
-use crate_config::{Config, CursorConfig};
+use crate_config::*;
 use crate_cursors::formats::{WindowsCursor, XCursor};
 use crate_cursors::{Cursor, CursorDuration, CursorFrame, CursorImage};
 use crate_images::RgbaImage;
@@ -101,12 +101,14 @@ fn read_config(reader: BufReader<File>) -> Result<Config, Error> {
 
 fn cursor_from_config(cursor_config: CursorConfig) -> Result<Cursor, Error> {
   Ok(match cursor_config {
-    CursorConfig::ScaledStatic {
-      nominal,
-      hotspot,
-      asset,
-      aliases: _,
-    } => {
+    CursorConfig::ScaledStatic(value) => {
+      let ScaledStaticCursorConfig {
+        nominal,
+        hotspot,
+        asset,
+        aliases: _,
+      } = value;
+
       // TODO: separate asset decoding/transform logic
       let png_reader = BufReader::new(File::open(&asset.path)?);
       let png_image = RgbaImage::decode_png(png_reader)?;
@@ -130,15 +132,17 @@ fn cursor_from_config(cursor_config: CursorConfig) -> Result<Cursor, Error> {
         metadata: None,
       }
     }
-    CursorConfig::ScaledAnimated {
-      nominal,
-      hotspot,
-      duration,
-      durations,
-      sequence,
-      assets,
-      aliases: _,
-    } => {
+    CursorConfig::ScaledAnimated(value) => {
+      let ScaledAnimatedCursorConfig {
+        nominal,
+        hotspot,
+        duration,
+        durations,
+        sequence,
+        assets,
+        aliases: _,
+      } = value;
+
       if duration.is_none() && durations.is_none_or(|v| v.is_empty()) {
         todo!()
       }
@@ -153,7 +157,7 @@ fn cursor_from_config(cursor_config: CursorConfig) -> Result<Cursor, Error> {
 
       let mut frames = Vec::with_capacity(num_frames);
 
-      for frame in sequence {
+      for frame in sequence.iter() {
         let asset_config = assets.get(frame.asset).unwrap();
 
         // TODO: separate asset decoding/transform logic

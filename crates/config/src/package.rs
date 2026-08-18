@@ -6,6 +6,21 @@ use std::str::FromStr;
 use serde::de::{Error as DeError, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 
+#[derive(Debug, Deserialize, PartialEq)]
+pub struct PackageConfig {
+  /// Short name for the cursor theme.
+  pub name: LocaleString,
+  /// Long description for the cursor theme.
+  pub comment: LocaleString,
+  /// Whether to hide the cursor theme in selection UIs, usually enabled for
+  /// fallback themes. Only applies when packaged for Linux.
+  pub hidden: Option<bool>,
+  /// Name of a specific cursor to use as an example in selection UIs. Only
+  /// applies when packaged for Linux.
+  pub example: Option<String>,
+}
+
+#[derive(Debug, PartialEq)]
 pub struct LocaleString(pub BTreeMap<String, String>);
 
 impl FromStr for LocaleString {

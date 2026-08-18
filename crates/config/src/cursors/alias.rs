@@ -1,5 +1,5 @@
-use std::error::Error as StdError;
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::convert::Infallible;
+use std::fmt::{Formatter, Result as FmtResult};
 use std::str::FromStr;
 
 use serde::de::{Error as DeError, Visitor};
@@ -7,27 +7,14 @@ use serde::{Deserialize, Deserializer};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum PlatformAlias {
+  Global(String),
   Linux(String),
   Macos(String),
   Windows(String),
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct ParsePlatformAliasError;
-
-const ERROR_MSG: &str =
-  "string prepended by either 'linux:', 'macos:', or 'windows:'";
-
-impl StdError for ParsePlatformAliasError {}
-
-impl Display for ParsePlatformAliasError {
-  fn fmt(&self, formatter: &mut Formatter<'_>) -> FmtResult {
-    formatter.write_str(&format!("expected a {ERROR_MSG}"))
-  }
-}
-
 impl FromStr for PlatformAlias {
-  type Err = ParsePlatformAliasError;
+  type Err = Infallible;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     if let Some(s) = s.strip_prefix("linux:") {
@@ -37,7 +24,7 @@ impl FromStr for PlatformAlias {
     } else if let Some(s) = s.strip_prefix("windows:") {
       Ok(Self::Windows(s.to_string()))
     } else {
-      Err(ParsePlatformAliasError)
+      Ok(Self::Global(s.to_string()))
     }
   }
 }
@@ -50,11 +37,11 @@ impl<'de> Deserialize<'de> for PlatformAlias {
       type Value = PlatformAlias;
 
       fn expecting(&self, formatter: &mut Formatter) -> FmtResult {
-        formatter.write_str(ERROR_MSG)
+        formatter.write_str("alias string")
       }
 
       fn visit_str<E: DeError>(self, value: &str) -> Result<Self::Value, E> {
-        PlatformAlias::from_str(value).or_else(|err| Err(E::custom(err)))
+        Ok(PlatformAlias::from_str(value).unwrap())
       }
     }
 
@@ -69,6 +56,10 @@ mod tests {
   #[test]
   fn test_platform_alias_from_str() {
     assert_eq!(
+      PlatformAlias::from_str("test"),
+      Ok(PlatformAlias::Global("test".into())),
+    );
+    assert_eq!(
       PlatformAlias::from_str("linux:test"),
       Ok(PlatformAlias::Linux("test".into())),
     );
@@ -80,9 +71,24 @@ mod tests {
       PlatformAlias::from_str("windows:test"),
       Ok(PlatformAlias::Windows("test".into())),
     );
-    assert_eq!(
-      PlatformAlias::from_str("test"),
-      Err(ParsePlatformAliasError)
-    );
+  }
+
+  #[test]
+  fn test_platform_alias_deserialize() {
+    use toml::Value;
+
+    let exprs = [
+      (r#""test""#, PlatformAlias::Global("test".into())),
+      (r#""linux:test""#, PlatformAlias::Linux("test".into())),
+      (r#""macos:test""#, PlatformAlias::Macos("test".into())),
+      (r#""windows:test""#, PlatformAlias::Windows("test".into())),
+    ];
+
+    for (raw_value, expected) in exprs {
+      let de = raw_value.parse::<Value>().unwrap();
+      let value = PlatformAlias::deserialize(de).unwrap();
+
+      assert_eq!(value, expected);
+    }
   }
 }
