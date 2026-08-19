@@ -1,11 +1,11 @@
 [package]
-name = "crate_cursors"
+name = "crate_cursor"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
 byteorder.workspace = true
-crate_images.workspace = true
+crate_formats.workspace = true
 num_enum.workspace = true
 serde.workspace = true

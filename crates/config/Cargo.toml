@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-crate_cursors.workspace = true
+crate_cursor.workspace = true
 serde.workspace = true
 
 [dev-dependencies]

@@ -21,7 +21,7 @@ mod tests {
   use std::path::PathBuf;
   use std::str::FromStr;
 
-  use crate_cursors::{CursorDuration, CursorHotspot};
+  use crate_cursor::{CursorDuration, CursorHotspot};
 
   #[test]
   fn test_deserialize_from_document() {

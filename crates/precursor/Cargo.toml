@@ -8,6 +8,6 @@ license.workspace = true
 [dependencies]
 clap.workspace = true
 crate_config.workspace = true
-crate_cursors.workspace = true
-crate_images.workspace = true
+crate_cursor.workspace = true
+crate_formats.workspace = true
 toml.workspace = true

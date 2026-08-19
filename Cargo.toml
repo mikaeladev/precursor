@@ -2,8 +2,8 @@
 resolver = "3"
 members = [
   "crates/config",
-  "crates/cursors",
-  "crates/images",
+  "crates/cursor",
+  "crates/formats",
   "crates/precursor",
 ]
 
@@ -14,8 +14,8 @@ license = "GPL-3.0-or-later"
 
 [workspace.dependencies]
 crate_config.path = "crates/config"
-crate_cursors.path = "crates/cursors"
-crate_images.path = "crates/images"
+crate_cursor.path = "crates/cursor"
+crate_formats.path = "crates/formats"
 
 byteorder = "1.5.0"
 num_enum = "0.7.6"

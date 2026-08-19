@@ -1,6 +1,6 @@
 use std::fmt::{Formatter, Result as FmtResult};
 
-use crate_cursors::{CursorDuration, CursorHotspot};
+use crate_cursor::{CursorDuration, CursorHotspot};
 
 use serde::de::{Error as DeError, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};

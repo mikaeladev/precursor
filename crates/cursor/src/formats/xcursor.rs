@@ -1,6 +1,6 @@
 use std::io::{Result as IoResult, Write};
 
-use crate_images::RasterImage;
+use crate_formats::RasterImage;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use num_enum::IntoPrimitive;

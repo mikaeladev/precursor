@@ -1,5 +1,5 @@
 [package]
-name = "crate_images"
+name = "crate_formats"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

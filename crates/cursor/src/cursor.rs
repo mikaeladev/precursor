@@ -2,7 +2,7 @@ use std::error::Error as StdError;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::str::FromStr;
 
-use crate_images::RasterImage;
+use crate_formats::RasterImage;
 
 use serde::Deserialize;
 

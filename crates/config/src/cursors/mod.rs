@@ -6,7 +6,7 @@ pub use alias::*;
 pub use asset::*;
 pub use frame::*;
 
-use crate_cursors::{CursorDuration, CursorHotspot};
+use crate_cursor::{CursorDuration, CursorHotspot};
 
 use serde::Deserialize;
 

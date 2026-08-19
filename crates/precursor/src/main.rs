@@ -7,9 +7,9 @@ use std::io::{BufReader, ErrorKind as IoErrorKind, read_to_string};
 use std::path::PathBuf;
 
 use crate_config::*;
-use crate_cursors::formats::{WindowsCursor, XCursor};
-use crate_cursors::{Cursor, CursorDuration, CursorFrame, CursorImage};
-use crate_images::{PngImage, RasterImage};
+use crate_cursor::formats::{WindowsCursor, XCursor};
+use crate_cursor::{Cursor, CursorDuration, CursorFrame, CursorImage};
+use crate_formats::{PngImage, RasterImage};
 
 use clap::Parser;
 

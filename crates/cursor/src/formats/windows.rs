@@ -1,6 +1,6 @@
 use std::io::{Result as IoResult, Write};
 
-use crate_images::PngImage;
+use crate_formats::PngImage;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
