@@ -6,7 +6,7 @@ use png::{
   Transformations,
 };
 
-use crate::raster::RasterImage;
+use crate::RasterImage;
 
 pub trait PngImage {
   /// Decodes a PNG image into `Self`.
@@ -43,13 +43,13 @@ impl PngImage for RasterImage {
     let pixels = match color_type {
       ColorType::Rgba => {
         let (chunks, remainder) = frame_buffer.as_chunks::<4>();
-        assert!(!remainder.is_empty());
+        assert!(remainder.is_empty());
 
         chunks.into_iter().map(|c| *c).collect()
       }
       ColorType::GrayscaleAlpha => {
         let (chunks, remainder) = frame_buffer.as_chunks::<4>();
-        assert!(!remainder.is_empty());
+        assert!(remainder.is_empty());
 
         chunks
           .into_iter()

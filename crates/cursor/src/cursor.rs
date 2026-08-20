@@ -55,12 +55,12 @@ impl CursorDuration {
 
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
 pub struct CursorHotspot {
-  pub x: u16,
-  pub y: u16,
+  pub x: u32,
+  pub y: u32,
 }
 
-impl From<(u16, u16)> for CursorHotspot {
-  fn from((x, y): (u16, u16)) -> Self {
+impl From<(u32, u32)> for CursorHotspot {
+  fn from((x, y): (u32, u32)) -> Self {
     Self { x, y }
   }
 }
@@ -72,7 +72,7 @@ impl StdError for ParseCursorHotspotError {}
 
 impl Display for ParseCursorHotspotError {
   fn fmt(&self, formatter: &mut Formatter<'_>) -> FmtResult {
-    formatter.write_str("expected a `{u16},{u16}`")
+    formatter.write_str("expected a `{u32},{u32}`")
   }
 }
 
@@ -82,8 +82,8 @@ impl FromStr for CursorHotspot {
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     let (x, y) = s.split_once(',').ok_or(ParseCursorHotspotError)?;
 
-    let x = x.parse::<u16>().map_err(|_| ParseCursorHotspotError)?;
-    let y = y.parse::<u16>().map_err(|_| ParseCursorHotspotError)?;
+    let x = x.parse::<u32>().map_err(|_| ParseCursorHotspotError)?;
+    let y = y.parse::<u32>().map_err(|_| ParseCursorHotspotError)?;
 
     Ok(CursorHotspot { x, y })
   }

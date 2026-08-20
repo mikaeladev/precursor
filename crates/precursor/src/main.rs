@@ -7,9 +7,8 @@ use std::io::{BufReader, ErrorKind as IoErrorKind, read_to_string};
 use std::path::PathBuf;
 
 use crate_config::*;
-use crate_cursor::formats::{WindowsCursor, XCursor};
-use crate_cursor::{Cursor, CursorDuration, CursorFrame, CursorImage};
-use crate_formats::{PngImage, RasterImage};
+use crate_cursor::*;
+use crate_formats::{PngImage, RasterImage, WriteTo};
 
 use clap::Parser;
 
@@ -44,11 +43,11 @@ fn main() -> Result<(), Error> {
           let cursor_path = cursor_path
             .with_extension(if cursor.is_animated() { "ani" } else { "cur" });
 
-          WindowsCursor::from(&cursor).write(File::create(cursor_path)?)?;
+          WindowsCursor(&cursor).write_to(File::create(cursor_path)?)?;
         }
 
         if all || xcursor {
-          XCursor::from(&cursor).write(File::create(cursor_path)?)?;
+          X11Cursor(&cursor).write_to(File::create(cursor_path)?)?;
         }
 
         // TODO: name aliasing

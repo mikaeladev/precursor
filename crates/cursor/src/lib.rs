@@ -1,5 +1,7 @@
 mod cursor;
-
-pub mod formats;
+mod windows;
+mod xcursor;
 
 pub use cursor::*;
+pub use windows::*;
+pub use xcursor::*;
