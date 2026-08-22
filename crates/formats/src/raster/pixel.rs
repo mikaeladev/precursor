@@ -1,0 +1,219 @@
+use std::array::IntoIter;
+
+/// 1 channel for luminence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GrayscalePixel {
+  pub y: u8,
+}
+
+impl From<u8> for GrayscalePixel {
+  fn from(y: u8) -> Self {
+    Self { y }
+  }
+}
+
+/// 2 channels for luminence and alpha.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GrayscaleAlphaPixel {
+  pub y: u8,
+  pub a: u8,
+}
+
+impl From<[u8; 2]> for GrayscaleAlphaPixel {
+  fn from(ya: [u8; 2]) -> Self {
+    Self { y: ya[0], a: ya[1] }
+  }
+}
+
+impl IntoIterator for GrayscaleAlphaPixel {
+  type Item = u8;
+  type IntoIter = IntoIter<Self::Item, 2>;
+
+  fn into_iter(self) -> Self::IntoIter {
+    [self.y, self.a].into_iter()
+  }
+}
+
+/// 3 channels for red, green, and blue.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct RgbPixel {
+  pub r: u8,
+  pub g: u8,
+  pub b: u8,
+}
+
+impl From<[u8; 3]> for RgbPixel {
+  fn from(rgb: [u8; 3]) -> Self {
+    Self {
+      r: rgb[0],
+      g: rgb[1],
+      b: rgb[2],
+    }
+  }
+}
+
+impl IntoIterator for RgbPixel {
+  type Item = u8;
+  type IntoIter = IntoIter<Self::Item, 3>;
+
+  fn into_iter(self) -> Self::IntoIter {
+    [self.r, self.g, self.b].into_iter()
+  }
+}
+
+/// 4 channels for red, green, blue, and alpha.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct RgbAlphaPixel {
+  pub r: u8,
+  pub g: u8,
+  pub b: u8,
+  pub a: u8,
+}
+
+impl From<[u8; 4]> for RgbAlphaPixel {
+  fn from(rgba: [u8; 4]) -> Self {
+    Self {
+      r: rgba[0],
+      g: rgba[1],
+      b: rgba[2],
+      a: rgba[3],
+    }
+  }
+}
+
+impl IntoIterator for RgbAlphaPixel {
+  type Item = u8;
+  type IntoIter = IntoIter<Self::Item, 4>;
+
+  fn into_iter(self) -> Self::IntoIter {
+    [self.r, self.g, self.b, self.a].into_iter()
+  }
+}
+
+pub trait IntoPixel {
+  /// Converts the value to a `GrayscalePixel`.
+  fn into_grayscale(self) -> GrayscalePixel;
+
+  /// Converts the value to a `GrayscaleAlphaPixel`.
+  fn into_grayscale_alpha(self) -> GrayscaleAlphaPixel;
+
+  /// Converts the value to an `RgbPixel`.
+  fn into_rgb(self) -> RgbPixel;
+
+  /// Converts the value to an `RgbAlphaPixel`.
+  fn into_rgb_alpha(self) -> RgbAlphaPixel;
+}
+
+impl IntoPixel for GrayscalePixel {
+  fn into_grayscale(self) -> Self {
+    self
+  }
+
+  fn into_grayscale_alpha(self) -> GrayscaleAlphaPixel {
+    GrayscaleAlphaPixel {
+      y: self.y,
+      a: u8::MAX,
+    }
+  }
+
+  fn into_rgb(self) -> RgbPixel {
+    RgbPixel {
+      r: self.y,
+      g: self.y,
+      b: self.y,
+    }
+  }
+
+  fn into_rgb_alpha(self) -> RgbAlphaPixel {
+    RgbAlphaPixel {
+      r: self.y,
+      g: self.y,
+      b: self.y,
+      a: u8::MAX,
+    }
+  }
+}
+
+impl IntoPixel for GrayscaleAlphaPixel {
+  fn into_grayscale(self) -> GrayscalePixel {
+    GrayscalePixel { y: self.y }
+  }
+
+  fn into_grayscale_alpha(self) -> GrayscaleAlphaPixel {
+    self
+  }
+
+  fn into_rgb(self) -> RgbPixel {
+    RgbPixel {
+      r: self.y,
+      g: self.y,
+      b: self.y,
+    }
+  }
+
+  fn into_rgb_alpha(self) -> RgbAlphaPixel {
+    RgbAlphaPixel {
+      r: self.y,
+      g: self.y,
+      b: self.y,
+      a: self.a,
+    }
+  }
+}
+
+impl IntoPixel for RgbPixel {
+  fn into_grayscale(self) -> GrayscalePixel {
+    let [r, g, b] = [self.r as f32, self.b as f32, self.g as f32];
+
+    GrayscalePixel {
+      y: (r * 0.2126 + g * 0.7152 + b * 0.0722) as u8,
+    }
+  }
+
+  fn into_grayscale_alpha(self) -> GrayscaleAlphaPixel {
+    GrayscaleAlphaPixel {
+      y: Self::into_grayscale(self).y,
+      a: u8::MAX,
+    }
+  }
+
+  fn into_rgb(self) -> Self {
+    self
+  }
+
+  fn into_rgb_alpha(self) -> RgbAlphaPixel {
+    RgbAlphaPixel {
+      r: self.r,
+      g: self.g,
+      b: self.b,
+      a: u8::MAX,
+    }
+  }
+}
+
+impl IntoPixel for RgbAlphaPixel {
+  fn into_grayscale(self) -> GrayscalePixel {
+    GrayscalePixel {
+      y: self.into_rgb().into_grayscale().y,
+    }
+  }
+
+  fn into_grayscale_alpha(self) -> GrayscaleAlphaPixel {
+    GrayscaleAlphaPixel {
+      a: self.a,
+      y: self.into_grayscale().y,
+    }
+  }
+
+  fn into_rgb(self) -> RgbPixel {
+    RgbPixel {
+      r: self.r,
+      g: self.g,
+      b: self.b,
+    }
+  }
+
+  fn into_rgb_alpha(self) -> RgbAlphaPixel {
+    self
+  }
+}

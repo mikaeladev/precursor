@@ -1,5 +1,6 @@
 use std::io::{Result as IoResult, Write};
 
+use crate_formats::raster::IntoPixmap;
 use crate_formats::{WriteTo, XcursorFile, XcursorImageChunk};
 
 use crate::Cursor;
@@ -19,7 +20,14 @@ impl WriteTo for X11Cursor<'_> {
       let duration = frame.duration.and_then(|d| Some(d.milliseconds()));
 
       for image in &frame.images {
-        let pixels = image.raster.to_bgra();
+        let bgra = image
+          .raster
+          .pixmap()
+          .clone()
+          .into_rgb_alpha()
+          .into_iter()
+          .flat_map(|p| [p.b, p.g, p.r, p.a])
+          .collect();
 
         chunks.push(XcursorImageChunk::new(
           image.nominal,
@@ -28,7 +36,7 @@ impl WriteTo for X11Cursor<'_> {
           image.hotspot.x,
           image.hotspot.y,
           duration,
-          pixels,
+          bgra,
         ));
       }
     }

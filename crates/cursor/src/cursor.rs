@@ -1,4 +1,4 @@
-use crate_formats::RasterImage;
+use crate_formats::raster::RasterImage;
 
 use crate::{CursorDuration, CursorHotspot};
 

@@ -18,7 +18,6 @@ crate_cursor.path = "crates/cursor"
 crate_formats.path = "crates/formats"
 
 byteorder = "1.5.0"
-num_enum = "0.7.6"
 toml = "1.1.4"
 
 [workspace.dependencies.clap]

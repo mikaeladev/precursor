@@ -6,4 +6,5 @@ license.workspace = true
 
 [dependencies]
 byteorder.workspace = true
+indexmap = "2.14.0"
 png = "0.18.1"

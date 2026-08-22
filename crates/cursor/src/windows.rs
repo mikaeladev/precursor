@@ -1,8 +1,7 @@
 use std::io::{Error as IoError, Result as IoResult, Write};
 
-use crate_formats::{
-  AniFile, CurFile, IconColorCount, IconDirEntry, PngImage, WriteTo,
-};
+use crate_formats::raster::PngImage;
+use crate_formats::{AniFile, CurFile, IconColorCount, IconDirEntry, WriteTo};
 
 use crate::{Cursor, CursorFrame};
 

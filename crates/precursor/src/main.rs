@@ -8,7 +8,8 @@ use std::path::PathBuf;
 
 use crate_config::*;
 use crate_cursor::*;
-use crate_formats::{PngImage, RasterImage, WriteTo};
+use crate_formats::WriteTo;
+use crate_formats::raster::{PngImage, RasterImage};
 
 use clap::Parser;
 

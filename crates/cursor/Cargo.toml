@@ -7,5 +7,4 @@ license.workspace = true
 [dependencies]
 byteorder.workspace = true
 crate_formats.workspace = true
-num_enum.workspace = true
 serde.workspace = true

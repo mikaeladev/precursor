@@ -1,11 +1,11 @@
 mod ani;
 mod cur;
-mod images;
 mod xcursor;
+
+pub mod raster;
 
 pub use ani::*;
 pub use cur::*;
-pub use images::*;
 pub use xcursor::*;
 
 use std::io::{Result as IoResult, Write};
