@@ -46,7 +46,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_from_str() {
+  fn from_str() {
     assert_eq!(
       CursorHotspot::from_str("4,4").unwrap(),
       CursorHotspot::new(4, 4)
@@ -54,7 +54,7 @@ mod tests {
   }
 
   #[test]
-  fn test_from_str_err() {
+  fn from_str_err() {
     assert_eq!(
       CursorHotspot::from_str("test"),
       Err(ParseCursorHotspotError)

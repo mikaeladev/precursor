@@ -54,7 +54,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_platform_alias_from_str() {
+  fn from_str() {
     assert_eq!(
       PlatformAlias::from_str("test"),
       Ok(PlatformAlias::Global("test".into())),
@@ -74,7 +74,7 @@ mod tests {
   }
 
   #[test]
-  fn test_platform_alias_deserialize() {
+  fn deserialize() {
     use toml::Value;
 
     let exprs = [

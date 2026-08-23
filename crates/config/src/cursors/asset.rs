@@ -125,12 +125,12 @@ mod tests {
   use toml::Value;
 
   #[test]
-  fn test_from_path_buf() {
+  fn from_path_buf() {
     assert_eq!(AssetConfig::from(PathBuf::new()), Default::default());
   }
 
   #[test]
-  fn test_deserialize_from_string() {
+  fn deserialize_from_string() {
     let raw_value = r#""/foo/bar""#;
 
     let de = raw_value.parse::<Value>().unwrap();
@@ -140,7 +140,7 @@ mod tests {
   }
 
   #[test]
-  fn test_deserialize_from_table() {
+  fn deserialize_from_table() {
     let raw_value = r#"{ path = "/foo/bar" }"#;
 
     let de = raw_value.parse::<Value>().unwrap();
@@ -150,7 +150,7 @@ mod tests {
   }
 
   #[test]
-  fn test_deserialize_from_table_with_transforms() {
+  fn deserialize_from_table_with_transforms() {
     let raw_value =
       r#"{ path = "/foo/bar", flip = true, flop = true, rotate = 180 }"#;
 
@@ -169,7 +169,7 @@ mod tests {
   }
 
   #[test]
-  fn test_deserialize_from_table_with_transforms_error() {
+  fn deserialize_from_table_with_transforms_err() {
     let raw_value =
       r#"{ path = "/foo/bar", flip = true, flop = true, rotate = 365 }"#;
 

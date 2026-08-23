@@ -120,12 +120,12 @@ mod tests {
   use toml::Value;
 
   #[test]
-  fn test_from_usize() {
+  fn from_usize() {
     assert_eq!(ScaledCursorFrameConfig::from(0), Default::default());
   }
 
   #[test]
-  fn test_deserialize_from_int() {
+  fn deserialize_from_int() {
     let de = "0".parse::<Value>().unwrap();
     let value = ScaledCursorFrameConfig::deserialize(de).unwrap();
 
@@ -133,7 +133,7 @@ mod tests {
   }
 
   #[test]
-  fn test_deserialize_from_int_error() {
+  fn deserialize_from_int_err() {
     let de = "-1".parse::<Value>().unwrap();
     let value = ScaledCursorFrameConfig::deserialize(de);
 
@@ -141,7 +141,7 @@ mod tests {
   }
 
   #[test]
-  fn test_deserialize_from_table() {
+  fn deserialize_from_table() {
     let raw_value = r#"{ asset = 0 }"#;
 
     let de = raw_value.parse::<Value>().unwrap();
@@ -151,7 +151,7 @@ mod tests {
   }
 
   #[test]
-  fn test_deserialize_from_table_with_overrides() {
+  fn deserialize_from_table_with_overrides() {
     let raw_value =
       r#"{ asset = 0, nominal = 24, hotspot = [4, 4], duration = 200 }"#;
 

@@ -38,7 +38,7 @@ mod tests {
   const EXPECTED_JIF: u32 = 12;
 
   #[test]
-  fn test_ms_to_jiffy() {
+  fn ms_to_jiffy() {
     assert_eq!(
       CursorDuration::from_milliseconds(EXPECTED_MS).jiffies(),
       EXPECTED_JIF
@@ -46,7 +46,7 @@ mod tests {
   }
 
   #[test]
-  fn test_jiffy_to_ms() {
+  fn jiffy_to_ms() {
     assert_eq!(
       CursorDuration::from_jiffies(EXPECTED_JIF).milliseconds(),
       EXPECTED_MS
@@ -54,7 +54,7 @@ mod tests {
   }
 
   #[test]
-  fn test_inner_eq() {
+  fn inner_eq() {
     assert_eq!(
       CursorDuration::from_milliseconds(EXPECTED_MS),
       CursorDuration::from_jiffies(EXPECTED_JIF)

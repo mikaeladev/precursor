@@ -24,7 +24,7 @@ mod tests {
   use crate_cursor::{CursorDuration, CursorHotspot};
 
   #[test]
-  fn test_deserialize_from_document() {
+  fn deserialize_from_document() {
     let raw_value = r#"
       [package]
       name = "test"
