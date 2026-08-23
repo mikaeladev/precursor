@@ -49,7 +49,7 @@ impl<'f> TryFrom<&'f CursorFrame> for CurFile {
     let mut images = Vec::with_capacity(num_images);
 
     for image in value.images.iter() {
-      let png = image.raster.encode_png()?;
+      let png = image.pixmap.encode_png()?;
 
       entries.push(IconDirEntry::new(
         image.nominal as u16,

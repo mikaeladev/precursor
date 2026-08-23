@@ -1,4 +1,4 @@
-use crate_formats::raster::RasterImage;
+use crate_formats::raster::DynamicPixmap;
 
 use crate::{CursorDuration, CursorHotspot};
 
@@ -23,7 +23,7 @@ pub struct CursorFrame {
 pub struct CursorImage {
   pub nominal: u32,
   pub hotspot: CursorHotspot,
-  pub raster: RasterImage,
+  pub pixmap: DynamicPixmap,
 }
 
 #[derive(Clone)]

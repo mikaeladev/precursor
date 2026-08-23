@@ -1,9 +1,18 @@
 use std::array::IntoIter;
 
-/// 1 channel for luminence.
+pub trait Pixel {
+  /// Number of channels in the pixel.
+  const NUM_CHANNELS: usize;
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LumaPixel {
   pub y: u8,
+}
+
+impl Pixel for LumaPixel {
+  /// 1 channel for luminence.
+  const NUM_CHANNELS: usize = 1;
 }
 
 impl From<u8> for LumaPixel {
@@ -12,11 +21,15 @@ impl From<u8> for LumaPixel {
   }
 }
 
-/// 2 channels for luminence and alpha.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LumaAlphaPixel {
   pub y: u8,
   pub a: u8,
+}
+
+impl Pixel for LumaAlphaPixel {
+  /// 2 channels for luminence and alpha.
+  const NUM_CHANNELS: usize = 2;
 }
 
 impl From<[u8; 2]> for LumaAlphaPixel {
@@ -34,12 +47,16 @@ impl IntoIterator for LumaAlphaPixel {
   }
 }
 
-/// 3 channels for red, green, and blue.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RgbPixel {
   pub r: u8,
   pub g: u8,
   pub b: u8,
+}
+
+impl Pixel for RgbPixel {
+  /// 3 channels for red, green, and blue.
+  const NUM_CHANNELS: usize = 3;
 }
 
 impl From<[u8; 3]> for RgbPixel {
@@ -61,13 +78,17 @@ impl IntoIterator for RgbPixel {
   }
 }
 
-/// 4 channels for red, green, blue, and alpha.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RgbAlphaPixel {
   pub r: u8,
   pub g: u8,
   pub b: u8,
   pub a: u8,
+}
+
+impl Pixel for RgbAlphaPixel {
+  /// 4 channels for red, green, blue, and alpha.
+  const NUM_CHANNELS: usize = 4;
 }
 
 impl From<[u8; 4]> for RgbAlphaPixel {
@@ -90,7 +111,23 @@ impl IntoIterator for RgbAlphaPixel {
   }
 }
 
-pub trait IntoPixel {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PaletteIndex {
+  pub i: u8,
+}
+
+impl Pixel for PaletteIndex {
+  /// 1 channel for the index.
+  const NUM_CHANNELS: usize = 1;
+}
+
+impl From<u8> for PaletteIndex {
+  fn from(i: u8) -> Self {
+    Self { i }
+  }
+}
+
+pub trait IntoNonPalettePixel {
   /// Converts the value to a `LumaPixel`.
   fn into_luma(self) -> LumaPixel;
 
@@ -104,7 +141,7 @@ pub trait IntoPixel {
   fn into_rgb_alpha(self) -> RgbAlphaPixel;
 }
 
-impl IntoPixel for LumaPixel {
+impl IntoNonPalettePixel for LumaPixel {
   fn into_luma(self) -> Self {
     self
   }
@@ -134,7 +171,7 @@ impl IntoPixel for LumaPixel {
   }
 }
 
-impl IntoPixel for LumaAlphaPixel {
+impl IntoNonPalettePixel for LumaAlphaPixel {
   fn into_luma(self) -> LumaPixel {
     LumaPixel { y: self.y }
   }
@@ -161,7 +198,7 @@ impl IntoPixel for LumaAlphaPixel {
   }
 }
 
-impl IntoPixel for RgbPixel {
+impl IntoNonPalettePixel for RgbPixel {
   fn into_luma(self) -> LumaPixel {
     let [r, g, b] = [self.r as f32, self.b as f32, self.g as f32];
 
@@ -191,7 +228,7 @@ impl IntoPixel for RgbPixel {
   }
 }
 
-impl IntoPixel for RgbAlphaPixel {
+impl IntoNonPalettePixel for RgbAlphaPixel {
   fn into_luma(self) -> LumaPixel {
     LumaPixel {
       y: self.into_rgb().into_luma().y,

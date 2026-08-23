@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use crate_formats::raster::IntoPixmap;
+use crate_formats::raster::{IntoPixmap, Pixmap};
 use crate_formats::write::{WriteResult, WriteTo};
 use crate_formats::{XcursorFile, XcursorImageChunk};
 
@@ -22,18 +22,18 @@ impl WriteTo for X11Cursor<'_> {
 
       for image in &frame.images {
         let bgra = image
-          .raster
-          .pixmap()
+          .pixmap
           .clone()
           .into_rgb_alpha()
+          .pixels()
           .into_iter()
           .flat_map(|p| [p.b, p.g, p.r, p.a])
           .collect();
 
         chunks.push(XcursorImageChunk::new(
           image.nominal,
-          image.raster.width(),
-          image.raster.height(),
+          image.pixmap.width(),
+          image.pixmap.height(),
           image.hotspot.x,
           image.hotspot.y,
           duration,

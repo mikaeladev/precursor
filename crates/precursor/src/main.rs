@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use crate_config::*;
 use crate_cursor::*;
-use crate_formats::raster::{PngImage, RasterImage};
+use crate_formats::raster::{DynamicPixmap, PngImage};
 use crate_formats::write::WriteTo;
 
 use clap::Parser;
@@ -112,12 +112,12 @@ fn cursor_from_config(cursor_config: CursorConfig) -> PrecursorResult<Cursor> {
 
       // TODO: separate asset decoding/transform logic
       let png_reader = BufReader::new(File::open(&asset.path)?);
-      let raster = RasterImage::decode_png(png_reader)?;
+      let pixmap = DynamicPixmap::decode_png(png_reader)?;
 
       let image = CursorImage {
         nominal,
         hotspot,
-        raster,
+        pixmap,
       };
 
       // TODO: scale image for various DPIs
@@ -163,12 +163,12 @@ fn cursor_from_config(cursor_config: CursorConfig) -> PrecursorResult<Cursor> {
 
         // TODO: separate asset decoding/transform logic
         let png_reader = BufReader::new(File::open(&asset_config.path)?);
-        let raster = RasterImage::decode_png(png_reader)?;
+        let pixmap = DynamicPixmap::decode_png(png_reader)?;
 
         let image = CursorImage {
           nominal: frame.nominal.unwrap_or(nominal),
           hotspot: frame.hotspot.unwrap_or(hotspot),
-          raster,
+          pixmap,
         };
 
         // TODO: scale image for various DPIs

@@ -1,6 +1,8 @@
+use crate::raster::Pixmap;
+
 use super::{
-  IndexedPixmap, IntoPixmap, LumaAlphaPixmap, LumaPixmap, Pixmap,
-  RgbAlphaPixmap, RgbPixmap,
+  IndexedPixmap, IntoPixmap, LumaAlphaPixmap, LumaPixmap, RgbAlphaPixmap,
+  RgbPixmap,
 };
 
 #[derive(Debug, Clone)]
@@ -13,26 +15,36 @@ pub enum DynamicPixmap {
 }
 
 impl DynamicPixmap {
-  /// Returns the number of pixels in the pixmap.
-  pub const fn pixels_len(&self) -> usize {
+  /// Returns the width of the pixmap.
+  pub const fn width(&self) -> u32 {
     match self {
-      Self::Luma(v) => v.len(),
-      Self::LumaAlpha(v) => v.len(),
-      Self::Rgb(v) => v.len(),
-      Self::RgbAlpha(v) => v.len(),
-      Self::Indexed(v) => v.pixels.len(),
+      Self::Luma(p) => p.width,
+      Self::LumaAlpha(p) => p.width,
+      Self::Rgb(p) => p.width,
+      Self::RgbAlpha(p) => p.width,
+      Self::Indexed(p) => p.width,
     }
   }
-}
 
-impl Pixmap for DynamicPixmap {
-  fn concat(&self) -> Vec<u8> {
+  /// Returns the height of the pixmap.
+  pub const fn height(&self) -> u32 {
     match self {
-      Self::Luma(v) => v.concat(),
-      Self::LumaAlpha(v) => v.concat(),
-      Self::Rgb(v) => v.concat(),
-      Self::RgbAlpha(v) => v.concat(),
-      Self::Indexed(v) => v.concat(),
+      Self::Luma(p) => p.height,
+      Self::LumaAlpha(p) => p.height,
+      Self::Rgb(p) => p.height,
+      Self::RgbAlpha(p) => p.height,
+      Self::Indexed(p) => p.height,
+    }
+  }
+
+  /// Copies and concatenates the pixels into a new `Vec<u8>`.
+  pub fn pixels_concat(&self) -> Vec<u8> {
+    match self {
+      Self::Luma(p) => p.pixels_concat(),
+      Self::LumaAlpha(p) => p.pixels_concat(),
+      Self::Rgb(p) => p.pixels_concat(),
+      Self::RgbAlpha(p) => p.pixels_concat(),
+      Self::Indexed(p) => p.pixels_concat(),
     }
   }
 }
