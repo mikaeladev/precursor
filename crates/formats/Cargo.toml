@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-byteorder.workspace = true
+byteorder = "1.5.0"
 indexmap = "2.14.0"
 png = "0.18.1"
+thiserror.workspace = true

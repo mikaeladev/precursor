@@ -1,8 +1,10 @@
-use std::io::{Result as IoResult, Write};
+use std::io::Write;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use crate::{CurFile, WriteTo};
+use crate::write::{WriteResult, WriteTo};
+
+use super::CurFile;
 
 pub struct AniFile {
   header: HeaderChunk,
@@ -47,7 +49,7 @@ impl AniFile {
 }
 
 impl WriteTo for AniFile {
-  fn write_to<W: Write>(self, mut writer: W) -> IoResult<()> {
+  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
     let riff_size = (self.inner_size()) as u32;
 
     writer.write_all(b"RIFF")?;
@@ -98,7 +100,7 @@ impl HeaderChunk {
 }
 
 impl WriteTo for HeaderChunk {
-  fn write_to<W: Write>(self, mut writer: W) -> IoResult<()> {
+  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
     writer.write_all(b"anih")?;
 
     writer.write_u32::<LittleEndian>(Self::INNER_SIZE as u32)?;
@@ -125,7 +127,7 @@ impl RatesChunk {
 }
 
 impl WriteTo for RatesChunk {
-  fn write_to<W: Write>(self, mut writer: W) -> IoResult<()> {
+  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
     writer.write_all(b"rate")?;
 
     for rate in self.0.into_iter() {
@@ -146,7 +148,7 @@ impl SequenceChunk {
 }
 
 impl WriteTo for SequenceChunk {
-  fn write_to<W: Write>(self, mut writer: W) -> IoResult<()> {
+  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
     writer.write_all(b"seq ")?;
 
     for seq in self.0.into_iter() {
@@ -186,7 +188,7 @@ impl FramesChunk {
 }
 
 impl WriteTo for FramesChunk {
-  fn write_to<W: Write>(self, mut writer: W) -> IoResult<()> {
+  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
     writer.write_all(b"fram")?;
 
     for icon in self.0 {

@@ -1,20 +1,22 @@
-use std::io::{Error as IoError, Result as IoResult, Write};
+use std::io::Write;
 
-use crate_formats::raster::PngImage;
-use crate_formats::{AniFile, CurFile, IconColorCount, IconDirEntry, WriteTo};
+use crate_formats::raster::{PngImage, RasterError};
+use crate_formats::write::{WriteResult, WriteTo};
+use crate_formats::{AniFile, CurFile, IconColorCount, IconDirEntry};
 
 use crate::{Cursor, CursorFrame};
 
 pub struct WindowsCursor<'c>(pub &'c Cursor);
 
-impl WriteTo for WindowsCursor<'_> {
-  fn write_to<W: Write>(self, writer: W) -> IoResult<()> {
+impl WindowsCursor<'_> {
+  /// Writes the formatted data to `writer`.
+  pub fn write_to<W: Write>(self, writer: W) -> WriteResult {
     let Self(cursor) = self;
 
     if cursor.frames.len() == 1 {
       let frame = cursor.frames.first().unwrap();
 
-      CurFile::try_from(frame)?.write_to(writer)
+      CurFile::try_from(frame)?.write_to(writer)?;
     } else {
       let num_frames = cursor.frames.len();
 
@@ -30,13 +32,15 @@ impl WriteTo for WindowsCursor<'_> {
         sequence.push(index as u32);
       }
 
-      AniFile::new(frames, rates, sequence).write_to(writer)
+      AniFile::new(frames, rates, sequence).write_to(writer)?;
     }
+
+    Ok(())
   }
 }
 
 impl<'f> TryFrom<&'f CursorFrame> for CurFile {
-  type Error = IoError;
+  type Error = RasterError;
 
   fn try_from(value: &'f CursorFrame) -> Result<Self, Self::Error> {
     let num_images = value.images.len();

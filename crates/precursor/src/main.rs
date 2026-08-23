@@ -8,15 +8,15 @@ use std::path::PathBuf;
 
 use crate_config::*;
 use crate_cursor::*;
-use crate_formats::WriteTo;
 use crate_formats::raster::{PngImage, RasterImage};
+use crate_formats::write::WriteTo;
 
 use clap::Parser;
 
 use crate::args::{Cli, Command};
-use crate::error::{Error, IoError};
+use crate::error::{IoError, PrecursorResult};
 
-fn main() -> Result<(), Error> {
+fn main() -> PrecursorResult {
   let args = Cli::parse();
 
   match args.command {
@@ -93,14 +93,14 @@ fn get_target_directory(
   }
 }
 
-fn read_config(reader: BufReader<File>) -> Result<Config, Error> {
+fn read_config(reader: BufReader<File>) -> PrecursorResult<Config> {
   let config_str = read_to_string(reader)?;
   let config = toml::from_str::<Config>(&config_str)?;
 
   Ok(config)
 }
 
-fn cursor_from_config(cursor_config: CursorConfig) -> Result<Cursor, Error> {
+fn cursor_from_config(cursor_config: CursorConfig) -> PrecursorResult<Cursor> {
   Ok(match cursor_config {
     CursorConfig::ScaledStatic(value) => {
       let ScaledStaticCursorConfig {

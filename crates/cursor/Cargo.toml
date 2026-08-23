@@ -5,6 +5,5 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-byteorder.workspace = true
 crate_formats.workspace = true
 serde.workspace = true

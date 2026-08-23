@@ -1,14 +1,15 @@
-use std::io::{Result as IoResult, Write};
+use std::io::Write;
 
 use crate_formats::raster::IntoPixmap;
-use crate_formats::{WriteTo, XcursorFile, XcursorImageChunk};
+use crate_formats::write::{WriteResult, WriteTo};
+use crate_formats::{XcursorFile, XcursorImageChunk};
 
 use crate::Cursor;
 
 pub struct X11Cursor<'c>(pub &'c Cursor);
 
 impl WriteTo for X11Cursor<'_> {
-  fn write_to<W: Write>(self, writer: W) -> IoResult<()> {
+  fn write_to<W: Write>(self, writer: W) -> WriteResult {
     let Self(cursor) = self;
 
     let num_chunks =

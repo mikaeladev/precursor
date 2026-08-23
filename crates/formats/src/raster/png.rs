@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{BufReader, Result as IoResult};
+use std::io::BufReader;
 
 use png::{
   BitDepth, ColorType, Compression, Decoder, Encoder, OutputInfo,
@@ -8,21 +8,21 @@ use png::{
 
 use super::{
   ConcatPixmap, GrayscaleAlphaPixel, GrayscalePixel, IndexedPixmap, Pixmap,
-  RasterImage, RgbAlphaPixel, RgbPixel,
+  RasterError, RasterImage, RgbAlphaPixel, RgbPixel,
 };
 
 pub trait PngImage {
   /// Decodes a PNG image into `Self`.
-  fn decode_png(reader: BufReader<File>) -> IoResult<Self>
+  fn decode_png(reader: BufReader<File>) -> Result<Self, RasterError>
   where
     Self: Sized;
 
   /// Encodes `Self` into a PNG image.
-  fn encode_png(&self) -> IoResult<Vec<u8>>;
+  fn encode_png(&self) -> Result<Vec<u8>, RasterError>;
 }
 
 impl PngImage for RasterImage {
-  fn decode_png(reader: BufReader<File>) -> IoResult<Self> {
+  fn decode_png(reader: BufReader<File>) -> Result<Self, RasterError> {
     let mut decoder = Decoder::new(reader);
     decoder.set_transformations(Transformations::STRIP_16);
 
@@ -113,10 +113,10 @@ impl PngImage for RasterImage {
       }
     };
 
-    Ok(Self::new(width, height, pixmap))
+    Self::new(width, height, pixmap)
   }
 
-  fn encode_png(&self) -> IoResult<Vec<u8>> {
+  fn encode_png(&self) -> Result<Vec<u8>, RasterError> {
     let width = self.width();
     let height = self.height();
     let pixmap = self.pixmap();

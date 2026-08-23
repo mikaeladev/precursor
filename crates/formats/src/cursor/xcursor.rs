@@ -1,8 +1,8 @@
-use std::io::{Result as IoResult, Write};
+use std::io::Write;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use crate::WriteTo;
+use crate::write::{WriteResult, WriteTo};
 
 pub struct XcursorFile<'c> {
   chunks: Vec<XcursorChunk<'c>>,
@@ -49,7 +49,7 @@ impl<'c> XcursorFile<'c> {
 }
 
 impl WriteTo for XcursorFile<'_> {
-  fn write_to<W: Write>(self, mut writer: W) -> IoResult<()> {
+  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
     let num_chunks = self.chunks.len();
 
     writer.write_all(b"Xcur")?;
@@ -103,7 +103,7 @@ impl XcursorChunk<'_> {
 }
 
 impl WriteTo for XcursorChunk<'_> {
-  fn write_to<W: Write>(self, writer: W) -> IoResult<()> {
+  fn write_to<W: Write>(self, writer: W) -> WriteResult {
     match self {
       Self::Comment(c) => c.write_to(writer),
       Self::Image(c) => c.write_to(writer),
@@ -157,14 +157,15 @@ impl<'s> XcursorCommentChunk<'s> {
 }
 
 impl WriteTo for XcursorCommentChunk<'_> {
-  fn write_to<W: Write>(self, mut writer: W) -> IoResult<()> {
+  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
     writer.write_u32::<LittleEndian>(Self::HEADER_SIZE as u32)?;
     writer.write_u32::<LittleEndian>(Self::HEADER_TYPE)?;
     writer.write_u32::<LittleEndian>(self.subtype as u32)?;
     writer.write_u32::<LittleEndian>(Self::HEADER_VERSION)?;
     writer.write_u32::<LittleEndian>(self.string.len() as u32)?;
 
-    writer.write_all(self.string.as_bytes())
+    writer.write_all(self.string.as_bytes())?;
+    Ok(())
   }
 }
 
@@ -236,7 +237,7 @@ impl XcursorImageChunk {
 }
 
 impl WriteTo for XcursorImageChunk {
-  fn write_to<W: Write>(self, mut writer: W) -> IoResult<()> {
+  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
     writer.write_u32::<LittleEndian>(Self::HEADER_SIZE as u32)?;
     writer.write_u32::<LittleEndian>(Self::HEADER_TYPE)?;
     writer.write_u32::<LittleEndian>(self.nominal)?;
@@ -247,7 +248,8 @@ impl WriteTo for XcursorImageChunk {
     writer.write_u32::<LittleEndian>(self.hotspot_y)?;
     writer.write_u32::<LittleEndian>(self.delay.unwrap_or(0))?;
 
-    writer.write_all(&self.pixels)
+    writer.write_all(&self.pixels)?;
+    Ok(())
   }
 }
 

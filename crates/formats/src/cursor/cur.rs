@@ -1,8 +1,8 @@
-use std::io::{Result as IoResult, Write};
+use std::io::Write;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use crate::WriteTo;
+use crate::write::{WriteResult, WriteTo};
 
 pub struct CurFile {
   directory: IconDir,
@@ -39,7 +39,7 @@ impl CurFile {
 }
 
 impl WriteTo for CurFile {
-  fn write_to<W: Write>(self, mut writer: W) -> IoResult<()> {
+  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
     self.directory.write_to(&mut writer)?;
 
     for image in self.images {
@@ -61,7 +61,7 @@ impl IconDir {
 }
 
 impl WriteTo for IconDir {
-  fn write_to<W: Write>(self, mut writer: W) -> IoResult<()> {
+  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
     writer.write_u16::<LittleEndian>(0)?; // reserved
     writer.write_u16::<LittleEndian>(2)?; // magic type
 
