@@ -2,11 +2,11 @@ use std::array::IntoIter;
 
 /// 1 channel for luminence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct GrayscalePixel {
+pub struct LumaPixel {
   pub y: u8,
 }
 
-impl From<u8> for GrayscalePixel {
+impl From<u8> for LumaPixel {
   fn from(y: u8) -> Self {
     Self { y }
   }
@@ -14,18 +14,18 @@ impl From<u8> for GrayscalePixel {
 
 /// 2 channels for luminence and alpha.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct GrayscaleAlphaPixel {
+pub struct LumaAlphaPixel {
   pub y: u8,
   pub a: u8,
 }
 
-impl From<[u8; 2]> for GrayscaleAlphaPixel {
+impl From<[u8; 2]> for LumaAlphaPixel {
   fn from(ya: [u8; 2]) -> Self {
     Self { y: ya[0], a: ya[1] }
   }
 }
 
-impl IntoIterator for GrayscaleAlphaPixel {
+impl IntoIterator for LumaAlphaPixel {
   type Item = u8;
   type IntoIter = IntoIter<Self::Item, 2>;
 
@@ -91,11 +91,11 @@ impl IntoIterator for RgbAlphaPixel {
 }
 
 pub trait IntoPixel {
-  /// Converts the value to a `GrayscalePixel`.
-  fn into_grayscale(self) -> GrayscalePixel;
+  /// Converts the value to a `LumaPixel`.
+  fn into_luma(self) -> LumaPixel;
 
-  /// Converts the value to a `GrayscaleAlphaPixel`.
-  fn into_grayscale_alpha(self) -> GrayscaleAlphaPixel;
+  /// Converts the value to a `LumaAlphaPixel`.
+  fn into_luma_alpha(self) -> LumaAlphaPixel;
 
   /// Converts the value to an `RgbPixel`.
   fn into_rgb(self) -> RgbPixel;
@@ -104,13 +104,13 @@ pub trait IntoPixel {
   fn into_rgb_alpha(self) -> RgbAlphaPixel;
 }
 
-impl IntoPixel for GrayscalePixel {
-  fn into_grayscale(self) -> Self {
+impl IntoPixel for LumaPixel {
+  fn into_luma(self) -> Self {
     self
   }
 
-  fn into_grayscale_alpha(self) -> GrayscaleAlphaPixel {
-    GrayscaleAlphaPixel {
+  fn into_luma_alpha(self) -> LumaAlphaPixel {
+    LumaAlphaPixel {
       y: self.y,
       a: u8::MAX,
     }
@@ -134,12 +134,12 @@ impl IntoPixel for GrayscalePixel {
   }
 }
 
-impl IntoPixel for GrayscaleAlphaPixel {
-  fn into_grayscale(self) -> GrayscalePixel {
-    GrayscalePixel { y: self.y }
+impl IntoPixel for LumaAlphaPixel {
+  fn into_luma(self) -> LumaPixel {
+    LumaPixel { y: self.y }
   }
 
-  fn into_grayscale_alpha(self) -> GrayscaleAlphaPixel {
+  fn into_luma_alpha(self) -> LumaAlphaPixel {
     self
   }
 
@@ -162,17 +162,17 @@ impl IntoPixel for GrayscaleAlphaPixel {
 }
 
 impl IntoPixel for RgbPixel {
-  fn into_grayscale(self) -> GrayscalePixel {
+  fn into_luma(self) -> LumaPixel {
     let [r, g, b] = [self.r as f32, self.b as f32, self.g as f32];
 
-    GrayscalePixel {
+    LumaPixel {
       y: (r * 0.2126 + g * 0.7152 + b * 0.0722) as u8,
     }
   }
 
-  fn into_grayscale_alpha(self) -> GrayscaleAlphaPixel {
-    GrayscaleAlphaPixel {
-      y: Self::into_grayscale(self).y,
+  fn into_luma_alpha(self) -> LumaAlphaPixel {
+    LumaAlphaPixel {
+      y: Self::into_luma(self).y,
       a: u8::MAX,
     }
   }
@@ -192,16 +192,16 @@ impl IntoPixel for RgbPixel {
 }
 
 impl IntoPixel for RgbAlphaPixel {
-  fn into_grayscale(self) -> GrayscalePixel {
-    GrayscalePixel {
-      y: self.into_rgb().into_grayscale().y,
+  fn into_luma(self) -> LumaPixel {
+    LumaPixel {
+      y: self.into_rgb().into_luma().y,
     }
   }
 
-  fn into_grayscale_alpha(self) -> GrayscaleAlphaPixel {
-    GrayscaleAlphaPixel {
+  fn into_luma_alpha(self) -> LumaAlphaPixel {
+    LumaAlphaPixel {
       a: self.a,
-      y: self.into_grayscale().y,
+      y: self.into_luma().y,
     }
   }
 

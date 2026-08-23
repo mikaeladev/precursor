@@ -1,10 +1,8 @@
 mod error;
-mod pixel;
 mod pixmap;
 mod png;
 
 pub use error::*;
-pub use pixel::*;
 pub use pixmap::*;
 pub use png::*;
 
@@ -12,7 +10,7 @@ pub use png::*;
 pub struct RasterImage {
   width: u32,
   height: u32,
-  pixmap: Pixmap,
+  pixmap: DynamicPixmap,
 }
 
 impl RasterImage {
@@ -20,7 +18,7 @@ impl RasterImage {
   pub fn new(
     width: u32,
     height: u32,
-    pixmap: Pixmap,
+    pixmap: DynamicPixmap,
   ) -> Result<Self, RasterError> {
     let expected_pixels = width as usize * height as usize;
     let actual_pixels = pixmap.pixels_len();
@@ -47,12 +45,12 @@ impl RasterImage {
   }
 
   /// Returns a reference to the pixmap.
-  pub const fn pixmap(&self) -> &Pixmap {
+  pub const fn pixmap(&self) -> &DynamicPixmap {
     &self.pixmap
   }
 
   /// Consumes the struct and returns the pixmap.
-  pub fn into_pixmap(self) -> Pixmap {
+  pub fn into_pixmap(self) -> DynamicPixmap {
     self.pixmap
   }
 }

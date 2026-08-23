@@ -7,8 +7,8 @@ use png::{
 };
 
 use super::{
-  ConcatPixmap, GrayscaleAlphaPixel, GrayscalePixel, IndexedPixmap, Pixmap,
-  RasterError, RasterImage, RgbAlphaPixel, RgbPixel,
+  DynamicPixmap, IndexedPixmap, LumaAlphaPixel, LumaPixel, Pixmap, RasterError,
+  RasterImage, RgbAlphaPixel, RgbPixel,
 };
 
 pub trait PngImage {
@@ -19,6 +19,9 @@ pub trait PngImage {
 
   /// Encodes `Self` into a PNG image.
   fn encode_png(&self) -> Result<Vec<u8>, RasterError>;
+
+  /// Returns the associated PNG [`ColorType`].
+  fn color_type(&self) -> ColorType;
 }
 
 impl PngImage for RasterImage {
@@ -42,10 +45,10 @@ impl PngImage for RasterImage {
     } = png_reader.next_frame(&mut frame_buffer)?;
 
     let pixmap = match color_type {
-      ColorType::Grayscale => Pixmap::Grayscale(
+      ColorType::Grayscale => DynamicPixmap::Luma(
         frame_buffer
           .into_iter()
-          .map(|chunk| GrayscalePixel::from(chunk))
+          .map(|chunk| LumaPixel::from(chunk))
           .collect(),
       ),
 
@@ -53,10 +56,10 @@ impl PngImage for RasterImage {
         let (chunks, remainder) = frame_buffer.as_chunks::<2>();
         assert!(remainder.is_empty());
 
-        Pixmap::GrayscaleAlpha(
+        DynamicPixmap::LumaAlpha(
           chunks
             .into_iter()
-            .map(|chunk| GrayscaleAlphaPixel::from(*chunk))
+            .map(|chunk| LumaAlphaPixel::from(*chunk))
             .collect(),
         )
       }
@@ -78,7 +81,7 @@ impl PngImage for RasterImage {
             _ => None,
           };
 
-          Pixmap::Indexed(IndexedPixmap {
+          DynamicPixmap::Indexed(IndexedPixmap {
             pixels: frame_buffer,
             palette,
             trns,
@@ -92,7 +95,7 @@ impl PngImage for RasterImage {
         let (chunks, remainder) = frame_buffer.as_chunks::<3>();
         assert!(remainder.is_empty());
 
-        Pixmap::Rgb(
+        DynamicPixmap::Rgb(
           chunks
             .into_iter()
             .map(|chunk| RgbPixel::from(*chunk))
@@ -104,7 +107,7 @@ impl PngImage for RasterImage {
         let (chunks, remainder) = frame_buffer.as_chunks::<4>();
         assert!(remainder.is_empty());
 
-        Pixmap::RgbAlpha(
+        DynamicPixmap::RgbAlpha(
           chunks
             .into_iter()
             .map(|chunk| RgbAlphaPixel::from(*chunk))
@@ -126,13 +129,11 @@ impl PngImage for RasterImage {
     let mut buffer = Vec::with_capacity(capacity);
     let mut encoder = Encoder::new(&mut buffer, width, height);
 
-    let color_type = pixmap.color_type();
-
     encoder.set_depth(BitDepth::Eight);
-    encoder.set_color(color_type);
+    encoder.set_color(self.color_type());
     encoder.set_compression(Compression::High);
 
-    if let Pixmap::Indexed(indexed_pixmap) = pixmap {
+    if let DynamicPixmap::Indexed(indexed_pixmap) = pixmap {
       let palette: Vec<_> = indexed_pixmap
         .palette
         .iter()
@@ -152,5 +153,17 @@ impl PngImage for RasterImage {
     writer.finish()?;
 
     Ok(buffer)
+  }
+
+  fn color_type(&self) -> ColorType {
+    use DynamicPixmap::*;
+
+    match self.pixmap {
+      Luma(_) => ColorType::Grayscale,
+      LumaAlpha(_) => ColorType::GrayscaleAlpha,
+      Rgb(_) => ColorType::Rgb,
+      RgbAlpha(_) => ColorType::Rgba,
+      Indexed(_) => ColorType::Indexed,
+    }
   }
 }
