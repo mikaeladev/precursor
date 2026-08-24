@@ -13,7 +13,15 @@ pub struct AssetConfig {
   /// Whether the image should be vertically flipped.
   pub flop: Option<bool>,
   /// How much the image should be rotated.
-  pub rotate: Option<u16>,
+  pub rotate: Option<RotateValue>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u16)]
+pub enum RotateValue {
+  Ninety = 90,
+  OneEighty = 180,
+  TwoSeventy = 270,
 }
 
 impl From<PathBuf> for AssetConfig {
@@ -92,12 +100,18 @@ impl<'de> Deserialize<'de> for AssetConfig {
                 return Err(DeError::duplicate_field("rotate"));
               }
 
-              let value = map.next_value()?;
-              if value > 360 {
-                return Err(DeError::custom("rotate must be ≤ 360"));
-              }
+              let value: u16 = map.next_value()?;
 
-              rotate = Some(value);
+              rotate = match value {
+                90 => Some(RotateValue::Ninety),
+                180 => Some(RotateValue::OneEighty),
+                270 => Some(RotateValue::TwoSeventy),
+                _ => {
+                  return Err(DeError::custom(
+                    "rotate must be one of 90, 180, or 270",
+                  ));
+                }
+              };
             }
           }
         }
@@ -163,7 +177,7 @@ mod tests {
         path: PathBuf::from("/foo/bar"),
         flip: Some(true),
         flop: Some(true),
-        rotate: Some(180),
+        rotate: Some(RotateValue::OneEighty),
       }
     )
   }
@@ -176,6 +190,9 @@ mod tests {
     let de = raw_value.parse::<Value>().unwrap();
     let value = AssetConfig::deserialize(de);
 
-    assert_eq!(value, Err(DeError::custom("rotate must be ≤ 360")))
+    assert_eq!(
+      value,
+      Err(DeError::custom("rotate must be one of 90, 180, or 270"))
+    )
   }
 }

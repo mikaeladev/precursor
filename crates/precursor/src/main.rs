@@ -1,4 +1,5 @@
 mod args;
+mod asset;
 mod error;
 
 use std::env::current_dir;
@@ -8,12 +9,12 @@ use std::path::PathBuf;
 
 use crate_config::*;
 use crate_cursor::*;
-use crate_formats::raster::{DynamicPixmap, PngImage};
 use crate_formats::write::WriteTo;
 
 use clap::Parser;
 
 use crate::args::{Cli, Command};
+use crate::asset::Asset;
 use crate::error::{IoError, PrecursorResult};
 
 fn main() -> PrecursorResult {
@@ -106,19 +107,12 @@ fn cursor_from_config(cursor_config: CursorConfig) -> PrecursorResult<Cursor> {
       let ScaledStaticCursorConfig {
         nominal,
         hotspot,
-        asset,
+        asset: asset_config,
         aliases: _,
       } = value;
 
-      // TODO: separate asset decoding/transform logic
-      let png_reader = BufReader::new(File::open(&asset.path)?);
-      let pixmap = DynamicPixmap::decode_png(png_reader)?;
-
-      let image = CursorImage {
-        nominal,
-        hotspot,
-        pixmap,
-      };
+      let image =
+        Asset::from_config(nominal, hotspot, &asset_config)?.into_image();
 
       // TODO: scale image for various DPIs
       let images = vec![image];
@@ -161,15 +155,12 @@ fn cursor_from_config(cursor_config: CursorConfig) -> PrecursorResult<Cursor> {
       for frame in sequence.iter() {
         let asset_config = assets.get(frame.asset).unwrap();
 
-        // TODO: separate asset decoding/transform logic
-        let png_reader = BufReader::new(File::open(&asset_config.path)?);
-        let pixmap = DynamicPixmap::decode_png(png_reader)?;
-
-        let image = CursorImage {
-          nominal: frame.nominal.unwrap_or(nominal),
-          hotspot: frame.hotspot.unwrap_or(hotspot),
-          pixmap,
-        };
+        let image = Asset::from_config(
+          frame.nominal.unwrap_or(nominal),
+          frame.hotspot.unwrap_or(hotspot),
+          asset_config,
+        )?
+        .into_image();
 
         // TODO: scale image for various DPIs
         let images = vec![image];

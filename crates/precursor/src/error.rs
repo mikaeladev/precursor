@@ -18,6 +18,9 @@ pub enum PrecursorError {
 
   #[error("toml error: {0}")]
   TomlError(#[from] TomlError),
+
+  #[error("invalid asset type, expected a PNG")]
+  InvalidAssetType,
 }
 
 pub type PrecursorResult<T = ()> = Result<T, PrecursorError>;
