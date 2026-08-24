@@ -1,6 +1,6 @@
 use std::array::IntoIter;
 
-pub trait Pixel {
+pub trait Pixel: Clone + Copy + PartialEq + Eq {
   /// Number of channels in the pixel.
   const NUM_CHANNELS: usize;
 }

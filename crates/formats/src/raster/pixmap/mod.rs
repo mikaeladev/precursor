@@ -1,14 +1,16 @@
 mod convert;
 mod dynamic;
 mod pixel;
+mod transform;
 
 pub use convert::*;
 pub use dynamic::*;
 pub use pixel::*;
+pub use transform::*;
 
 use crate::raster::RasterError;
 
-pub trait Pixmap<P: Pixel> {
+pub trait Pixmap<P: Pixel>: Clone + PartialEq + Eq {
   /// Returns the width of the Pixmap.
   fn width(&self) -> u32;
 
