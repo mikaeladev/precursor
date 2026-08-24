@@ -349,3 +349,77 @@ impl Pixmap<PaletteIndex> for IndexedPixmap {
     self.pixels.iter().map(|p| p.i).collect()
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[rustfmt::skip]
+  pub const LUMA_PIXELS: [LumaPixel; 9] = [
+    LumaPixel { y: 255 }, LumaPixel { y: 200 }, LumaPixel { y: 145 },
+    LumaPixel { y: 200 }, LumaPixel { y: 145 }, LumaPixel { y: 095 },
+    LumaPixel { y: 145 }, LumaPixel { y: 095 }, LumaPixel { y: 040 },
+  ];
+
+  #[test]
+  fn width() {
+    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    assert_eq!(pixmap.width(), pixmap.width);
+  }
+
+  #[test]
+  fn height() {
+    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    assert_eq!(pixmap.height(), pixmap.height);
+  }
+
+  #[test]
+  fn dimensions() {
+    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    assert_eq!(pixmap.dimensions(), (pixmap.width, pixmap.height));
+  }
+
+  #[test]
+  fn pixels() {
+    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    assert_eq!(pixmap.pixels(), &pixmap.pixels);
+  }
+
+  #[test]
+  fn pixels_concat() {
+    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    #[rustfmt::skip]
+    let expected_pixels = vec![
+      255, 200, 145,
+      200, 145, 095,
+      145, 095, 040,
+    ];
+
+    assert_eq!(pixmap.pixels_concat(), expected_pixels);
+  }
+
+  #[test]
+  fn get_pixel() {
+    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    assert_eq!(pixmap.get_pixel(0, 0), Some(&LUMA_PIXELS[0]));
+    assert_eq!(pixmap.get_pixel(1, 1), Some(&LUMA_PIXELS[4]));
+    assert_eq!(pixmap.get_pixel(2, 2), Some(&LUMA_PIXELS[8]));
+    assert_eq!(pixmap.get_pixel(3, 3), None);
+  }
+
+  #[test]
+  fn get_pixel_index() {
+    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    assert_eq!(pixmap.get_pixel_index(0, 0), Some(0));
+    assert_eq!(pixmap.get_pixel_index(1, 1), Some(4));
+    assert_eq!(pixmap.get_pixel_index(2, 2), Some(8));
+    assert_eq!(pixmap.get_pixel_index(3, 3), None);
+  }
+}
