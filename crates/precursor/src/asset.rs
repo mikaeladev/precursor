@@ -1,37 +1,33 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use crate_config::{AssetConfig, RotateValue};
-use crate_cursor::{CursorHotspot, CursorImage};
+use crate_config::{AssetValue, RotateValue};
+use crate_cursor::{CursorHotspot, CursorIcon};
 use crate_formats::raster::{DynamicPixmap, PixmapTransform, PngImage};
 
 use crate::error::{PrecursorError::InvalidAssetType, PrecursorResult};
 
-pub struct Asset {
+pub fn asset_to_icon(
   nominal: u32,
-  hotspot: CursorHotspot,
-  pixmap: DynamicPixmap,
-}
+  hotspot: (u32, u32),
+  asset_config: AssetValue,
+) -> PrecursorResult<CursorIcon> {
+  let mut reader = BufReader::new(File::open(asset_config.path())?);
+  let mut pixmap;
 
-impl Asset {
-  /// Creates a new `Asset`.
-  pub fn from_config(
-    nominal: u32,
-    hotspot: CursorHotspot,
-    asset_config: &AssetConfig,
-  ) -> PrecursorResult<Asset> {
-    let mut reader = BufReader::new(File::open(&asset_config.path)?);
-    let mut pixmap;
+  let buffer = reader.fill_buf()?;
 
-    let buffer = reader.fill_buf()?;
+  if buffer.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
+    pixmap = DynamicPixmap::decode_png(reader)?;
+  } else {
+    return Err(InvalidAssetType);
+  }
 
-    if buffer.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
-      pixmap = DynamicPixmap::decode_png(reader)?;
-    } else {
-      return Err(InvalidAssetType);
-    }
-
-    if asset_config.flip.unwrap_or_default() {
+  if let AssetValue::Verbose {
+    flip, flop, rotate, ..
+  } = asset_config
+  {
+    if flip.unwrap_or_default() {
       match &mut pixmap {
         DynamicPixmap::Luma(p) => p.flip_horizontal(),
         DynamicPixmap::LumaAlpha(p) => p.flip_horizontal(),
@@ -41,7 +37,7 @@ impl Asset {
       }
     }
 
-    if asset_config.flop.unwrap_or_default() {
+    if flop.unwrap_or_default() {
       match &mut pixmap {
         DynamicPixmap::Luma(p) => p.flip_vertical(),
         DynamicPixmap::LumaAlpha(p) => p.flip_vertical(),
@@ -51,8 +47,8 @@ impl Asset {
       }
     }
 
-    if let Some(rotate) = asset_config.rotate {
-      match rotate {
+    if let Some(value) = rotate {
+      match value {
         RotateValue::Ninety => match &mut pixmap {
           DynamicPixmap::Luma(p) => p.rotate_90(),
           DynamicPixmap::LumaAlpha(p) => p.rotate_90(),
@@ -76,20 +72,16 @@ impl Asset {
         },
       }
     }
-
-    Ok(Self {
-      nominal,
-      hotspot,
-      pixmap,
-    })
   }
 
-  /// Converts the asset into a `CursorImage`.
-  pub fn into_image(self) -> CursorImage {
-    CursorImage {
-      nominal: self.nominal,
-      hotspot: self.hotspot,
-      pixmap: self.pixmap,
-    }
-  }
+  let hotspot = CursorHotspot {
+    x: hotspot.0,
+    y: hotspot.1,
+  };
+
+  Ok(CursorIcon {
+    nominal,
+    hotspot,
+    pixmap,
+  })
 }

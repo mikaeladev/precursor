@@ -7,14 +7,15 @@ use std::fs::{File, metadata};
 use std::io::{BufReader, ErrorKind as IoErrorKind, read_to_string};
 use std::path::PathBuf;
 
-use crate_config::*;
-use crate_cursor::*;
+use crate_config::{Config, CursorConfig, CursorIconConfig, CursorSubconfig};
+use crate_cursor::{Cursor, CursorDuration, CursorFrame, FromCursor};
 use crate_formats::write::WriteTo;
+use crate_formats::{AniFile, CurFile, XcursorFile};
 
 use clap::Parser;
 
 use crate::args::{Cli, Command};
-use crate::asset::Asset;
+use crate::asset::asset_to_icon;
 use crate::error::{IoError, PrecursorResult};
 
 fn main() -> PrecursorResult {
@@ -33,23 +34,28 @@ fn main() -> PrecursorResult {
 
       let config = read_config(input.open()?)?;
 
-      for (name, cursor_config) in config.cursors {
-        let cursor_path = target_directory.join(&name);
+      for cursor_config in config.cursors {
+        let cursor_path = target_directory.join(&cursor_config.name);
         let cursor = cursor_from_config(cursor_config)?;
 
         if all || scalable {
-          todo!()
+          // TODO
         }
 
         if all || windows {
-          let cursor_path = cursor_path
-            .with_extension(if cursor.is_animated() { "ani" } else { "cur" });
-
-          WindowsCursor(&cursor).write_to(File::create(cursor_path)?)?;
+          if cursor.is_animated() {
+            AniFile::from_cursor(&cursor)?
+              .write_to(File::create(cursor_path.with_extension("ani"))?)?;
+          } else {
+            CurFile::from_cursor(&cursor)?
+              .write_to(File::create(cursor_path.with_extension("cur"))?)?;
+          }
         }
 
         if all || xcursor {
-          X11Cursor(&cursor).write_to(File::create(cursor_path)?)?;
+          XcursorFile::from_cursor(&cursor)
+            .unwrap() // infallible
+            .write_to(File::create(cursor_path)?)?;
         }
 
         // TODO: name aliasing
@@ -102,23 +108,24 @@ fn read_config(reader: BufReader<File>) -> PrecursorResult<Config> {
 }
 
 fn cursor_from_config(cursor_config: CursorConfig) -> PrecursorResult<Cursor> {
-  Ok(match cursor_config {
-    CursorConfig::ScaledStatic(value) => {
-      let ScaledStaticCursorConfig {
-        nominal,
-        hotspot,
-        asset: asset_config,
-        aliases: _,
-      } = value;
+  use CursorSubconfig::*;
 
-      let image =
-        Asset::from_config(nominal, hotspot, &asset_config)?.into_image();
+  Ok(match cursor_config.subconfig {
+    ScaledStatic {
+      icon:
+        CursorIconConfig {
+          asset,
+          nominal,
+          hotspot,
+        },
+    } => {
+      let icon = asset_to_icon(nominal, hotspot, asset)?;
 
-      // TODO: scale image for various DPIs
-      let images = vec![image];
+      // TODO: scale icon for various DPIs
+      let icons = vec![icon];
 
       let frame = CursorFrame {
-        images,
+        icons,
         duration: None,
       };
 
@@ -127,50 +134,23 @@ fn cursor_from_config(cursor_config: CursorConfig) -> PrecursorResult<Cursor> {
         metadata: None,
       }
     }
-    CursorConfig::ScaledAnimated(value) => {
-      let ScaledAnimatedCursorConfig {
-        nominal,
-        hotspot,
-        duration,
-        durations,
-        sequence,
-        assets,
-        aliases: _,
-      } = value;
-
-      if duration.is_none() && durations.is_none_or(|v| v.is_empty()) {
-        todo!()
-      }
-
+    ScaledAnimated {
+      nominal,
+      hotspot,
+      sequence,
+    } => {
       let num_frames = sequence.len();
-
-      let duration_split = duration.and_then(|d| {
-        Some(CursorDuration::from_milliseconds(
-          d.milliseconds() / num_frames as u32,
-        ))
-      });
 
       let mut frames = Vec::with_capacity(num_frames);
 
-      for frame in sequence.iter() {
-        let asset_config = assets.get(frame.asset).unwrap();
+      for (asset, duration) in sequence {
+        let icon = asset_to_icon(nominal, hotspot, asset)?;
 
-        let image = Asset::from_config(
-          frame.nominal.unwrap_or(nominal),
-          frame.hotspot.unwrap_or(hotspot),
-          asset_config,
-        )?
-        .into_image();
+        // TODO: scale icon for various DPIs
+        let icons = vec![icon];
+        let duration = Some(CursorDuration::new(duration));
 
-        // TODO: scale image for various DPIs
-        let images = vec![image];
-        let duration = frame.duration.or(duration_split);
-
-        if duration.is_none() {
-          panic!("duration should be Some")
-        }
-
-        frames.push(CursorFrame { images, duration });
+        frames.push(CursorFrame { icons, duration });
       }
 
       Cursor {
@@ -178,5 +158,6 @@ fn cursor_from_config(cursor_config: CursorConfig) -> PrecursorResult<Cursor> {
         metadata: None,
       }
     }
+    _ => todo!(),
   })
 }

@@ -6,21 +6,21 @@ use crate::write::{WriteResult, WriteTo};
 
 pub struct CurFile {
   directory: IconDir,
-  images: Vec<Vec<u8>>,
+  icons: Vec<Vec<u8>>,
 }
 
 impl CurFile {
   /// Creates a new `CurFile`.
-  pub const fn new(entries: Vec<IconDirEntry>, images: Vec<Vec<u8>>) -> Self {
+  pub const fn new(entries: Vec<IconDirEntry>, icons: Vec<Vec<u8>>) -> Self {
     Self {
       directory: IconDir(entries),
-      images,
+      icons,
     }
   }
 
   /// Returns the formatted data size in bytes.
   pub const fn size(&self) -> usize {
-    let slice = self.images.as_slice();
+    let slice = self.icons.as_slice();
     let len = slice.len();
 
     let mut index = 0;
@@ -42,7 +42,7 @@ impl WriteTo for CurFile {
   fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
     self.directory.write_to(&mut writer)?;
 
-    for image in self.images {
+    for image in self.icons {
       writer.write_all(&image)?;
     }
 

@@ -5,8 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-crate_cursor.workspace = true
 serde.workspace = true
+serde_repr = "0.1.21"
 
 [dev-dependencies]
 toml.workspace = true

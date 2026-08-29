@@ -72,7 +72,7 @@ impl WriteTo for AniFile {
 }
 
 struct HeaderChunk {
-  /// Number of unique images in the animation.
+  /// Number of unique icons in the animation.
   icon_count: u32,
   /// Number of frames in the animation.
   frame_count: u32,

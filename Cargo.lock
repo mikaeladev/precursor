@@ -126,8 +126,8 @@ checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 name = "crate_config"
 version = "0.1.0"
 dependencies = [
- "crate_cursor",
  "serde",
+ "serde_repr",
  "toml",
 ]
 
@@ -136,7 +136,6 @@ name = "crate_cursor"
 version = "0.1.0"
 dependencies = [
  "crate_formats",
- "serde",
 ]
 
 [[package]]
@@ -294,6 +293,17 @@ name = "serde_derive"
 version = "1.0.229"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7a5d71263a5a7d47b41f6b3f06ba276f10cc18b0931f1799f710578e2309348"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "serde_repr"
+version = "0.1.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d3b1629de253c70a0508c3899572da79ca359fdab27c7920ff00406df418906"
 dependencies = [
  "proc-macro2",
  "quote",
