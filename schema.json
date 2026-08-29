@@ -1,0 +1,219 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Precursor Config Schema",
+  "type": "object",
+  "definitions": {
+    "path_string": {
+      "type": "string",
+      "description": "Path to a local file.",
+      "examples": ["arrow.png", "./arrow.png", "../assets/arrow.png"]
+    },
+    "package_name": {
+      "type": "string",
+      "description": "Short name of the cursor pack.",
+      "examples": ["My Cursor Pack"]
+    },
+    "package_comment": {
+      "type": "string",
+      "description": "Description of the cursor pack.",
+      "examples": ["My cursor pack (made by me)"]
+    },
+    "cursor_name": {
+      "type": "string",
+      "description": "Name of the cursor.",
+      "examples": ["arrow", "pointer", "spinner"]
+    },
+    "cursor_aliases": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Alternate names of the cursor.",
+      "examples": ["s-resize", "size-ver", "split-v"]
+    },
+    "cursor_name_and_aliases": {
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "#/definitions/cursor_name" },
+        "aliases": { "$ref": "#/definitions/cursor_aliases" }
+      }
+    },
+    "cursor_asset": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/path_string",
+          "description": "Path to the asset."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "path": {
+              "$ref": "#/definitions/path_string",
+              "description": "Path to the asset."
+            },
+            "flip": {
+              "type": "boolean",
+              "description": "Flip the asset horizontally."
+            },
+            "flop": {
+              "type": "boolean",
+              "description": "Flip the asset vertically."
+            },
+            "rotate": {
+              "description": "Rotate the asset clockwise.",
+              "enum": [90, 180, 270]
+            }
+          }
+        }
+      ]
+    },
+    "cursor_nominal": {
+      "type": "integer",
+      "description": "Nominal size of the cursor.",
+      "examples": [12, 24, 36]
+    },
+    "cursor_hotspot": {
+      "type": "array",
+      "description": "Point of the cursor hotspot.",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "integer" },
+      "examples": [
+        [0, 0],
+        [4, 2],
+        [6, 7]
+      ]
+    },
+    "cursor_icon": {
+      "type": "object",
+      "required": ["asset", "nominal", "hotspot"],
+      "properties": {
+        "asset": { "$ref": "#/definitions/cursor_asset" },
+        "nominal": { "$ref": "#/definitions/cursor_nominal" },
+        "hotspot": { "$ref": "#/definitions/cursor_hotspot" }
+      }
+    },
+    "cursor_icons": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/cursor_icon",
+        "description": "Array of icons of varying sizes."
+      }
+    },
+    "cursor_duration": {
+      "type": "integer",
+      "description": "Duration of this frame in milliseconds.",
+      "minimum": 0,
+      "examples": [250, 500, 1000]
+    }
+  },
+  "properties": {
+    "package": {
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "#/definitions/package_name" },
+        "comment": { "$ref": "#/definitions/package_comment" },
+        "example": {
+          "type": "string",
+          "description": "Name of a specific cursor to use as an example in selection UIs.\n\nOnly applies when packaged for Linux.",
+          "examples": ["arrow", "pointer", "spinner"]
+        },
+        "hidden": {
+          "type": "boolean",
+          "description": "Whether to hide the cursor theme in selection UIs, usually enabled for fallback themes.\n\nOnly applies when packaged for Linux."
+        },
+        "locales": {
+          "type": "object",
+          "description": "Map of localised values for `name` and `comment`.\n\nOnly applies when packaged for Linux.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "name": { "$ref": "#/definitions/package_name" },
+              "comment": { "$ref": "#/definitions/package_comment" }
+            }
+          }
+        }
+      }
+    },
+    "cursors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "$ref": "#/definitions/cursor_name" },
+          "aliases": { "$ref": "#/definitions/cursor_aliases" },
+          "targets": {
+            "type": "object",
+            "description": "Map of platform-specific values for `name` and `aliases`.",
+            "properties": {
+              "linux": {
+                "$ref": "#/definitions/cursor_name_and_aliases",
+                "description": "Linux-specific values."
+              },
+              "windows": {
+                "$ref": "#/definitions/cursor_name_and_aliases",
+                "description": "Windows-specific values."
+              }
+            }
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/definitions/cursor_icon",
+            "description": "Scaled static cursor config."
+          },
+          {
+            "type": "object",
+            "description": "Verbose static cursor config.",
+            "required": ["icons"],
+            "properties": {
+              "icons": { "$ref": "#/definitions/cursor_icons" }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Scaled animated cursor config.",
+            "required": ["nominal", "hotspot", "sequence"],
+            "properties": {
+              "nominal": { "$ref": "#/definitions/cursor_nominal" },
+              "hotspot": { "$ref": "#/definitions/cursor_hotspot" },
+              "sequence": {
+                "type": "array",
+                "description": "Sequence of animation frames.",
+                "minItems": 1,
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": [
+                    { "$ref": "#/definitions/cursor_asset" },
+                    { "$ref": "#/definitions/cursor_duration" }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Verbose animated cursor config.",
+            "required": ["sequence"],
+            "properties": {
+              "sequence": {
+                "type": "array",
+                "description": "Sequence of animation frames.",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["duration", "icons"],
+                  "properties": {
+                    "duration": { "$ref": "#/definitions/cursor_duration" },
+                    "icons": { "$ref": "#/definitions/cursor_icons" }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
