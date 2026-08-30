@@ -132,13 +132,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "crate_cursor"
-version = "0.1.0"
-dependencies = [
- "crate_formats",
-]
-
-[[package]]
 name = "crate_formats"
 version = "0.1.0"
 dependencies = [
@@ -245,7 +238,6 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "crate_config",
- "crate_cursor",
  "crate_formats",
  "thiserror",
  "toml",

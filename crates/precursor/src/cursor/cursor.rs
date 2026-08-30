@@ -1,4 +1,4 @@
-use crate_formats::raster::DynamicPixmap;
+use crate_formats::DynamicPixmap;
 
 #[derive(Debug, Clone)]
 pub struct Cursor {
@@ -36,8 +36,6 @@ pub struct CursorHotspot {
 pub struct CursorDuration(u32);
 
 impl CursorDuration {
-  pub const ZERO: Self = Self(0);
-
   const JIFFY: f32 = 16.666666;
 
   /// Creates a new `CursorDuration`.

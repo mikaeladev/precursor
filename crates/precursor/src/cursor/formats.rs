@@ -1,9 +1,8 @@
 use std::convert::Infallible;
 
-use crate_formats::raster::{IntoPixmap, Pixmap, PngImage, RasterError};
 use crate_formats::{
-  AniFile, CurFile, IconColorCount, IconDirEntry, XcursorFile,
-  XcursorImageChunk,
+  AniFile, CurFile, IconColorCount, IconDirEntry, IntoPixmap, Pixmap, PngImage,
+  RasterError, XcursorFile, XcursorImageChunk,
 };
 
 use super::{Cursor, CursorFrame};

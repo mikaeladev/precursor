@@ -2,12 +2,12 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 use crate_config::{AssetValue, RotateValue};
-use crate_cursor::{CursorHotspot, CursorIcon};
-use crate_formats::raster::{DynamicPixmap, PixmapTransform, PngImage};
+use crate_formats::{DynamicPixmap, PixmapTransform, PngImage};
 
+use crate::cursor::{CursorHotspot, CursorIcon};
 use crate::error::{PrecursorError::InvalidAssetType, PrecursorResult};
 
-pub fn asset_to_icon(
+pub fn icon(
   nominal: u32,
   hotspot: (u32, u32),
   asset_config: AssetValue,

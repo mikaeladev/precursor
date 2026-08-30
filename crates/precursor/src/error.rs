@@ -1,4 +1,4 @@
-use crate_formats::raster::RasterError;
+use crate_formats::RasterError;
 use thiserror::Error;
 
 pub use std::fmt::Error as FmtError;

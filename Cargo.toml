@@ -2,7 +2,6 @@
 resolver = "3"
 members = [
   "crates/config",
-  "crates/cursor",
   "crates/formats",
   "crates/precursor",
 ]
@@ -14,7 +13,6 @@ license = "GPL-3.0-or-later"
 
 [workspace.dependencies]
 crate_config.path = "crates/config"
-crate_cursor.path = "crates/cursor"
 crate_formats.path = "crates/formats"
 
 thiserror = "2.0.20"

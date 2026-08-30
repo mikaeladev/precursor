@@ -1,41 +1,47 @@
 mod args;
 mod asset;
+mod config;
+mod cursor;
 mod error;
 
-use std::env::current_dir;
-use std::fs::{File, metadata};
-use std::io::{BufReader, ErrorKind as IoErrorKind, read_to_string};
-use std::path::PathBuf;
+use std::env;
+use std::fs::{self, File};
+use std::io::ErrorKind as IoErrorKind;
 
-use crate_config::{Config, CursorConfig, CursorIconConfig, CursorSubconfig};
-use crate_cursor::{Cursor, CursorDuration, CursorFrame, FromCursor};
+use crate_config::{CursorConfig, CursorIconConfig, CursorSubconfig};
 use crate_formats::write::WriteTo;
 use crate_formats::{AniFile, CurFile, XcursorFile};
 
-use clap::Parser;
-
-use crate::args::{Cli, Command};
-use crate::asset::asset_to_icon;
-use crate::error::{IoError, PrecursorResult};
+use crate::args::Command;
+use crate::cursor::{Cursor, CursorDuration, CursorFrame, FromCursor};
+use crate::error::PrecursorResult;
 
 fn main() -> PrecursorResult {
-  let args = Cli::parse();
+  let args = args::parse();
 
   match args.command {
     Command::Build {
       input,
-      target_directory,
+      target_dir,
       scalable,
       windows,
       xcursor,
       all,
     } => {
-      let target_directory = get_target_directory(target_directory)?;
+      let target_dir = if let Some(value) = target_dir {
+        if !fs::metadata(&value)?.is_dir() {
+          Err(IoErrorKind::NotADirectory.into())
+        } else {
+          Ok(value)
+        }
+      } else {
+        env::current_dir()
+      }?;
 
-      let config = read_config(input.open()?)?;
+      let config = config::read(input.open()?)?;
 
       for cursor_config in config.cursors {
-        let cursor_path = target_directory.join(&cursor_config.name);
+        let cursor_path = target_dir.join(&cursor_config.name);
         let cursor = cursor_from_config(cursor_config)?;
 
         if all || scalable {
@@ -63,7 +69,7 @@ fn main() -> PrecursorResult {
     }
 
     Command::Check { input } => {
-      let config = read_config(input.open()?);
+      let config = config::read(input.open()?);
 
       match config {
         Ok(_) => println!("Success!"),
@@ -86,27 +92,6 @@ fn main() -> PrecursorResult {
   Ok(())
 }
 
-fn get_target_directory(
-  target_directory: Option<PathBuf>,
-) -> Result<PathBuf, IoError> {
-  if let Some(value) = target_directory {
-    if !metadata(&value)?.is_dir() {
-      Err(IoErrorKind::NotADirectory.into())
-    } else {
-      Ok(value)
-    }
-  } else {
-    current_dir()
-  }
-}
-
-fn read_config(reader: BufReader<File>) -> PrecursorResult<Config> {
-  let config_str = read_to_string(reader)?;
-  let config = toml::from_str::<Config>(&config_str)?;
-
-  Ok(config)
-}
-
 fn cursor_from_config(cursor_config: CursorConfig) -> PrecursorResult<Cursor> {
   use CursorSubconfig::*;
 
@@ -119,7 +104,7 @@ fn cursor_from_config(cursor_config: CursorConfig) -> PrecursorResult<Cursor> {
           hotspot,
         },
     } => {
-      let icon = asset_to_icon(nominal, hotspot, asset)?;
+      let icon = asset::icon(nominal, hotspot, asset)?;
 
       // TODO: scale icon for various DPIs
       let icons = vec![icon];
@@ -144,7 +129,7 @@ fn cursor_from_config(cursor_config: CursorConfig) -> PrecursorResult<Cursor> {
       let mut frames = Vec::with_capacity(num_frames);
 
       for (asset, duration) in sequence {
-        let icon = asset_to_icon(nominal, hotspot, asset)?;
+        let icon = asset::icon(nominal, hotspot, asset)?;
 
         // TODO: scale icon for various DPIs
         let icons = vec![icon];
