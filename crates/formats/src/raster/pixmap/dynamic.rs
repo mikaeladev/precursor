@@ -1,8 +1,6 @@
-use crate::raster::Pixmap;
-
 use super::{
-  IndexedPixmap, IntoPixmap, LumaAlphaPixmap, LumaPixmap, RgbAlphaPixmap,
-  RgbPixmap,
+  IndexedPixmap, IntoPixmap, LumaAlphaPixmap, LumaPixmap, Pixmap,
+  RgbAlphaPixmap, RgbPixmap,
 };
 
 #[derive(Debug, Clone)]

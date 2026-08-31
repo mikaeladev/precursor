@@ -1,56 +1,267 @@
 mod convert;
 mod dynamic;
 mod pixel;
-mod transform;
 
 pub use convert::*;
 pub use dynamic::*;
 pub use pixel::*;
-pub use transform::*;
 
 use crate::raster::RasterError;
 
-pub trait Pixmap<P: Pixel>: Clone + PartialEq + Eq {
-  /// Returns the width of the Pixmap.
+pub trait Pixmap: Clone + PartialEq + Eq {
+  type Pixel: Pixel;
+
+  /// Returns the width of the pixmap.
   fn width(&self) -> u32;
 
-  /// Returns the height of the Pixmap.
+  /// Returns the height of the pixmap.
   fn height(&self) -> u32;
 
-  /// Returns the width and height of the Pixmap as a tuple.
-  fn dimensions(&self) -> (u32, u32) {
-    (self.width(), self.height())
-  }
+  /// Returns a reference to the underlying pixel `Vec`.
+  fn pixels(&self) -> &Vec<Self::Pixel>;
 
-  /// Returns a reference to the underlying `Vec<P>`.
-  fn pixels(&self) -> &Vec<P>;
-
-  /// Returns a mutable reference to the underlying `Vec<P>`.
-  fn pixels_mut(&mut self) -> &mut Vec<P>;
+  /// Returns a mutable reference to the underlying pixel `Vec`.
+  fn pixels_mut(&mut self) -> &mut Vec<Self::Pixel>;
 
   /// Copies and concatenates the pixels into a new `Vec<u8>`.
   fn pixels_concat(&self) -> Vec<u8>;
 
-  /// Returns a reference to the pixel at `(x,y)`.
-  fn get_pixel(&self, x: u32, y: u32) -> Option<&P> {
+  /// TODO
+  fn scale(&self, factor: usize) -> Self;
+
+  /// Returns the width and height of the pixmap as a tuple.
+  fn dimensions(&self) -> (u32, u32) {
+    (self.width(), self.height())
+  }
+
+  /// Returns `Some` reference to the pixel at `(x,y)`.
+  ///
+  /// # Notes
+  ///
+  /// Is `None` if the co-ordinates are out of bounds.
+  fn get_pixel(&self, x: u32, y: u32) -> Option<&Self::Pixel> {
     self.pixels().get(self.get_pixel_index(x, y)?)
   }
 
-  /// Returns a mutable reference to the pixel at `(x,y)`.
-  fn get_pixel_mut(&mut self, x: u32, y: u32) -> Option<&mut P> {
+  /// Returns a reference to the pixel at `(x,y)`.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the co-ordinates are out of bounds.
+  fn get_pixel_unchecked(&self, x: u32, y: u32) -> &Self::Pixel {
+    let i = self.get_pixel_index(x, y).unwrap();
+    self.pixels().get(i).unwrap()
+  }
+
+  /// Returns `Some` mutable reference to the pixel at `(x,y)`.
+  ///
+  /// # Notes
+  ///
+  /// Is `None` if the co-ordinates are out of bounds.
+  fn get_pixel_mut(&mut self, x: u32, y: u32) -> Option<&mut Self::Pixel> {
     let i = self.get_pixel_index(x, y)?;
     self.pixels_mut().get_mut(i)
   }
 
-  /// Returns the index of the pixel at `(x,y)`.
+  /// Returns `Some` index of the pixel at `(x,y)`.
+  ///
+  /// # Notes
+  ///
+  /// Is `None` if the co-ordinates are out of bounds.
   fn get_pixel_index(&self, x: u32, y: u32) -> Option<usize> {
     let (width, height) = self.dimensions();
+
     if x >= width || y >= height {
       return None;
     }
-    Some((y as usize * width as usize + x as usize) * P::NUM_CHANNELS)
+
+    Some((y as usize * width as usize + x as usize) * Self::Pixel::NUM_CHANNELS)
+  }
+
+  /// Returns the index of the pixel at `(x,y)`.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the co-ordinates are out of bounds.
+  fn get_pixel_index_unchecked(&self, x: u32, y: u32) -> usize {
+    self.get_pixel_index(x, y).unwrap()
+  }
+
+  /// Sets a pixel at `(x,y)`.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the co-ordinates are out of bounds.
+  fn set_pixel(&mut self, x: u32, y: u32, p: Self::Pixel) {
+    *self.get_pixel_mut(x, y).unwrap() = p.into();
+  }
+
+  /// Flips the pixmap horizontally.
+  fn flip_horizontal(&mut self) {
+    let (width, height) = self.dimensions();
+
+    for y in 0..height {
+      for x1 in 0..width / 2 {
+        let x2 = width - x1 - 1;
+
+        let p1 = *self.get_pixel_unchecked(x1, y);
+        let p2 = *self.get_pixel_unchecked(x2, y);
+
+        self.set_pixel(x2, y, p1);
+        self.set_pixel(x1, y, p2);
+      }
+    }
+  }
+
+  /// Flips the pixmap vertically.
+  fn flip_vertical(&mut self) {
+    let (width, height) = self.dimensions();
+
+    for y1 in 0..height / 2 {
+      for x in 0..width {
+        let y2 = height - y1 - 1;
+
+        let p1 = *self.get_pixel_unchecked(x, y1);
+        let p2 = *self.get_pixel_unchecked(x, y2);
+
+        self.set_pixel(x, y2, p1);
+        self.set_pixel(x, y1, p2);
+      }
+    }
+  }
+
+  /// Rotates the pixmap by 90°.
+  fn rotate_90(&mut self) {
+    let (width, height) = self.dimensions();
+
+    let mut out = self.clone();
+
+    for y in 0..height {
+      for x in 0..width {
+        let p = *self.get_pixel_unchecked(x, y);
+        out.set_pixel(height - y - 1, x, p);
+      }
+    }
+
+    *self = out;
+  }
+
+  /// Rotates the pixmap by 180°.
+  fn rotate_180(&mut self) {
+    let (width, height) = self.dimensions();
+
+    for y1 in 0..height / 2 {
+      for x1 in 0..width {
+        let x2 = width - x1 - 1;
+        let y2 = height - y1 - 1;
+
+        let p1 = *self.get_pixel_unchecked(x1, y1);
+        let p2 = *self.get_pixel_unchecked(x2, y2);
+
+        self.set_pixel(x1, y1, p2);
+        self.set_pixel(x2, y2, p1);
+      }
+    }
+
+    if height % 2 != 0 {
+      let mid = height / 2;
+
+      for x1 in 0..width / 2 {
+        let x2 = width - x1 - 1;
+
+        let p1 = *self.get_pixel_unchecked(x1, mid);
+        let p2 = *self.get_pixel_unchecked(x2, mid);
+
+        self.set_pixel(x1, mid, p2);
+        self.set_pixel(x2, mid, p1);
+      }
+    }
+  }
+
+  /// Rotates the pixmap by 270°.
+  fn rotate_270(&mut self) {
+    let (width, height) = self.dimensions();
+
+    let mut out = self.clone();
+
+    for y in 0..height {
+      for x in 0..width {
+        let p = *self.get_pixel_unchecked(x, y);
+        out.set_pixel(y, width - x - 1, p);
+      }
+    }
+
+    *self = out;
   }
 }
+
+macro_rules! impl_new {
+  // simple implementation
+  ($pixmap:ident) => {
+    impl_new!(@gen $pixmap, { }, impl_new!(@doc $pixmap));
+  };
+
+  // token tree for additional fields
+  ($pixmap:ident, $args:tt) => {
+    impl_new!(@gen $pixmap, $args, impl_new!(@doc $pixmap));
+  };
+
+  (@doc $pixmap:ident) => {
+    concat!("Creates a new `", stringify!($pixmap), "`.")
+  };
+
+  (@gen $pixmap:ident, { $( $ident:ident; $type:ty ),* }, $doc:expr) => {
+    impl $pixmap {
+      #[doc = $doc]
+      ///
+      /// # Notes
+      ///
+      /// Returns an `Err` if the number of pixels `≠` the width `*` the
+      /// height.
+      pub fn new(
+        width: u32,
+        height: u32,
+        pixels: Vec<<Self as Pixmap>::Pixel>,
+        $( $ident: $type, )*
+      ) -> Result<Self, RasterError> {
+        let expected_pixels = width as usize * height as usize;
+        let actual_pixels = pixels.len();
+
+        if expected_pixels != actual_pixels {
+          return Err(RasterError::WrongDimensions(
+            expected_pixels,
+            actual_pixels,
+          ));
+        }
+
+        Ok(Self {
+          width,
+          height,
+          pixels,
+          $( $ident, )*
+        })
+      }
+    }
+  };
+}
+
+// TODO: create a wrapper type that only changes the getter values without
+// increasing the size of the underlying buffer
+fn scale_vec<T: Copy>(vec: &Vec<T>, factor: usize) -> Vec<T> {
+  assert_ne!(factor, 0, "factor cannot be 0");
+
+  let mut scaled_vec = Vec::with_capacity(vec.len() * factor);
+
+  for item in vec {
+    for _ in 1..=factor {
+      scaled_vec.push(*item);
+    }
+  }
+
+  scaled_vec
+}
+
+// -------------------------------------------------------------------------- //
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LumaPixmap {
@@ -62,31 +273,11 @@ pub struct LumaPixmap {
   pixels: Vec<LumaPixel>,
 }
 
-impl LumaPixmap {
-  /// Creates a new `LumaPixmap`.
-  ///
-  /// Returns an `Err` if the number of pixels `!=` the width `*` the height.
-  pub fn new(
-    width: u32,
-    height: u32,
-    pixels: Vec<LumaPixel>,
-  ) -> Result<Self, RasterError> {
-    let expected_pixels = width as usize * height as usize;
-    let actual_pixels = pixels.len();
+impl_new!(LumaPixmap);
 
-    if expected_pixels != actual_pixels {
-      return Err(RasterError::WrongDimensions(expected_pixels, actual_pixels));
-    }
+impl Pixmap for LumaPixmap {
+  type Pixel = LumaPixel;
 
-    Ok(Self {
-      width,
-      height,
-      pixels,
-    })
-  }
-}
-
-impl Pixmap<LumaPixel> for LumaPixmap {
   fn width(&self) -> u32 {
     self.width
   }
@@ -106,7 +297,17 @@ impl Pixmap<LumaPixel> for LumaPixmap {
   fn pixels_concat(&self) -> Vec<u8> {
     self.pixels.iter().map(|p| p.y).collect()
   }
+
+  fn scale(&self, factor: usize) -> Self {
+    Self {
+      width: self.width * factor as u32,
+      height: self.height * factor as u32,
+      pixels: scale_vec(&self.pixels, factor),
+    }
+  }
 }
+
+// -------------------------------------------------------------------------- //
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LumaAlphaPixmap {
@@ -118,31 +319,11 @@ pub struct LumaAlphaPixmap {
   pixels: Vec<LumaAlphaPixel>,
 }
 
-impl LumaAlphaPixmap {
-  /// Creates a new `LumaAlphaPixmap`.
-  ///
-  /// Returns an `Err` if the number of pixels `!=` the width `*` the height.
-  pub fn new(
-    width: u32,
-    height: u32,
-    pixels: Vec<LumaAlphaPixel>,
-  ) -> Result<Self, RasterError> {
-    let expected_pixels = width as usize * height as usize;
-    let actual_pixels = pixels.len();
+impl_new!(LumaAlphaPixmap);
 
-    if expected_pixels != actual_pixels {
-      return Err(RasterError::WrongDimensions(expected_pixels, actual_pixels));
-    }
+impl Pixmap for LumaAlphaPixmap {
+  type Pixel = LumaAlphaPixel;
 
-    Ok(Self {
-      width,
-      height,
-      pixels,
-    })
-  }
-}
-
-impl Pixmap<LumaAlphaPixel> for LumaAlphaPixmap {
   fn width(&self) -> u32 {
     self.width
   }
@@ -162,7 +343,17 @@ impl Pixmap<LumaAlphaPixel> for LumaAlphaPixmap {
   fn pixels_concat(&self) -> Vec<u8> {
     self.pixels.iter().flat_map(|p| p.into_iter()).collect()
   }
+
+  fn scale(&self, factor: usize) -> Self {
+    Self {
+      width: self.width * factor as u32,
+      height: self.height * factor as u32,
+      pixels: scale_vec(&self.pixels, factor),
+    }
+  }
 }
+
+// -------------------------------------------------------------------------- //
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RgbPixmap {
@@ -174,31 +365,11 @@ pub struct RgbPixmap {
   pixels: Vec<RgbPixel>,
 }
 
-impl RgbPixmap {
-  /// Creates a new `RgbPixmap`.
-  ///
-  /// Returns an `Err` if the number of pixels `!=` the width `*` the height.
-  pub fn new(
-    width: u32,
-    height: u32,
-    pixels: Vec<RgbPixel>,
-  ) -> Result<Self, RasterError> {
-    let expected_pixels = width as usize * height as usize;
-    let actual_pixels = pixels.len();
+impl_new!(RgbPixmap);
 
-    if expected_pixels != actual_pixels {
-      return Err(RasterError::WrongDimensions(expected_pixels, actual_pixels));
-    }
+impl Pixmap for RgbPixmap {
+  type Pixel = RgbPixel;
 
-    Ok(Self {
-      width,
-      height,
-      pixels,
-    })
-  }
-}
-
-impl Pixmap<RgbPixel> for RgbPixmap {
   fn width(&self) -> u32 {
     self.width
   }
@@ -218,7 +389,17 @@ impl Pixmap<RgbPixel> for RgbPixmap {
   fn pixels_concat(&self) -> Vec<u8> {
     self.pixels.iter().flat_map(|p| p.into_iter()).collect()
   }
+
+  fn scale(&self, factor: usize) -> Self {
+    Self {
+      width: self.width * factor as u32,
+      height: self.height * factor as u32,
+      pixels: scale_vec(&self.pixels, factor),
+    }
+  }
 }
+
+// -------------------------------------------------------------------------- //
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RgbAlphaPixmap {
@@ -230,31 +411,11 @@ pub struct RgbAlphaPixmap {
   pixels: Vec<RgbAlphaPixel>,
 }
 
-impl RgbAlphaPixmap {
-  /// Creates a new `RgbAlphaPixmap`.
-  ///
-  /// Returns an `Err` if the number of pixels `!=` the width `*` the height.
-  pub fn new(
-    width: u32,
-    height: u32,
-    pixels: Vec<RgbAlphaPixel>,
-  ) -> Result<Self, RasterError> {
-    let expected_pixels = width as usize * height as usize;
-    let actual_pixels = pixels.len();
+impl_new!(RgbAlphaPixmap);
 
-    if expected_pixels != actual_pixels {
-      return Err(RasterError::WrongDimensions(expected_pixels, actual_pixels));
-    }
+impl Pixmap for RgbAlphaPixmap {
+  type Pixel = RgbAlphaPixel;
 
-    Ok(Self {
-      width,
-      height,
-      pixels,
-    })
-  }
-}
-
-impl Pixmap<RgbAlphaPixel> for RgbAlphaPixmap {
   fn width(&self) -> u32 {
     self.width
   }
@@ -274,7 +435,17 @@ impl Pixmap<RgbAlphaPixel> for RgbAlphaPixmap {
   fn pixels_concat(&self) -> Vec<u8> {
     self.pixels.iter().flat_map(|p| p.into_iter()).collect()
   }
+
+  fn scale(&self, factor: usize) -> Self {
+    Self {
+      width: self.width * factor as u32,
+      height: self.height * factor as u32,
+      pixels: scale_vec(&self.pixels, factor),
+    }
+  }
 }
+
+// -------------------------------------------------------------------------- //
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IndexedPixmap {
@@ -292,45 +463,26 @@ pub struct IndexedPixmap {
   trns: Option<Vec<u8>>,
 }
 
+impl_new!(IndexedPixmap, {
+  palette; Vec::<RgbPixel>,
+  trns; Option::<Vec<u8>>
+});
+
 impl IndexedPixmap {
-  /// Creates a new `IndexedPixmap`.
-  ///
-  /// Returns an `Err` if the number of pixels `!=` the width `*` the height.
-  pub fn new(
-    width: u32,
-    height: u32,
-    pixels: Vec<PaletteIndex>,
-    palette: Vec<RgbPixel>,
-    trns: Option<Vec<u8>>,
-  ) -> Result<Self, RasterError> {
-    let expected_pixels = width as usize * height as usize;
-    let actual_pixels = pixels.len();
-
-    if expected_pixels != actual_pixels {
-      return Err(RasterError::WrongDimensions(expected_pixels, actual_pixels));
-    }
-
-    Ok(Self {
-      width,
-      height,
-      pixels,
-      palette,
-      trns,
-    })
-  }
-
-  /// Returns a reference to the palette.
+  /// Returns a reference to the palette `Vec`.
   pub const fn palette(&self) -> &Vec<RgbPixel> {
     &self.palette
   }
 
-  /// Returns a reference to the trns.
+  /// Returns a reference to the trns `Vec`.
   pub const fn trns(&self) -> &Option<Vec<u8>> {
     &self.trns
   }
 }
 
-impl Pixmap<PaletteIndex> for IndexedPixmap {
+impl Pixmap for IndexedPixmap {
+  type Pixel = PaletteIndex;
+
   fn width(&self) -> u32 {
     self.width
   }
@@ -350,7 +502,19 @@ impl Pixmap<PaletteIndex> for IndexedPixmap {
   fn pixels_concat(&self) -> Vec<u8> {
     self.pixels.iter().map(|p| p.i).collect()
   }
+
+  fn scale(&self, factor: usize) -> Self {
+    Self {
+      width: self.width * factor as u32,
+      height: self.height * factor as u32,
+      pixels: scale_vec(&self.pixels, factor),
+      palette: self.palette.clone(),
+      trns: self.trns.clone(),
+    }
+  }
 }
+
+// -------------------------------------------------------------------------- //
 
 #[cfg(test)]
 mod tests {
@@ -423,5 +587,139 @@ mod tests {
     assert_eq!(pixmap.get_pixel_index(1, 1), Some(4));
     assert_eq!(pixmap.get_pixel_index(2, 2), Some(8));
     assert_eq!(pixmap.get_pixel_index(3, 3), None);
+  }
+
+  #[test]
+  fn set_pixel() {
+    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    pixmap.set_pixel(0, 0, LumaPixel { y: 040 });
+    pixmap.set_pixel(2, 2, LumaPixel { y: 255 });
+
+    #[rustfmt::skip]
+    let expected_pixels = vec![
+      LumaPixel { y: 040 }, LumaPixel { y: 200 }, LumaPixel { y: 145 },
+      LumaPixel { y: 200 }, LumaPixel { y: 145 }, LumaPixel { y: 095 },
+      LumaPixel { y: 145 }, LumaPixel { y: 095 }, LumaPixel { y: 255 },
+    ];
+
+    assert_eq!(pixmap.pixels, expected_pixels);
+  }
+
+  #[test]
+  fn flip_horizontal() {
+    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    pixmap.flip_horizontal();
+
+    #[rustfmt::skip]
+    let expected_pixels = vec![
+      LumaPixel { y: 145 }, LumaPixel { y: 200 }, LumaPixel { y: 255 },
+      LumaPixel { y: 095 }, LumaPixel { y: 145 }, LumaPixel { y: 200 },
+      LumaPixel { y: 040 }, LumaPixel { y: 095 }, LumaPixel { y: 145 },
+    ];
+
+    assert_eq!(pixmap.pixels, expected_pixels);
+  }
+
+  #[test]
+  fn flip_horizontal_and_back() {
+    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    pixmap.flip_horizontal();
+    pixmap.flip_horizontal();
+
+    assert_eq!(pixmap.pixels, Vec::from(LUMA_PIXELS));
+  }
+
+  #[test]
+  fn flip_vertical() {
+    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    pixmap.flip_vertical();
+
+    #[rustfmt::skip]
+    let expected_pixels = vec![
+      LumaPixel { y: 145 }, LumaPixel { y: 095 }, LumaPixel { y: 040 },
+      LumaPixel { y: 200 }, LumaPixel { y: 145 }, LumaPixel { y: 095 },
+      LumaPixel { y: 255 }, LumaPixel { y: 200 }, LumaPixel { y: 145 },
+    ];
+
+    assert_eq!(pixmap.pixels, expected_pixels);
+  }
+
+  #[test]
+  fn flip_vertical_and_back() {
+    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    pixmap.flip_vertical();
+    pixmap.flip_vertical();
+
+    assert_eq!(pixmap.pixels, Vec::from(LUMA_PIXELS));
+  }
+
+  #[test]
+  fn flip_horizontal_vertical() {
+    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    pixmap.flip_horizontal();
+    pixmap.flip_vertical();
+
+    #[rustfmt::skip]
+    let expected_pixels = vec![
+      LumaPixel { y: 040 }, LumaPixel { y: 095 }, LumaPixel { y: 145 },
+      LumaPixel { y: 095 }, LumaPixel { y: 145 }, LumaPixel { y: 200 },
+      LumaPixel { y: 145 }, LumaPixel { y: 200 }, LumaPixel { y: 255 },
+    ];
+
+    assert_eq!(pixmap.pixels, expected_pixels);
+  }
+
+  #[test]
+  fn rotate_90() {
+    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    pixmap.rotate_90();
+
+    #[rustfmt::skip]
+    let expected_pixels = vec![
+      LumaPixel { y: 145 }, LumaPixel { y: 200 }, LumaPixel { y: 255 },
+      LumaPixel { y: 095 }, LumaPixel { y: 145 }, LumaPixel { y: 200 },
+      LumaPixel { y: 040 }, LumaPixel { y: 095 }, LumaPixel { y: 145 },
+    ];
+
+    assert_eq!(pixmap.pixels, expected_pixels);
+  }
+
+  #[test]
+  fn rotate_180() {
+    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    pixmap.rotate_180();
+
+    #[rustfmt::skip]
+    let expected_pixels = vec![
+      LumaPixel { y: 040 }, LumaPixel { y: 095 }, LumaPixel { y: 145 },
+      LumaPixel { y: 095 }, LumaPixel { y: 145 }, LumaPixel { y: 200 },
+      LumaPixel { y: 145 }, LumaPixel { y: 200 }, LumaPixel { y: 255 },
+    ];
+
+    assert_eq!(pixmap.pixels, expected_pixels);
+  }
+
+  #[test]
+  fn rotate_270() {
+    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    pixmap.rotate_270();
+
+    #[rustfmt::skip]
+    let expected_pixels = vec![
+      LumaPixel { y: 145 }, LumaPixel { y: 095 }, LumaPixel { y: 040 },
+      LumaPixel { y: 200 }, LumaPixel { y: 145 }, LumaPixel { y: 095 },
+      LumaPixel { y: 255 }, LumaPixel { y: 200 }, LumaPixel { y: 145 },
+    ];
+
+    assert_eq!(pixmap.pixels, expected_pixels);
   }
 }

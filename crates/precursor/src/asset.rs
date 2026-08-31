@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 use crate_config::{AssetValue, RotateValue};
-use crate_formats::{DynamicPixmap, PixmapTransform, PngImage};
+use crate_formats::{DynamicPixmap, Pixmap, PngImage};
 
 use crate::cursor::{CursorHotspot, CursorIcon};
 use crate::error::{PrecursorError::InvalidAssetType, PrecursorResult};
