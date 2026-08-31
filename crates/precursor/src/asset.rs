@@ -7,7 +7,7 @@ use crate_formats::{DynamicPixmap, PixmapTransform, PngImage};
 use crate::cursor::{CursorHotspot, CursorIcon};
 use crate::error::{PrecursorError::InvalidAssetType, PrecursorResult};
 
-pub fn icon(
+pub fn icon_from_asset(
   nominal: u32,
   hotspot: (u32, u32),
   asset_config: AssetValue,
