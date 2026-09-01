@@ -3,6 +3,7 @@ use std::fs::{self, File};
 use std::io::{ErrorKind as IoErrorKind, Result as IoResult};
 use std::path::PathBuf;
 
+use crate_config::CursorTargets;
 use crate_formats::write::WriteTo;
 use crate_formats::{AniFile, CurFile, XcursorFile};
 
@@ -25,7 +26,8 @@ pub fn build(
   let target_dir = get_target_dir(target_dir)?;
 
   for cursor_config in config.cursors {
-    let cursor_path = target_dir.join(&cursor_config.name);
+    let cursor_name = cursor_config.name.clone();
+    let cursor_targets = cursor_config.targets.clone();
     let cursor = Cursor::from_config(cursor_config)?;
 
     if all || scalable {
@@ -33,16 +35,22 @@ pub fn build(
     }
 
     if all || windows {
+      let mut cursor_path = target_dir
+        .join(get_windows_name(&cursor_targets).unwrap_or(&cursor_name));
+
       if cursor.is_animated() {
-        AniFile::from_cursor(&cursor)?
-          .write_to(File::create(cursor_path.with_extension("ani"))?)?;
+        cursor_path.set_extension("ani");
+        AniFile::from_cursor(&cursor)?.write_to(File::create(cursor_path)?)?;
       } else {
-        CurFile::from_cursor(&cursor)?
-          .write_to(File::create(cursor_path.with_extension("cur"))?)?;
+        cursor_path.set_extension("cur");
+        CurFile::from_cursor(&cursor)?.write_to(File::create(cursor_path)?)?;
       }
     }
 
     if all || xcursor {
+      let cursor_path = target_dir
+        .join(get_linux_name(&cursor_targets).unwrap_or(&cursor_name));
+
       XcursorFile::from_cursor(&cursor)
         .unwrap() // infallible
         .write_to(File::create(cursor_path)?)?;
@@ -66,5 +74,27 @@ fn get_target_dir(target_dir: Option<PathBuf>) -> IoResult<PathBuf> {
     }
   } else {
     env::current_dir()
+  }
+}
+
+fn get_windows_name(cursor_targets: &Option<CursorTargets>) -> Option<&String> {
+  if let Some(targets) = &cursor_targets
+    && let Some(windows) = &targets.windows
+    && let Some(name) = &windows.name
+  {
+    Some(name)
+  } else {
+    None
+  }
+}
+
+fn get_linux_name(cursor_targets: &Option<CursorTargets>) -> Option<&String> {
+  if let Some(targets) = &cursor_targets
+    && let Some(linux) = &targets.linux
+    && let Some(name) = &linux.name
+  {
+    Some(name)
+  } else {
+    None
   }
 }

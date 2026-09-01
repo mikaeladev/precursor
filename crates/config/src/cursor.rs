@@ -5,7 +5,7 @@ use serde::{Deserialize, Deserializer};
 
 use crate::AssetValue;
 
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct CursorConfig {
   pub name: String,
   pub aliases: Option<Vec<String>>,
@@ -15,19 +15,19 @@ pub struct CursorConfig {
   pub subconfig: CursorSubconfig,
 }
 
-#[derive(Debug, Default, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
 pub struct CursorTargets {
   pub linux: Option<CursorNameAndAliases>,
   pub windows: Option<CursorNameAndAliases>,
 }
 
-#[derive(Debug, Default, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
 pub struct CursorNameAndAliases {
   pub name: Option<String>,
   pub aliases: Option<Vec<String>>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CursorSubconfig {
   ScaledStatic {
     icon: CursorIconConfig,
@@ -45,7 +45,7 @@ pub enum CursorSubconfig {
   },
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct CursorIconConfig {
   pub asset: AssetValue,
   pub nominal: u32,
@@ -54,7 +54,7 @@ pub struct CursorIconConfig {
 
 pub type ScaledFrame = (AssetValue, u32);
 
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct VerboseFrame {
   pub icons: Vec<CursorIconConfig>,
   pub duration: u32,

@@ -5,7 +5,7 @@ use serde::de::{Error as DeError, IntoDeserializer, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_repr::Deserialize_repr;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AssetValue {
   Short(PathBuf),
   Verbose {
