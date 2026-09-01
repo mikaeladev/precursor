@@ -30,6 +30,9 @@ pub fn build(
     let cursor_targets = cursor_config.targets.clone();
     let cursor = Cursor::from_config(cursor_config)?;
 
+    #[cfg(target_family = "unix")]
+    let linux_aliases = get_linux_aliases(&cursor_targets);
+
     if all || scalable {
       // TODO
     }
@@ -53,10 +56,20 @@ pub fn build(
 
       XcursorFile::from_cursor(&cursor)
         .unwrap() // infallible
-        .write_to(File::create(cursor_path)?)?;
-    }
+        .write_to(File::create(&cursor_path)?)?;
 
-    // TODO: name aliasing
+      #[cfg(target_family = "unix")]
+      if let Some(aliases) = linux_aliases {
+        use std::os::unix::fs as unix_fs;
+
+        for alias in aliases {
+          unix_fs::symlink(
+            &cursor_path.file_name().unwrap(),
+            target_dir.join(alias),
+          )?;
+        }
+      }
+    }
   }
 
   Ok(())
@@ -94,6 +107,21 @@ fn get_linux_name(cursor_targets: &Option<CursorTargets>) -> Option<&String> {
     && let Some(name) = &linux.name
   {
     Some(name)
+  } else {
+    None
+  }
+}
+
+#[cfg(target_family = "unix")]
+fn get_linux_aliases(
+  cursor_targets: &Option<CursorTargets>,
+) -> Option<&Vec<String>> {
+  if let Some(targets) = &cursor_targets
+    && let Some(linux) = &targets.linux
+    && let Some(aliases) = &linux.aliases
+    && !aliases.is_empty()
+  {
+    Some(aliases)
   } else {
     None
   }

@@ -8,7 +8,6 @@ use crate::AssetValue;
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct CursorConfig {
   pub name: String,
-  pub aliases: Option<Vec<String>>,
   pub targets: Option<CursorTargets>,
 
   #[serde(flatten)]
@@ -17,14 +16,19 @@ pub struct CursorConfig {
 
 #[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
 pub struct CursorTargets {
-  pub linux: Option<CursorNameAndAliases>,
-  pub windows: Option<CursorNameAndAliases>,
+  pub linux: Option<LinuxSpecificConfig>,
+  pub windows: Option<WindowsSpecificConfig>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
-pub struct CursorNameAndAliases {
+pub struct LinuxSpecificConfig {
   pub name: Option<String>,
   pub aliases: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
+pub struct WindowsSpecificConfig {
+  pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -242,7 +246,6 @@ mod tests {
 
     let expected = CursorConfig {
       name: String::from("test"),
-      aliases: None,
       targets: None,
       subconfig: CursorSubconfig::ScaledStatic {
         icon: CursorIconConfig {
@@ -305,7 +308,6 @@ mod tests {
 
     let expected = CursorConfig {
       name: String::from("test"),
-      aliases: None,
       targets: None,
       subconfig: CursorSubconfig::ScaledAnimated {
         nominal: 12,
@@ -354,7 +356,6 @@ mod tests {
 
     let expected = CursorConfig {
       name: String::from("test"),
-      aliases: None,
       targets: None,
       subconfig: CursorSubconfig::VerboseStatic {
         icons: vec![CursorIconConfig {
@@ -414,7 +415,6 @@ mod tests {
 
     let expected = CursorConfig {
       name: String::from("test"),
-      aliases: None,
       targets: None,
       subconfig: CursorSubconfig::VerboseAnimated {
         sequence: vec![VerboseFrame {

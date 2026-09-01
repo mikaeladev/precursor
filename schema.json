@@ -23,19 +23,6 @@
       "description": "Name of the cursor.",
       "examples": ["arrow", "pointer", "spinner"]
     },
-    "cursor_aliases": {
-      "type": "array",
-      "items": { "type": "string" },
-      "description": "Alternate names of the cursor.",
-      "examples": ["s-resize", "size-ver", "split-v"]
-    },
-    "cursor_name_and_aliases": {
-      "type": "object",
-      "properties": {
-        "name": { "$ref": "#/definitions/cursor_name" },
-        "aliases": { "$ref": "#/definitions/cursor_aliases" }
-      }
-    },
     "cursor_asset": {
       "oneOf": [
         {
@@ -138,20 +125,38 @@
       "type": "array",
       "items": {
         "type": "object",
+        "required": ["name"],
         "properties": {
           "name": { "$ref": "#/definitions/cursor_name" },
-          "aliases": { "$ref": "#/definitions/cursor_aliases" },
           "targets": {
             "type": "object",
-            "description": "Map of platform-specific values for `name` and `aliases`.",
+            "description": "Map of platform-specific values.",
             "properties": {
               "linux": {
-                "$ref": "#/definitions/cursor_name_and_aliases",
-                "description": "Linux-specific values."
+                "type": "object",
+                "description": "Linux-specific values.",
+                "properties": {
+                  "name": {
+                    "$ref": "#/definitions/cursor_name",
+                    "description": "Linux-specific name of the cursor."
+                  },
+                  "aliases": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Alternate names of the cursor.",
+                    "examples": ["s-resize", "size-ver", "split-v"]
+                  }
+                }
               },
               "windows": {
-                "$ref": "#/definitions/cursor_name_and_aliases",
-                "description": "Windows-specific values."
+                "type": "object",
+                "description": "Windows-specific values.",
+                "properties": {
+                  "name": {
+                    "$ref": "#/definitions/cursor_name",
+                    "description": "Windows-specific name of the cursor."
+                  }
+                }
               }
             }
           }
