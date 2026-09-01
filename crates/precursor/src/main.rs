@@ -1,5 +1,4 @@
 mod args;
-mod asset;
 mod cmds;
 mod config;
 mod cursor;

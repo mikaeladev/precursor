@@ -56,8 +56,8 @@ pub type ScaledFrame = (AssetValue, u32);
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct VerboseFrame {
-  icons: Vec<CursorIconConfig>,
-  duration: u32,
+  pub icons: Vec<CursorIconConfig>,
+  pub duration: u32,
 }
 
 const MISSING_FIELDS: &str =

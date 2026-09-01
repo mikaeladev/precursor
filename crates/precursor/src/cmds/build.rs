@@ -3,14 +3,12 @@ use std::fs::{self, File};
 use std::io::{ErrorKind as IoErrorKind, Result as IoResult};
 use std::path::PathBuf;
 
-use crate_config::{CursorConfig, CursorIconConfig, CursorSubconfig};
 use crate_formats::write::WriteTo;
 use crate_formats::{AniFile, CurFile, XcursorFile};
 
 use crate::args::BuildArgs;
-use crate::asset;
 use crate::config;
-use crate::cursor::{Cursor, CursorDuration, CursorFrame, FromCursor};
+use crate::cursor::{Cursor, FromCursor};
 use crate::error::PrecursorResult;
 
 pub fn build(
@@ -28,7 +26,7 @@ pub fn build(
 
   for cursor_config in config.cursors {
     let cursor_path = target_dir.join(&cursor_config.name);
-    let cursor = cursor_from_config(cursor_config)?;
+    let cursor = Cursor::from_config(cursor_config)?;
 
     if all || scalable {
       // TODO
@@ -69,61 +67,4 @@ fn get_target_dir(target_dir: Option<PathBuf>) -> IoResult<PathBuf> {
   } else {
     env::current_dir()
   }
-}
-
-fn cursor_from_config(
-  CursorConfig { subconfig, .. }: CursorConfig,
-) -> PrecursorResult<Cursor> {
-  use CursorSubconfig::*;
-
-  Ok(match subconfig {
-    ScaledStatic {
-      icon:
-        CursorIconConfig {
-          asset,
-          nominal,
-          hotspot,
-        },
-    } => {
-      let icon = asset::icon_from_asset(nominal, hotspot, asset)?;
-
-      // TODO: scale icon for various DPIs
-      let icons = vec![icon];
-
-      let frame = CursorFrame {
-        icons,
-        duration: None,
-      };
-
-      Cursor {
-        frames: vec![frame],
-        metadata: None,
-      }
-    }
-    ScaledAnimated {
-      nominal,
-      hotspot,
-      sequence,
-    } => {
-      let num_frames = sequence.len();
-
-      let mut frames = Vec::with_capacity(num_frames);
-
-      for (asset, duration) in sequence {
-        let icon = asset::icon_from_asset(nominal, hotspot, asset)?;
-
-        // TODO: scale icon for various DPIs
-        let icons = vec![icon];
-        let duration = Some(CursorDuration::new(duration));
-
-        frames.push(CursorFrame { icons, duration });
-      }
-
-      Cursor {
-        frames,
-        metadata: None,
-      }
-    }
-    _ => todo!(),
-  })
 }
