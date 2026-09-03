@@ -19,11 +19,11 @@ pub trait Pixmap: Clone + PartialEq + Eq {
   /// Returns the height of the pixmap.
   fn height(&self) -> u32;
 
-  /// Returns a reference to the underlying pixel `Vec`.
-  fn pixels(&self) -> &Vec<Self::Pixel>;
+  /// Returns a slice of the underlying pixel `Vec`.
+  fn pixels(&self) -> &[Self::Pixel];
 
-  /// Returns a mutable reference to the underlying pixel `Vec`.
-  fn pixels_mut(&mut self) -> &mut Vec<Self::Pixel>;
+  /// Returns a mutable slice of the underlying pixel `Vec`.
+  fn pixels_mut(&mut self) -> &mut [Self::Pixel];
 
   /// Copies and concatenates the pixels into a new `Vec<u8>`.
   fn pixels_concat(&self) -> Vec<u8>;
@@ -268,11 +268,11 @@ impl Pixmap for LumaPixmap {
     self.height
   }
 
-  fn pixels(&self) -> &Vec<Self::Pixel> {
+  fn pixels(&self) -> &[Self::Pixel] {
     &self.pixels
   }
 
-  fn pixels_mut(&mut self) -> &mut Vec<Self::Pixel> {
+  fn pixels_mut(&mut self) -> &mut [Self::Pixel] {
     &mut self.pixels
   }
 
@@ -303,11 +303,11 @@ impl Pixmap for LumaAlphaPixmap {
     self.height
   }
 
-  fn pixels(&self) -> &Vec<Self::Pixel> {
+  fn pixels(&self) -> &[Self::Pixel] {
     &self.pixels
   }
 
-  fn pixels_mut(&mut self) -> &mut Vec<Self::Pixel> {
+  fn pixels_mut(&mut self) -> &mut [Self::Pixel] {
     &mut self.pixels
   }
 
@@ -338,11 +338,11 @@ impl Pixmap for RgbPixmap {
     self.height
   }
 
-  fn pixels(&self) -> &Vec<Self::Pixel> {
+  fn pixels(&self) -> &[Self::Pixel] {
     &self.pixels
   }
 
-  fn pixels_mut(&mut self) -> &mut Vec<Self::Pixel> {
+  fn pixels_mut(&mut self) -> &mut [Self::Pixel] {
     &mut self.pixels
   }
 
@@ -373,11 +373,11 @@ impl Pixmap for RgbAlphaPixmap {
     self.height
   }
 
-  fn pixels(&self) -> &Vec<RgbAlphaPixel> {
+  fn pixels(&self) -> &[Self::Pixel] {
     &self.pixels
   }
 
-  fn pixels_mut(&mut self) -> &mut Vec<RgbAlphaPixel> {
+  fn pixels_mut(&mut self) -> &mut [Self::Pixel] {
     &mut self.pixels
   }
 
@@ -403,14 +403,18 @@ impl_new!(IndexedPixmap, {
 });
 
 impl IndexedPixmap {
-  /// Returns a reference to the palette `Vec`.
-  pub const fn palette(&self) -> &Vec<RgbPixel> {
-    &self.palette
+  /// Returns a slice of the palette `Vec`.
+  pub const fn palette(&self) -> &[RgbPixel] {
+    self.palette.as_slice()
   }
 
-  /// Returns a reference to the trns `Vec`.
-  pub const fn trns(&self) -> &Option<Vec<u8>> {
-    &self.trns
+  /// Returns `Some` slice of the trns `Vec`.
+  pub const fn trns(&self) -> Option<&[u8]> {
+    if let Some(trns) = &self.trns {
+      Some(trns.as_slice())
+    } else {
+      None
+    }
   }
 }
 
@@ -425,11 +429,11 @@ impl Pixmap for IndexedPixmap {
     self.height
   }
 
-  fn pixels(&self) -> &Vec<Self::Pixel> {
+  fn pixels(&self) -> &[Self::Pixel] {
     &self.pixels
   }
 
-  fn pixels_mut(&mut self) -> &mut Vec<Self::Pixel> {
+  fn pixels_mut(&mut self) -> &mut [Self::Pixel] {
     &mut self.pixels
   }
 
