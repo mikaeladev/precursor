@@ -2,6 +2,9 @@ use std::io::Write;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
+use crate_pixmap::{Pixmap, RgbAlphaPixmap};
+
+use crate::cursors::Hotspot;
 use crate::write::{WriteResult, WriteTo};
 
 pub struct XcursorFile<'c> {
@@ -29,7 +32,7 @@ impl<'c> XcursorFile<'c> {
   }
 
   /// Returns the formatted data size in bytes.
-  pub const fn size(&self) -> usize {
+  pub fn size(&self) -> usize {
     let slice = self.chunks.as_slice();
     let len = slice.len();
 
@@ -87,14 +90,14 @@ impl XcursorTocEntry {
   const SIZE: usize = 12;
 }
 
-pub enum XcursorChunk<'s> {
-  Comment(XcursorCommentChunk<'s>),
+pub enum XcursorChunk<'c> {
+  Comment(XcursorCommentChunk<'c>),
   Image(XcursorImageChunk),
 }
 
 impl XcursorChunk<'_> {
   /// Returns the formatted data size in bytes.
-  pub const fn size(&self) -> usize {
+  pub fn size(&self) -> usize {
     match self {
       Self::Comment(c) => c.size(),
       Self::Image(c) => c.size(),
@@ -185,12 +188,9 @@ impl<'c> From<XcursorCommentChunk<'c>> for XcursorChunk<'c> {
 
 pub struct XcursorImageChunk {
   nominal: u32,
-  width: u32,
-  height: u32,
-  hotspot_x: u32,
-  hotspot_y: u32,
-  delay: Option<u32>,
-  pixels: Vec<u8>,
+  hotspot: Hotspot,
+  pixmap: RgbAlphaPixmap,
+  duration: u32,
 }
 
 impl XcursorImageChunk {
@@ -202,37 +202,35 @@ impl XcursorImageChunk {
   ///
   /// # Panics
   ///
-  /// Panics if `width` or `height` are zero, or if `hotspot_x` or `hotspot_y`
-  /// are out of bounds.
-  pub const fn new(
+  /// Panics if `hotspot` is out of bounds.
+  pub fn new(
     nominal: u32,
-    width: u32,
-    height: u32,
-    hotspot_x: u32,
-    hotspot_y: u32,
-    delay: Option<u32>,
-    pixels: Vec<u8>,
+    hotspot: Hotspot,
+    pixmap: RgbAlphaPixmap,
+    duration: Option<u32>,
   ) -> Self {
-    assert!(width != 0, "width should be > 0");
-    assert!(height != 0, "height should be > 0");
+    assert!(
+      hotspot.x <= pixmap.width(),
+      "hotspot.x should be ≤ pixmap width"
+    );
+    assert!(
+      hotspot.y <= pixmap.height(),
+      "hotspot.y should be ≤ pixmap height"
+    );
 
-    assert!(hotspot_x <= width, "hotspot_x should be ≤ width");
-    assert!(hotspot_y <= height, "hotspot_y should be ≤ height");
+    let duration = duration.unwrap_or_default();
 
     Self {
       nominal,
-      width,
-      height,
-      hotspot_x,
-      hotspot_y,
-      delay,
-      pixels,
+      hotspot,
+      pixmap,
+      duration,
     }
   }
 
   /// Returns the formatted data size in bytes.
-  pub const fn size(&self) -> usize {
-    Self::HEADER_SIZE + self.pixels.len()
+  pub fn size(&self) -> usize {
+    Self::HEADER_SIZE + self.pixmap.pixels().len()
   }
 }
 
@@ -242,13 +240,19 @@ impl WriteTo for XcursorImageChunk {
     writer.write_u32::<LittleEndian>(Self::HEADER_TYPE)?;
     writer.write_u32::<LittleEndian>(self.nominal)?;
     writer.write_u32::<LittleEndian>(Self::HEADER_VERSION)?;
-    writer.write_u32::<LittleEndian>(self.width)?;
-    writer.write_u32::<LittleEndian>(self.height)?;
-    writer.write_u32::<LittleEndian>(self.hotspot_x)?;
-    writer.write_u32::<LittleEndian>(self.hotspot_y)?;
-    writer.write_u32::<LittleEndian>(self.delay.unwrap_or(0))?;
+    writer.write_u32::<LittleEndian>(self.pixmap.width())?;
+    writer.write_u32::<LittleEndian>(self.pixmap.height())?;
+    writer.write_u32::<LittleEndian>(self.hotspot.x)?;
+    writer.write_u32::<LittleEndian>(self.hotspot.y)?;
+    writer.write_u32::<LittleEndian>(self.duration)?;
 
-    writer.write_all(&self.pixels)?;
+    for rgba in self.pixmap.pixels() {
+      writer.write_u8(rgba.b)?;
+      writer.write_u8(rgba.g)?;
+      writer.write_u8(rgba.r)?;
+      writer.write_u8(rgba.a)?;
+    }
+
     Ok(())
   }
 }

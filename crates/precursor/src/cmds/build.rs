@@ -4,8 +4,10 @@ use std::io::{ErrorKind as IoErrorKind, Result as IoResult};
 use std::path::PathBuf;
 
 use crate_config::CursorTargets;
+use crate_formats::ani::AniFile;
+use crate_formats::cur::CurFile;
 use crate_formats::write::WriteTo;
-use crate_formats::{AniFile, CurFile, XcursorFile};
+use crate_formats::xcursor::XcursorFile;
 
 use crate::args::BuildArgs;
 use crate::config;

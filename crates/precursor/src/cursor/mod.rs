@@ -1,9 +1,9 @@
+mod convert;
 mod cursor;
-mod formats;
 mod frame;
 mod icon;
 
+pub use convert::*;
 pub use cursor::*;
-pub use formats::*;
 pub use frame::*;
 pub use icon::*;

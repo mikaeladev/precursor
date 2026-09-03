@@ -1,8 +1,7 @@
 use crate_config::{CursorConfig, CursorIconConfig, CursorSubconfig};
 
+use crate::cursor::{CursorDuration, CursorFrame, CursorIcon};
 use crate::error::PrecursorResult;
-
-use super::{CursorDuration, CursorFrame, CursorIcon};
 
 #[derive(Debug, Clone)]
 pub struct Cursor {
@@ -16,7 +15,7 @@ impl Cursor {
     self.frames.len() != 1
   }
 
-  // TODO: document
+  // Attempts to
   pub fn from_config(
     CursorConfig { subconfig, .. }: CursorConfig,
   ) -> PrecursorResult<Self> {
@@ -27,7 +26,7 @@ impl Cursor {
         let icon = CursorIcon::from_config(icon_config)?;
 
         vec![CursorFrame {
-          icons: icon.to_scaled_vec(),
+          icons: vec![icon],
           duration: None,
         }]
       }
@@ -46,7 +45,7 @@ impl Cursor {
           })?;
 
           frames.push(CursorFrame {
-            icons: icon.to_scaled_vec(),
+            icons: vec![icon],
             duration: Some(CursorDuration::new(duration)),
           });
         }
@@ -71,7 +70,16 @@ impl Cursor {
         let mut frames = Vec::with_capacity(sequence.len());
 
         for frame_config in sequence {
-          frames.push(CursorFrame::from_config(frame_config)?);
+          let mut icons = Vec::with_capacity(frame_config.icons.len());
+
+          for icon_config in frame_config.icons {
+            icons.push(CursorIcon::from_config(icon_config)?);
+          }
+
+          frames.push(CursorFrame {
+            icons,
+            duration: Some(CursorDuration::new(frame_config.duration)),
+          });
         }
 
         frames

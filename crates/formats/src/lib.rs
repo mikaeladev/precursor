@@ -1,7 +1,6 @@
-mod cursor;
-mod raster;
-
+pub mod cursors;
+pub mod rasters;
 pub mod write;
 
-pub use cursor::*;
-pub use raster::*;
+pub use cursors::*;
+pub use rasters::*;

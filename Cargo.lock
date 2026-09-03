@@ -136,8 +136,16 @@ name = "crate_formats"
 version = "0.1.0"
 dependencies = [
  "byteorder",
- "indexmap",
+ "crate_pixmap",
  "png",
+ "thiserror",
+]
+
+[[package]]
+name = "crate_pixmap"
+version = "0.1.0"
+dependencies = [
+ "indexmap",
  "thiserror",
 ]
 
@@ -239,6 +247,7 @@ dependencies = [
  "clap",
  "crate_config",
  "crate_formats",
+ "crate_pixmap",
  "thiserror",
  "toml",
 ]

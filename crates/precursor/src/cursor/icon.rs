@@ -2,30 +2,22 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 use crate_config::{AssetValue, CursorIconConfig, RotateValue};
-use crate_formats::{DynamicPixmap, Pixmap, PngImage};
+
+use crate_formats::cursors::Hotspot;
+use crate_formats::png::PngImage;
+
+use crate_pixmap::{DynamicPixmap, Pixmap};
 
 use crate::error::{PrecursorError, PrecursorResult};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CursorIcon {
   pub nominal: u32,
-  pub hotspot: CursorHotspot,
+  pub hotspot: Hotspot,
   pub pixmap: DynamicPixmap,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CursorHotspot {
-  pub x: u32,
-  pub y: u32,
-}
-
 impl CursorIcon {
-  // TODO: document
-  pub fn to_scaled_vec(self) -> Vec<Self> {
-    // TODO: scale
-    vec![self]
-  }
-
   // TODO: document
   pub fn from_config(
     CursorIconConfig {
@@ -96,7 +88,7 @@ impl CursorIcon {
       }
     }
 
-    let hotspot = CursorHotspot {
+    let hotspot = Hotspot {
       x: hotspot.0,
       y: hotspot.1,
     };

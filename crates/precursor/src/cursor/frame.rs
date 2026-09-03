@@ -1,34 +1,9 @@
-use crate_config::VerboseFrame;
-
-use crate::error::PrecursorResult;
-
 use super::CursorIcon;
 
 #[derive(Debug, Clone)]
 pub struct CursorFrame {
   pub icons: Vec<CursorIcon>,
   pub duration: Option<CursorDuration>,
-}
-
-impl CursorFrame {
-  // TODO: document
-  pub fn from_config(
-    VerboseFrame {
-      icons: icon_configs,
-      duration,
-    }: VerboseFrame,
-  ) -> PrecursorResult<Self> {
-    let mut icons = Vec::with_capacity(icon_configs.len());
-
-    for icon_config in icon_configs {
-      icons.push(CursorIcon::from_config(icon_config)?);
-    }
-
-    Ok(CursorFrame {
-      icons,
-      duration: Some(CursorDuration::new(duration)),
-    })
-  }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

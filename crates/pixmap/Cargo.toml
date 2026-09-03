@@ -1,11 +1,9 @@
 [package]
-name = "crate_formats"
+name = "crate_pixmap"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-byteorder = "1.5.0"
-crate_pixmap.workspace = true
-png = "0.18.1"
+indexmap = "2.14.0"
 thiserror.workspace = true

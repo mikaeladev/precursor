@@ -1,12 +1,14 @@
 mod convert;
 mod dynamic;
-mod pixel;
+mod error;
+
+pub mod pixels;
 
 pub use convert::*;
 pub use dynamic::*;
-pub use pixel::*;
+pub use error::*;
 
-use crate::raster::RasterError;
+use pixels::*;
 
 pub trait Pixmap: Clone + PartialEq + Eq {
   type Pixel: Pixel;
@@ -25,9 +27,6 @@ pub trait Pixmap: Clone + PartialEq + Eq {
 
   /// Copies and concatenates the pixels into a new `Vec<u8>`.
   fn pixels_concat(&self) -> Vec<u8>;
-
-  /// TODO
-  fn scale(&self, factor: usize) -> Self;
 
   /// Returns the width and height of the pixmap as a tuple.
   fn dimensions(&self) -> (u32, u32) {
@@ -75,7 +74,7 @@ pub trait Pixmap: Clone + PartialEq + Eq {
       return None;
     }
 
-    Some((y as usize * width as usize + x as usize) * Self::Pixel::NUM_CHANNELS)
+    Some((y as usize * width as usize + x as usize) * Self::Pixel::CHANNELS)
   }
 
   /// Returns the index of the pixel at `(x,y)`.
@@ -195,15 +194,17 @@ pub trait Pixmap: Clone + PartialEq + Eq {
   }
 }
 
+// -------------------------------------------------------------------------- //
+
 macro_rules! impl_new {
-  // simple implementation
+  // ident
   ($pixmap:ident) => {
     impl_new!(@gen $pixmap, { }, impl_new!(@doc $pixmap));
   };
 
-  // token tree for additional fields
-  ($pixmap:ident, $args:tt) => {
-    impl_new!(@gen $pixmap, $args, impl_new!(@doc $pixmap));
+  // ident + extra fields
+  ($pixmap:ident, $fields:tt) => {
+    impl_new!(@gen $pixmap, $fields, impl_new!(@doc $pixmap));
   };
 
   (@doc $pixmap:ident) => {
@@ -223,12 +224,12 @@ macro_rules! impl_new {
         height: u32,
         pixels: Vec<<Self as Pixmap>::Pixel>,
         $( $ident: $type, )*
-      ) -> Result<Self, RasterError> {
+      ) -> Result<Self, PixmapError> {
         let expected_pixels = width as usize * height as usize;
         let actual_pixels = pixels.len();
 
         if expected_pixels != actual_pixels {
-          return Err(RasterError::WrongDimensions(
+          return Err(PixmapError::WrongDimensions(
             expected_pixels,
             actual_pixels,
           ));
@@ -245,31 +246,12 @@ macro_rules! impl_new {
   };
 }
 
-// TODO: create a wrapper type that only changes the getter values without
-// increasing the size of the underlying buffer
-fn scale_vec<T: Copy>(vec: &Vec<T>, factor: usize) -> Vec<T> {
-  assert_ne!(factor, 0, "factor cannot be 0");
-
-  let mut scaled_vec = Vec::with_capacity(vec.len() * factor);
-
-  for item in vec {
-    for _ in 1..=factor {
-      scaled_vec.push(*item);
-    }
-  }
-
-  scaled_vec
-}
-
 // -------------------------------------------------------------------------- //
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LumaPixmap {
-  /// Width of the pixmap.
   width: u32,
-  /// Height of the pixmap.
   height: u32,
-  /// Packed array of greyscale pixels.
   pixels: Vec<LumaPixel>,
 }
 
@@ -286,24 +268,16 @@ impl Pixmap for LumaPixmap {
     self.height
   }
 
-  fn pixels(&self) -> &Vec<LumaPixel> {
+  fn pixels(&self) -> &Vec<Self::Pixel> {
     &self.pixels
   }
 
-  fn pixels_mut(&mut self) -> &mut Vec<LumaPixel> {
+  fn pixels_mut(&mut self) -> &mut Vec<Self::Pixel> {
     &mut self.pixels
   }
 
   fn pixels_concat(&self) -> Vec<u8> {
     self.pixels.iter().map(|p| p.y).collect()
-  }
-
-  fn scale(&self, factor: usize) -> Self {
-    Self {
-      width: self.width * factor as u32,
-      height: self.height * factor as u32,
-      pixels: scale_vec(&self.pixels, factor),
-    }
   }
 }
 
@@ -311,11 +285,8 @@ impl Pixmap for LumaPixmap {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LumaAlphaPixmap {
-  /// Width of the pixmap.
   width: u32,
-  /// Height of the pixmap.
   height: u32,
-  /// Packed array of greyscale alpha pixels.
   pixels: Vec<LumaAlphaPixel>,
 }
 
@@ -332,24 +303,16 @@ impl Pixmap for LumaAlphaPixmap {
     self.height
   }
 
-  fn pixels(&self) -> &Vec<LumaAlphaPixel> {
+  fn pixels(&self) -> &Vec<Self::Pixel> {
     &self.pixels
   }
 
-  fn pixels_mut(&mut self) -> &mut Vec<LumaAlphaPixel> {
+  fn pixels_mut(&mut self) -> &mut Vec<Self::Pixel> {
     &mut self.pixels
   }
 
   fn pixels_concat(&self) -> Vec<u8> {
     self.pixels.iter().flat_map(|p| p.into_iter()).collect()
-  }
-
-  fn scale(&self, factor: usize) -> Self {
-    Self {
-      width: self.width * factor as u32,
-      height: self.height * factor as u32,
-      pixels: scale_vec(&self.pixels, factor),
-    }
   }
 }
 
@@ -357,11 +320,8 @@ impl Pixmap for LumaAlphaPixmap {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RgbPixmap {
-  /// Width of the pixmap.
   width: u32,
-  /// Height of the pixmap.
   height: u32,
-  /// Packed array of RGB pixels.
   pixels: Vec<RgbPixel>,
 }
 
@@ -378,24 +338,16 @@ impl Pixmap for RgbPixmap {
     self.height
   }
 
-  fn pixels(&self) -> &Vec<RgbPixel> {
+  fn pixels(&self) -> &Vec<Self::Pixel> {
     &self.pixels
   }
 
-  fn pixels_mut(&mut self) -> &mut Vec<RgbPixel> {
+  fn pixels_mut(&mut self) -> &mut Vec<Self::Pixel> {
     &mut self.pixels
   }
 
   fn pixels_concat(&self) -> Vec<u8> {
     self.pixels.iter().flat_map(|p| p.into_iter()).collect()
-  }
-
-  fn scale(&self, factor: usize) -> Self {
-    Self {
-      width: self.width * factor as u32,
-      height: self.height * factor as u32,
-      pixels: scale_vec(&self.pixels, factor),
-    }
   }
 }
 
@@ -403,11 +355,8 @@ impl Pixmap for RgbPixmap {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RgbAlphaPixmap {
-  /// Width of the pixmap.
   width: u32,
-  /// Height of the pixmap.
   height: u32,
-  /// Packed array of RGB alpha pixels.
   pixels: Vec<RgbAlphaPixel>,
 }
 
@@ -435,31 +384,16 @@ impl Pixmap for RgbAlphaPixmap {
   fn pixels_concat(&self) -> Vec<u8> {
     self.pixels.iter().flat_map(|p| p.into_iter()).collect()
   }
-
-  fn scale(&self, factor: usize) -> Self {
-    Self {
-      width: self.width * factor as u32,
-      height: self.height * factor as u32,
-      pixels: scale_vec(&self.pixels, factor),
-    }
-  }
 }
 
 // -------------------------------------------------------------------------- //
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IndexedPixmap {
-  /// Width of the pixmap.
   width: u32,
-  /// Height of the pixmap.
   height: u32,
-  /// Packed array of palette indexes.
-  pixels: Vec<PaletteIndex>,
-  /// Array of `RgbPixel`s.
+  pixels: Vec<IndexedPixel>,
   palette: Vec<RgbPixel>,
-  /// Optional array of alpha values corresponding to pixels in `palette`.
-  ///
-  /// Missing values are assumed to be opaque (`255`).
   trns: Option<Vec<u8>>,
 }
 
@@ -481,7 +415,7 @@ impl IndexedPixmap {
 }
 
 impl Pixmap for IndexedPixmap {
-  type Pixel = PaletteIndex;
+  type Pixel = IndexedPixel;
 
   fn width(&self) -> u32 {
     self.width
@@ -491,26 +425,16 @@ impl Pixmap for IndexedPixmap {
     self.height
   }
 
-  fn pixels(&self) -> &Vec<PaletteIndex> {
+  fn pixels(&self) -> &Vec<Self::Pixel> {
     &self.pixels
   }
 
-  fn pixels_mut(&mut self) -> &mut Vec<PaletteIndex> {
+  fn pixels_mut(&mut self) -> &mut Vec<Self::Pixel> {
     &mut self.pixels
   }
 
   fn pixels_concat(&self) -> Vec<u8> {
     self.pixels.iter().map(|p| p.i).collect()
-  }
-
-  fn scale(&self, factor: usize) -> Self {
-    Self {
-      width: self.width * factor as u32,
-      height: self.height * factor as u32,
-      pixels: scale_vec(&self.pixels, factor),
-      palette: self.palette.clone(),
-      trns: self.trns.clone(),
-    }
   }
 }
 

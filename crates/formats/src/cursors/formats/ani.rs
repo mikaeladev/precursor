@@ -2,9 +2,8 @@ use std::io::Write;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
+use crate::cur::CurFile;
 use crate::write::{WriteResult, WriteTo};
-
-use super::CurFile;
 
 pub struct AniFile {
   header: HeaderChunk,

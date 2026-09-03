@@ -1,9 +1,10 @@
-use crate_formats::RasterError;
-use thiserror::Error;
+use std::fmt::Error as FmtError;
+use std::io::Error as IoError;
 
-pub use std::fmt::Error as FmtError;
-pub use std::io::Error as IoError;
-pub use toml::de::Error as TomlError;
+use crate_formats::rasters::RasterError;
+
+use thiserror::Error;
+use toml::de::Error as TomlError;
 
 #[derive(Error, Debug)]
 pub enum PrecursorError {

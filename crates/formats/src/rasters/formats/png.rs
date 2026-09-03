@@ -6,27 +6,26 @@ use png::{
   Transformations,
 };
 
-use super::{
-  DynamicPixmap, IndexedPixmap, LumaAlphaPixel, LumaAlphaPixmap, LumaPixel,
-  LumaPixmap, PaletteIndex, RasterError, RgbAlphaPixel, RgbAlphaPixmap,
-  RgbPixel, RgbPixmap,
-};
+use crate_pixmap::pixels::*;
+use crate_pixmap::*;
+
+use crate::RasterResult;
 
 pub trait PngImage {
   /// Decodes a PNG image into `Self`.
-  fn decode_png(reader: BufReader<File>) -> Result<Self, RasterError>
+  fn decode_png(reader: BufReader<File>) -> RasterResult<Self>
   where
     Self: Sized;
 
   /// Encodes `Self` into a PNG image.
-  fn encode_png(&self) -> Result<Vec<u8>, RasterError>;
+  fn encode_png(&self) -> RasterResult<Vec<u8>>;
 
   /// Returns the associated PNG [`ColorType`].
   fn color_type(&self) -> ColorType;
 }
 
 impl PngImage for DynamicPixmap {
-  fn decode_png(reader: BufReader<File>) -> Result<Self, RasterError> {
+  fn decode_png(reader: BufReader<File>) -> RasterResult<Self> {
     let mut decoder = Decoder::new(reader);
     decoder.set_transformations(Transformations::STRIP_16);
 
@@ -98,7 +97,7 @@ impl PngImage for DynamicPixmap {
 
           let pixels = frame_buffer
             .into_iter()
-            .map(|i| PaletteIndex { i })
+            .map(|i| IndexedPixel { i })
             .collect();
 
           let palette = chunks
@@ -121,7 +120,7 @@ impl PngImage for DynamicPixmap {
     })
   }
 
-  fn encode_png(&self) -> Result<Vec<u8>, RasterError> {
+  fn encode_png(&self) -> RasterResult<Vec<u8>> {
     let width = self.width();
     let height = self.height();
 
