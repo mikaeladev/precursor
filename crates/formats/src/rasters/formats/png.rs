@@ -13,6 +13,10 @@ use crate::RasterResult;
 
 pub trait PngImage {
   /// Decodes a PNG image into `Self`.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the image buffer exceeds `isize::MAX`.
   fn decode_png(reader: BufReader<File>) -> RasterResult<Self>
   where
     Self: Sized;
@@ -31,7 +35,7 @@ impl PngImage for DynamicPixmap {
 
     let mut png_reader = decoder.read_info()?;
 
-    let frame_buffer_len = png_reader
+    let frame_buffer_len = png_reader // FIXME: handle gracefully
       .output_buffer_size()
       .expect("buffer length should not exceed isize::MAX");
 

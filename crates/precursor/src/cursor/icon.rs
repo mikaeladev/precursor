@@ -18,7 +18,17 @@ pub struct CursorIcon {
 }
 
 impl CursorIcon {
-  // TODO: document
+  /// Attemts to create a new `CursorIcon` from a `CursorIconConfig`.
+  ///
+  /// Fails with a `PrecursorResult` if any of the following occurs:
+  ///
+  /// * The hotspot is out of bounds (i.e. > `nominal`).
+  /// * The asset is not a `PNG` file.
+  /// * The `PNG` data is malformed.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the image buffer exceeds `isize::MAX`.
   pub fn from_config(
     CursorIconConfig {
       asset,

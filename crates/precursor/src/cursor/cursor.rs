@@ -10,12 +10,14 @@ pub struct Cursor {
 }
 
 impl Cursor {
-  // TODO: document
+  /// Returns `true` if there are multiple frames in the cursor.
   pub const fn is_animated(&self) -> bool {
     self.frames.len() != 1
   }
 
-  // Attempts to
+  /// Attempts to create a new `Cursor` from a `CursorConfig`.
+  ///
+  /// Fails with a `PrecursorError` if any asset fails to decode.
   pub fn from_config(
     CursorConfig { subconfig, .. }: CursorConfig,
   ) -> PrecursorResult<Self> {
