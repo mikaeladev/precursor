@@ -45,8 +45,13 @@ impl PngImage for DynamicPixmap {
       width,
       height,
       color_type,
+      bit_depth,
       ..
     } = png_reader.next_frame(&mut frame_buffer)?;
+
+    if bit_depth != BitDepth::Eight {
+      unimplemented!()
+    }
 
     Ok(match color_type {
       ColorType::Grayscale => {
