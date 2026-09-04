@@ -4,6 +4,9 @@ mod error;
 
 pub mod pixels;
 
+use std::iter::FlatMap;
+use std::vec::IntoIter;
+
 pub use convert::*;
 pub use dynamic::*;
 pub use error::*;
@@ -24,9 +27,6 @@ pub trait Pixmap: Clone + PartialEq + Eq {
 
   /// Returns a mutable slice of the underlying pixel `Vec`.
   fn pixels_mut(&mut self) -> &mut [Self::Pixel];
-
-  /// Copies and concatenates the pixels into a new `Vec<u8>`.
-  fn pixels_concat(&self) -> Vec<u8>;
 
   /// Returns the width and height of the pixmap as a tuple.
   fn dimensions(&self) -> (u32, u32) {
@@ -194,7 +194,37 @@ pub trait Pixmap: Clone + PartialEq + Eq {
   }
 }
 
+type PixmapIter<T, const N: usize> = FlatMap<
+  IntoIter<<T as Pixmap>::Pixel>,
+  [u8; N],
+  Box<dyn FnMut(<T as Pixmap>::Pixel) -> [u8; N]>,
+>;
+
 // -------------------------------------------------------------------------- //
+
+macro_rules! pixmap {
+  ($pixmap:ident<$pixel:ident<$n:literal>>) => {
+    pixmap!(@gen $pixmap<$pixel<$n>>, { });
+  };
+
+  ($pixmap:ident<$pixel:ident<$n:literal>>, $fields:tt) => {
+    pixmap!(@gen $pixmap<$pixel<$n>>, $fields);
+  };
+
+  (@gen $pixmap:ident<$pixel:ident<$n:literal>>, { $( $ident:ident; $type:ty ),* }) => {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct $pixmap {
+      width: u32,
+      height: u32,
+      pixels: Vec<$pixel>,
+      $( $ident: $type, )*
+    }
+
+    impl_new!($pixmap, { $( $ident; $type ),* });
+    impl_iter!($pixmap, $n);
+    impl_pixmap!($pixmap, $pixel);
+  };
+}
 
 macro_rules! impl_new {
   // ident
@@ -246,158 +276,57 @@ macro_rules! impl_new {
   };
 }
 
-// -------------------------------------------------------------------------- //
+macro_rules! impl_iter {
+  ($pixmap:ident, $n:literal) => {
+    impl IntoIterator for $pixmap {
+      type Item = u8;
+      type IntoIter = PixmapIter<Self, $n>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LumaPixmap {
-  width: u32,
-  height: u32,
-  pixels: Vec<LumaPixel>,
+      fn into_iter(self) -> Self::IntoIter {
+        self
+          .pixels
+          .into_iter()
+          .flat_map(Box::new(|px| px.into_bytes()))
+      }
+    }
+  };
 }
 
-impl_new!(LumaPixmap);
+macro_rules! impl_pixmap {
+  ($pixmap:ident, $pixel:ident) => {
+    impl Pixmap for $pixmap {
+      type Pixel = $pixel;
 
-impl Pixmap for LumaPixmap {
-  type Pixel = LumaPixel;
+      fn width(&self) -> u32 {
+        self.width
+      }
 
-  fn width(&self) -> u32 {
-    self.width
-  }
+      fn height(&self) -> u32 {
+        self.height
+      }
 
-  fn height(&self) -> u32 {
-    self.height
-  }
+      fn pixels(&self) -> &[Self::Pixel] {
+        &self.pixels
+      }
 
-  fn pixels(&self) -> &[Self::Pixel] {
-    &self.pixels
-  }
-
-  fn pixels_mut(&mut self) -> &mut [Self::Pixel] {
-    &mut self.pixels
-  }
-
-  fn pixels_concat(&self) -> Vec<u8> {
-    self.pixels.iter().map(|p| p.y).collect()
-  }
-}
-
-// -------------------------------------------------------------------------- //
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LumaAlphaPixmap {
-  width: u32,
-  height: u32,
-  pixels: Vec<LumaAlphaPixel>,
-}
-
-impl_new!(LumaAlphaPixmap);
-
-impl Pixmap for LumaAlphaPixmap {
-  type Pixel = LumaAlphaPixel;
-
-  fn width(&self) -> u32 {
-    self.width
-  }
-
-  fn height(&self) -> u32 {
-    self.height
-  }
-
-  fn pixels(&self) -> &[Self::Pixel] {
-    &self.pixels
-  }
-
-  fn pixels_mut(&mut self) -> &mut [Self::Pixel] {
-    &mut self.pixels
-  }
-
-  fn pixels_concat(&self) -> Vec<u8> {
-    self.pixels.iter().flat_map(|p| p.into_iter()).collect()
-  }
+      fn pixels_mut(&mut self) -> &mut [Self::Pixel] {
+        &mut self.pixels
+      }
+    }
+  };
 }
 
 // -------------------------------------------------------------------------- //
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RgbPixmap {
-  width: u32,
-  height: u32,
-  pixels: Vec<RgbPixel>,
-}
+pixmap!(LumaPixmap<LumaPixel<1>>);
 
-impl_new!(RgbPixmap);
+pixmap!(LumaAlphaPixmap<LumaAlphaPixel<2>>);
 
-impl Pixmap for RgbPixmap {
-  type Pixel = RgbPixel;
+pixmap!(RgbPixmap<RgbPixel<3>>);
 
-  fn width(&self) -> u32 {
-    self.width
-  }
+pixmap!(RgbAlphaPixmap<RgbAlphaPixel<4>>);
 
-  fn height(&self) -> u32 {
-    self.height
-  }
-
-  fn pixels(&self) -> &[Self::Pixel] {
-    &self.pixels
-  }
-
-  fn pixels_mut(&mut self) -> &mut [Self::Pixel] {
-    &mut self.pixels
-  }
-
-  fn pixels_concat(&self) -> Vec<u8> {
-    self.pixels.iter().flat_map(|p| p.into_iter()).collect()
-  }
-}
-
-// -------------------------------------------------------------------------- //
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RgbAlphaPixmap {
-  width: u32,
-  height: u32,
-  pixels: Vec<RgbAlphaPixel>,
-}
-
-impl_new!(RgbAlphaPixmap);
-
-impl Pixmap for RgbAlphaPixmap {
-  type Pixel = RgbAlphaPixel;
-
-  fn width(&self) -> u32 {
-    self.width
-  }
-
-  fn height(&self) -> u32 {
-    self.height
-  }
-
-  fn pixels(&self) -> &[Self::Pixel] {
-    &self.pixels
-  }
-
-  fn pixels_mut(&mut self) -> &mut [Self::Pixel] {
-    &mut self.pixels
-  }
-
-  fn pixels_concat(&self) -> Vec<u8> {
-    self.pixels.iter().flat_map(|p| p.into_iter()).collect()
-  }
-}
-
-// -------------------------------------------------------------------------- //
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct IndexedPixmap {
-  width: u32,
-  height: u32,
-  pixels: Vec<IndexedPixel>,
-  palette: Vec<RgbPixel>,
-  trns: Option<Vec<u8>>,
-}
-
-impl_new!(IndexedPixmap, {
+pixmap!(IndexedPixmap<IndexedPixel<1>>, {
   palette; Vec::<RgbPixel>,
   trns; Option::<Vec<u8>>
 });
@@ -415,30 +344,6 @@ impl IndexedPixmap {
     } else {
       None
     }
-  }
-}
-
-impl Pixmap for IndexedPixmap {
-  type Pixel = IndexedPixel;
-
-  fn width(&self) -> u32 {
-    self.width
-  }
-
-  fn height(&self) -> u32 {
-    self.height
-  }
-
-  fn pixels(&self) -> &[Self::Pixel] {
-    &self.pixels
-  }
-
-  fn pixels_mut(&mut self) -> &mut [Self::Pixel] {
-    &mut self.pixels
-  }
-
-  fn pixels_concat(&self) -> Vec<u8> {
-    self.pixels.iter().map(|p| p.i).collect()
   }
 }
 
@@ -481,20 +386,6 @@ mod tests {
     let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
 
     assert_eq!(pixmap.pixels(), &pixmap.pixels);
-  }
-
-  #[test]
-  fn pixels_concat() {
-    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
-
-    #[rustfmt::skip]
-    let expected_pixels = vec![
-      255, 200, 145,
-      200, 145, 095,
-      145, 095, 040,
-    ];
-
-    assert_eq!(pixmap.pixels_concat(), expected_pixels);
   }
 
   #[test]
@@ -649,5 +540,19 @@ mod tests {
     ];
 
     assert_eq!(pixmap.pixels, expected_pixels);
+  }
+
+  #[test]
+  fn into_iter() {
+    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+
+    #[rustfmt::skip]
+    let expected_pixels = vec![
+      255, 200, 145,
+      200, 145, 095,
+      145, 095, 040,
+    ];
+
+    assert_eq!(pixmap.into_iter().collect::<Vec<u8>>(), expected_pixels);
   }
 }

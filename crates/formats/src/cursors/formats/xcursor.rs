@@ -246,11 +246,8 @@ impl WriteTo for XcursorImageChunk {
     writer.write_u32::<LittleEndian>(self.hotspot.y)?;
     writer.write_u32::<LittleEndian>(self.duration)?;
 
-    for rgba in self.pixmap.pixels() {
-      writer.write_u8(rgba.b)?;
-      writer.write_u8(rgba.g)?;
-      writer.write_u8(rgba.r)?;
-      writer.write_u8(rgba.a)?;
+    for byte in self.pixmap.into_iter() {
+      writer.write_u8(byte)?;
     }
 
     Ok(())

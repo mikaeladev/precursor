@@ -1,6 +1,6 @@
 use crate::{
-  IndexedPixmap, IntoPixmap, LumaAlphaPixmap, LumaPixmap, Pixmap,
-  RgbAlphaPixmap, RgbPixmap,
+  IndexedPixmap, IntoPixmap, LumaAlphaPixmap, LumaPixmap, RgbAlphaPixmap,
+  RgbPixmap,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,14 +40,14 @@ impl DynamicPixmap {
     (self.width(), self.height())
   }
 
-  /// Copies and concatenates the pixels into a new `Vec<u8>`.
-  pub fn pixels_concat(&self) -> Vec<u8> {
+  /// Clones and concatenates the pixels into a flat `Vec<u8>`.
+  pub fn concat(&self) -> Vec<u8> {
     match self {
-      Self::Luma(p) => p.pixels_concat(),
-      Self::LumaAlpha(p) => p.pixels_concat(),
-      Self::Rgb(p) => p.pixels_concat(),
-      Self::RgbAlpha(p) => p.pixels_concat(),
-      Self::Indexed(p) => p.pixels_concat(),
+      Self::Luma(p) => p.clone().into_iter().collect(),
+      Self::LumaAlpha(p) => p.clone().into_iter().collect(),
+      Self::Rgb(p) => p.clone().into_iter().collect(),
+      Self::RgbAlpha(p) => p.clone().into_iter().collect(),
+      Self::Indexed(p) => p.clone().into_iter().collect(),
     }
   }
 }

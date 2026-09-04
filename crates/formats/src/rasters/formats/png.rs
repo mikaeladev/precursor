@@ -67,7 +67,7 @@ impl PngImage for DynamicPixmap {
 
         let pixels = chunks
           .into_iter()
-          .map(|chunk| LumaAlphaPixel::from(*chunk))
+          .map(|chunk| LumaAlphaPixel::from_bytes(*chunk))
           .collect();
 
         DynamicPixmap::LumaAlpha(LumaAlphaPixmap::new(width, height, pixels)?)
@@ -79,7 +79,7 @@ impl PngImage for DynamicPixmap {
 
         let pixels = chunks
           .into_iter()
-          .map(|chunk| RgbPixel::from(*chunk))
+          .map(|chunk| RgbPixel::from_bytes(*chunk))
           .collect();
 
         DynamicPixmap::Rgb(RgbPixmap::new(width, height, pixels)?)
@@ -91,7 +91,7 @@ impl PngImage for DynamicPixmap {
 
         let pixels = chunks
           .into_iter()
-          .map(|chunk| RgbAlphaPixel::from(*chunk))
+          .map(|chunk| RgbAlphaPixel::from_bytes(*chunk))
           .collect();
 
         DynamicPixmap::RgbAlpha(RgbAlphaPixmap::new(width, height, pixels)?)
@@ -111,7 +111,7 @@ impl PngImage for DynamicPixmap {
 
           let palette = chunks
             .into_iter()
-            .map(|chunk| RgbPixel::from(*chunk))
+            .map(|chunk| RgbPixel::from_bytes(*chunk))
             .collect();
 
           let trns = match &image_info.trns {
@@ -146,7 +146,7 @@ impl PngImage for DynamicPixmap {
       let palette: Vec<_> = indexed_pixmap
         .palette()
         .iter()
-        .flat_map(|p| p.into_iter())
+        .flat_map(|p| p.into_bytes())
         .collect();
 
       encoder.set_palette(palette);
@@ -158,7 +158,7 @@ impl PngImage for DynamicPixmap {
 
     let mut writer = encoder.write_header()?;
 
-    writer.write_image_data(&self.pixels_concat())?;
+    writer.write_image_data(&self.concat())?;
     writer.finish()?;
 
     Ok(buffer)

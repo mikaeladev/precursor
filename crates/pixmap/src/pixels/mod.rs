@@ -1,12 +1,20 @@
 mod convert;
 
-use std::array::IntoIter;
-
 pub use convert::*;
 
 pub trait Pixel: Clone + Copy + PartialEq + Eq {
   /// Number of channels in the pixel.
   const CHANNELS: usize;
+}
+
+pub trait FromBytes<const N: usize> {
+  /// Converts a byte array into this type.
+  fn from_bytes(bytes: [u8; N]) -> Self;
+}
+
+pub trait IntoBytes<const N: usize> {
+  /// Converts this type into a byte array.
+  fn into_bytes(self) -> [u8; N];
 }
 
 // -------------------------------------------------------------------------- //
@@ -21,9 +29,15 @@ impl Pixel for LumaPixel {
   const CHANNELS: usize = 1;
 }
 
-impl From<u8> for LumaPixel {
-  fn from(y: u8) -> Self {
+impl FromBytes<1> for LumaPixel {
+  fn from_bytes([y]: [u8; 1]) -> Self {
     Self { y }
+  }
+}
+
+impl IntoBytes<1> for LumaPixel {
+  fn into_bytes(self) -> [u8; 1] {
+    [self.y]
   }
 }
 
@@ -40,18 +54,16 @@ impl Pixel for LumaAlphaPixel {
   const CHANNELS: usize = 2;
 }
 
-impl From<[u8; 2]> for LumaAlphaPixel {
-  fn from(ya: [u8; 2]) -> Self {
-    Self { y: ya[0], a: ya[1] }
+impl FromBytes<2> for LumaAlphaPixel {
+  fn from_bytes([y, a]: [u8; 2]) -> Self {
+    Self { y, a }
   }
 }
 
-impl IntoIterator for LumaAlphaPixel {
-  type Item = u8;
-  type IntoIter = IntoIter<Self::Item, 2>;
-
-  fn into_iter(self) -> Self::IntoIter {
-    [self.y, self.a].into_iter()
+impl IntoBytes<2> for LumaAlphaPixel {
+  fn into_bytes(self) -> [u8; 2] {
+    let Self { y, a } = self;
+    [y, a]
   }
 }
 
@@ -69,22 +81,16 @@ impl Pixel for RgbPixel {
   const CHANNELS: usize = 3;
 }
 
-impl From<[u8; 3]> for RgbPixel {
-  fn from(rgb: [u8; 3]) -> Self {
-    Self {
-      r: rgb[0],
-      g: rgb[1],
-      b: rgb[2],
-    }
+impl FromBytes<3> for RgbPixel {
+  fn from_bytes([r, g, b]: [u8; 3]) -> Self {
+    Self { r, g, b }
   }
 }
 
-impl IntoIterator for RgbPixel {
-  type Item = u8;
-  type IntoIter = IntoIter<Self::Item, 3>;
-
-  fn into_iter(self) -> Self::IntoIter {
-    [self.r, self.g, self.b].into_iter()
+impl IntoBytes<3> for RgbPixel {
+  fn into_bytes(self) -> [u8; 3] {
+    let Self { r, g, b } = self;
+    [r, g, b]
   }
 }
 
@@ -103,23 +109,16 @@ impl Pixel for RgbAlphaPixel {
   const CHANNELS: usize = 4;
 }
 
-impl From<[u8; 4]> for RgbAlphaPixel {
-  fn from(rgba: [u8; 4]) -> Self {
-    Self {
-      r: rgba[0],
-      g: rgba[1],
-      b: rgba[2],
-      a: rgba[3],
-    }
+impl FromBytes<4> for RgbAlphaPixel {
+  fn from_bytes([r, g, b, a]: [u8; 4]) -> Self {
+    Self { r, g, b, a }
   }
 }
 
-impl IntoIterator for RgbAlphaPixel {
-  type Item = u8;
-  type IntoIter = IntoIter<Self::Item, 4>;
-
-  fn into_iter(self) -> Self::IntoIter {
-    [self.r, self.g, self.b, self.a].into_iter()
+impl IntoBytes<4> for RgbAlphaPixel {
+  fn into_bytes(self) -> [u8; 4] {
+    let Self { r, g, b, a } = self;
+    [r, g, b, a]
   }
 }
 
@@ -135,8 +134,14 @@ impl Pixel for IndexedPixel {
   const CHANNELS: usize = 1;
 }
 
-impl From<u8> for IndexedPixel {
-  fn from(i: u8) -> Self {
+impl FromBytes<1> for IndexedPixel {
+  fn from_bytes([i]: [u8; 1]) -> Self {
     Self { i }
+  }
+}
+
+impl IntoBytes<1> for IndexedPixel {
+  fn into_bytes(self) -> [u8; 1] {
+    [self.i]
   }
 }
