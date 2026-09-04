@@ -1,6 +1,6 @@
 use crate::{
-  IndexedPixmap, IntoPixmap, LumaAlphaPixmap, LumaPixmap, RgbAlphaPixmap,
-  RgbPixmap,
+  IndexedPixmap, IntoPixmap, LumaAlphaPixmap, LumaPixmap, Pixmap,
+  RgbAlphaPixmap, RgbPixmap,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,6 +48,61 @@ impl DynamicPixmap {
       Self::Rgb(p) => p.clone().into_iter().collect(),
       Self::RgbAlpha(p) => p.clone().into_iter().collect(),
       Self::Indexed(p) => p.clone().into_iter().collect(),
+    }
+  }
+
+  /// Flips the pixmap horizontally.
+  pub fn flip_horizontal(&mut self) {
+    match self {
+      Self::Luma(p) => p.flip_horizontal(),
+      Self::LumaAlpha(p) => p.flip_horizontal(),
+      Self::Rgb(p) => p.flip_horizontal(),
+      Self::RgbAlpha(p) => p.flip_horizontal(),
+      Self::Indexed(p) => p.flip_horizontal(),
+    }
+  }
+
+  /// Flips the pixmap vertically.
+  pub fn flip_vertical(&mut self) {
+    match self {
+      Self::Luma(p) => p.flip_vertical(),
+      Self::LumaAlpha(p) => p.flip_vertical(),
+      Self::Rgb(p) => p.flip_vertical(),
+      Self::RgbAlpha(p) => p.flip_vertical(),
+      Self::Indexed(p) => p.flip_vertical(),
+    }
+  }
+
+  /// Rotates the pixmap by 90°.
+  pub fn rotate_90(&mut self) {
+    match self {
+      Self::Luma(p) => p.rotate_90(),
+      Self::LumaAlpha(p) => p.rotate_90(),
+      Self::Rgb(p) => p.rotate_90(),
+      Self::RgbAlpha(p) => p.rotate_90(),
+      Self::Indexed(p) => p.rotate_90(),
+    }
+  }
+
+  /// Rotates the pixmap by 180°.
+  pub fn rotate_180(&mut self) {
+    match self {
+      Self::Luma(p) => p.rotate_180(),
+      Self::LumaAlpha(p) => p.rotate_180(),
+      Self::Rgb(p) => p.rotate_180(),
+      Self::RgbAlpha(p) => p.rotate_180(),
+      Self::Indexed(p) => p.rotate_180(),
+    }
+  }
+
+  /// Rotates the pixmap by 270°.
+  pub fn rotate_270(&mut self) {
+    match self {
+      Self::Luma(p) => p.rotate_270(),
+      Self::LumaAlpha(p) => p.rotate_270(),
+      Self::Rgb(p) => p.rotate_270(),
+      Self::RgbAlpha(p) => p.rotate_270(),
+      Self::Indexed(p) => p.rotate_270(),
     }
   }
 }

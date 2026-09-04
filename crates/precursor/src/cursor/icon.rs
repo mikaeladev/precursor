@@ -6,7 +6,7 @@ use crate_config::{AssetValue, CursorIconConfig, RotateValue};
 use crate_formats::cursors::Hotspot;
 use crate_formats::png::PngImage;
 
-use crate_pixmap::{DynamicPixmap, Pixmap};
+use crate_pixmap::DynamicPixmap;
 
 use crate::error::{PrecursorError, PrecursorResult};
 
@@ -52,48 +52,18 @@ impl CursorIcon {
     } = asset
     {
       if flip.unwrap_or_default() {
-        match &mut pixmap {
-          DynamicPixmap::Luma(p) => p.flip_horizontal(),
-          DynamicPixmap::LumaAlpha(p) => p.flip_horizontal(),
-          DynamicPixmap::Rgb(p) => p.flip_horizontal(),
-          DynamicPixmap::RgbAlpha(p) => p.flip_horizontal(),
-          DynamicPixmap::Indexed(p) => p.flip_horizontal(),
-        }
+        pixmap.flip_horizontal();
       }
 
       if flop.unwrap_or_default() {
-        match &mut pixmap {
-          DynamicPixmap::Luma(p) => p.flip_vertical(),
-          DynamicPixmap::LumaAlpha(p) => p.flip_vertical(),
-          DynamicPixmap::Rgb(p) => p.flip_vertical(),
-          DynamicPixmap::RgbAlpha(p) => p.flip_vertical(),
-          DynamicPixmap::Indexed(p) => p.flip_vertical(),
-        }
+        pixmap.flip_vertical();
       }
 
       if let Some(value) = rotate {
         match value {
-          RotateValue::Ninety => match &mut pixmap {
-            DynamicPixmap::Luma(p) => p.rotate_90(),
-            DynamicPixmap::LumaAlpha(p) => p.rotate_90(),
-            DynamicPixmap::Rgb(p) => p.rotate_90(),
-            DynamicPixmap::RgbAlpha(p) => p.rotate_90(),
-            DynamicPixmap::Indexed(p) => p.rotate_90(),
-          },
-          RotateValue::OneEighty => match &mut pixmap {
-            DynamicPixmap::Luma(p) => p.rotate_180(),
-            DynamicPixmap::LumaAlpha(p) => p.rotate_180(),
-            DynamicPixmap::Rgb(p) => p.rotate_180(),
-            DynamicPixmap::RgbAlpha(p) => p.rotate_180(),
-            DynamicPixmap::Indexed(p) => p.rotate_180(),
-          },
-          RotateValue::TwoSeventy => match &mut pixmap {
-            DynamicPixmap::Luma(p) => p.rotate_270(),
-            DynamicPixmap::LumaAlpha(p) => p.rotate_270(),
-            DynamicPixmap::Rgb(p) => p.rotate_270(),
-            DynamicPixmap::RgbAlpha(p) => p.rotate_270(),
-            DynamicPixmap::Indexed(p) => p.rotate_270(),
-          },
+          RotateValue::Ninety => pixmap.rotate_90(),
+          RotateValue::OneEighty => pixmap.rotate_180(),
+          RotateValue::TwoSeventy => pixmap.rotate_270(),
         }
       }
     }
