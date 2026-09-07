@@ -1,6 +1,7 @@
 mod convert;
 mod dynamic;
 mod error;
+mod scale;
 
 pub mod pixels;
 
@@ -10,6 +11,7 @@ use std::vec::IntoIter;
 pub use convert::*;
 pub use dynamic::*;
 pub use error::*;
+pub use scale::*;
 
 use pixels::*;
 
@@ -28,6 +30,9 @@ pub trait Pixmap: Clone + PartialEq + Eq {
   /// Returns a mutable slice of the underlying pixel `Vec`.
   fn pixels_mut(&mut self) -> &mut [Self::Pixel];
 
+  /// Scales the pixmap up by `factor`.
+  fn scale_up(&mut self, factor: usize);
+
   /// Returns the width and height of the pixmap as a tuple.
   fn dimensions(&self) -> (u32, u32) {
     (self.width(), self.height())
@@ -35,9 +40,9 @@ pub trait Pixmap: Clone + PartialEq + Eq {
 
   /// Returns `Some` reference to the pixel at `(x,y)`.
   ///
-  /// # Notes
+  /// # Options
   ///
-  /// Is `None` if the co-ordinates are out of bounds.
+  /// Returns `None` if the co-ordinates are out of bounds.
   fn get_pixel(&self, x: u32, y: u32) -> Option<&Self::Pixel> {
     self.pixels().get(self.get_pixel_index(x, y)?)
   }
@@ -54,9 +59,9 @@ pub trait Pixmap: Clone + PartialEq + Eq {
 
   /// Returns `Some` mutable reference to the pixel at `(x,y)`.
   ///
-  /// # Notes
+  /// # Options
   ///
-  /// Is `None` if the co-ordinates are out of bounds.
+  /// Returns `None` if the co-ordinates are out of bounds.
   fn get_pixel_mut(&mut self, x: u32, y: u32) -> Option<&mut Self::Pixel> {
     let i = self.get_pixel_index(x, y)?;
     self.pixels_mut().get_mut(i)
@@ -64,9 +69,9 @@ pub trait Pixmap: Clone + PartialEq + Eq {
 
   /// Returns `Some` index of the pixel at `(x,y)`.
   ///
-  /// # Notes
+  /// # Options
   ///
-  /// Is `None` if the co-ordinates are out of bounds.
+  /// Returns `None` if the co-ordinates are out of bounds.
   fn get_pixel_index(&self, x: u32, y: u32) -> Option<usize> {
     let (width, height) = self.dimensions();
 
@@ -238,17 +243,17 @@ macro_rules! impl_new {
   };
 
   (@doc $pixmap:ident) => {
-    concat!("Creates a new `", stringify!($pixmap), "`.")
+    concat!("Attempts to construct a new [`", stringify!($pixmap), "`].")
   };
 
   (@gen $pixmap:ident, { $( $ident:ident; $type:ty ),* }, $doc:expr) => {
     impl $pixmap {
       #[doc = $doc]
       ///
-      /// # Notes
+      /// # Errors
       ///
-      /// Returns an `Err` if the number of pixels `≠` the width `*` the
-      /// height.
+      /// Fails with a [`PixmapError`] if the number of pixels
+      /// `!= width * height`.
       pub fn new(
         width: u32,
         height: u32,
@@ -305,12 +310,21 @@ macro_rules! impl_pixmap {
         self.height
       }
 
-      fn pixels(&self) -> &[Self::Pixel] {
+      fn pixels(&self) -> &[$pixel] {
         &self.pixels
       }
 
-      fn pixels_mut(&mut self) -> &mut [Self::Pixel] {
+      fn pixels_mut(&mut self) -> &mut [$pixel] {
         &mut self.pixels
+      }
+
+      fn scale_up(&mut self, factor: usize) {
+        scale_pixmap(
+          &mut self.width,
+          &mut self.height,
+          &mut self.pixels,
+          factor,
+        );
       }
     }
   };
@@ -351,75 +365,77 @@ impl IndexedPixmap {
 
 #[cfg(test)]
 mod tests {
+  use std::sync::LazyLock;
+
   use super::*;
+
+  macro_rules! px {
+    ($y:literal) => {
+      LumaPixel { y: $y }
+    };
+  }
 
   #[rustfmt::skip]
   pub const LUMA_PIXELS: [LumaPixel; 9] = [
-    LumaPixel { y: 255 }, LumaPixel { y: 200 }, LumaPixel { y: 145 },
-    LumaPixel { y: 200 }, LumaPixel { y: 145 }, LumaPixel { y: 095 },
-    LumaPixel { y: 145 }, LumaPixel { y: 095 }, LumaPixel { y: 040 },
+    px!(255), px!(200), px!(145),
+    px!(200), px!(145), px!(095),
+    px!(145), px!(095), px!(040),
   ];
+
+  static LUMA_PIXMAP: LazyLock<LumaPixmap> =
+    LazyLock::new(|| LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap());
 
   #[test]
   fn width() {
-    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
-
-    assert_eq!(pixmap.width(), pixmap.width);
+    assert_eq!(LUMA_PIXMAP.width(), LUMA_PIXMAP.width);
   }
 
   #[test]
   fn height() {
-    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
-
-    assert_eq!(pixmap.height(), pixmap.height);
+    assert_eq!(LUMA_PIXMAP.height(), LUMA_PIXMAP.height);
   }
 
   #[test]
   fn dimensions() {
-    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
-
-    assert_eq!(pixmap.dimensions(), (pixmap.width, pixmap.height));
+    assert_eq!(
+      LUMA_PIXMAP.dimensions(),
+      (LUMA_PIXMAP.width, LUMA_PIXMAP.height)
+    );
   }
 
   #[test]
   fn pixels() {
-    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
-
-    assert_eq!(pixmap.pixels(), &pixmap.pixels);
+    assert_eq!(LUMA_PIXMAP.pixels(), &LUMA_PIXMAP.pixels);
   }
 
   #[test]
   fn get_pixel() {
-    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
-
-    assert_eq!(pixmap.get_pixel(0, 0), Some(&LUMA_PIXELS[0]));
-    assert_eq!(pixmap.get_pixel(1, 1), Some(&LUMA_PIXELS[4]));
-    assert_eq!(pixmap.get_pixel(2, 2), Some(&LUMA_PIXELS[8]));
-    assert_eq!(pixmap.get_pixel(3, 3), None);
+    assert_eq!(LUMA_PIXMAP.get_pixel(0, 0), Some(&LUMA_PIXELS[0]));
+    assert_eq!(LUMA_PIXMAP.get_pixel(1, 1), Some(&LUMA_PIXELS[4]));
+    assert_eq!(LUMA_PIXMAP.get_pixel(2, 2), Some(&LUMA_PIXELS[8]));
+    assert_eq!(LUMA_PIXMAP.get_pixel(3, 3), None);
   }
 
   #[test]
   fn get_pixel_index() {
-    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
-
-    assert_eq!(pixmap.get_pixel_index(0, 0), Some(0));
-    assert_eq!(pixmap.get_pixel_index(1, 1), Some(4));
-    assert_eq!(pixmap.get_pixel_index(2, 2), Some(8));
-    assert_eq!(pixmap.get_pixel_index(3, 3), None);
+    assert_eq!(LUMA_PIXMAP.get_pixel_index(0, 0), Some(0));
+    assert_eq!(LUMA_PIXMAP.get_pixel_index(1, 1), Some(4));
+    assert_eq!(LUMA_PIXMAP.get_pixel_index(2, 2), Some(8));
+    assert_eq!(LUMA_PIXMAP.get_pixel_index(3, 3), None);
   }
 
   #[test]
   fn set_pixel() {
-    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+    let mut pixmap = LUMA_PIXMAP.clone();
 
-    pixmap.set_pixel(0, 0, LumaPixel { y: 040 });
-    pixmap.set_pixel(2, 2, LumaPixel { y: 255 });
+    pixmap.set_pixel(0, 0, px!(040));
+    pixmap.set_pixel(2, 2, px!(255));
 
     #[rustfmt::skip]
     let expected_pixels = vec![
-      LumaPixel { y: 040 }, LumaPixel { y: 200 }, LumaPixel { y: 145 },
-      LumaPixel { y: 200 }, LumaPixel { y: 145 }, LumaPixel { y: 095 },
-      LumaPixel { y: 145 }, LumaPixel { y: 095 }, LumaPixel { y: 255 },
+      px!(040), px!(200), px!(145),
+      px!(200), px!(145), px!(095),
+      px!(145), px!(095), px!(255),
     ];
 
     assert_eq!(pixmap.pixels, expected_pixels);
@@ -427,15 +443,15 @@ mod tests {
 
   #[test]
   fn flip_horizontal() {
-    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+    let mut pixmap = LUMA_PIXMAP.clone();
 
     pixmap.flip_horizontal();
 
     #[rustfmt::skip]
     let expected_pixels = vec![
-      LumaPixel { y: 145 }, LumaPixel { y: 200 }, LumaPixel { y: 255 },
-      LumaPixel { y: 095 }, LumaPixel { y: 145 }, LumaPixel { y: 200 },
-      LumaPixel { y: 040 }, LumaPixel { y: 095 }, LumaPixel { y: 145 },
+      px!(145), px!(200), px!(255),
+      px!(095), px!(145), px!(200),
+      px!(040), px!(095), px!(145),
     ];
 
     assert_eq!(pixmap.pixels, expected_pixels);
@@ -443,25 +459,25 @@ mod tests {
 
   #[test]
   fn flip_horizontal_and_back() {
-    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+    let mut pixmap = LUMA_PIXMAP.clone();
 
     pixmap.flip_horizontal();
     pixmap.flip_horizontal();
 
-    assert_eq!(pixmap.pixels, Vec::from(LUMA_PIXELS));
+    assert_eq!(pixmap.pixels, LUMA_PIXMAP.pixels);
   }
 
   #[test]
   fn flip_vertical() {
-    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+    let mut pixmap = LUMA_PIXMAP.clone();
 
     pixmap.flip_vertical();
 
     #[rustfmt::skip]
     let expected_pixels = vec![
-      LumaPixel { y: 145 }, LumaPixel { y: 095 }, LumaPixel { y: 040 },
-      LumaPixel { y: 200 }, LumaPixel { y: 145 }, LumaPixel { y: 095 },
-      LumaPixel { y: 255 }, LumaPixel { y: 200 }, LumaPixel { y: 145 },
+      px!(145), px!(095), px!(040),
+      px!(200), px!(145), px!(095),
+      px!(255), px!(200), px!(145),
     ];
 
     assert_eq!(pixmap.pixels, expected_pixels);
@@ -469,26 +485,26 @@ mod tests {
 
   #[test]
   fn flip_vertical_and_back() {
-    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+    let mut pixmap = LUMA_PIXMAP.clone();
 
     pixmap.flip_vertical();
     pixmap.flip_vertical();
 
-    assert_eq!(pixmap.pixels, Vec::from(LUMA_PIXELS));
+    assert_eq!(pixmap.pixels, LUMA_PIXMAP.pixels);
   }
 
   #[test]
   fn flip_horizontal_vertical() {
-    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+    let mut pixmap = LUMA_PIXMAP.clone();
 
     pixmap.flip_horizontal();
     pixmap.flip_vertical();
 
     #[rustfmt::skip]
     let expected_pixels = vec![
-      LumaPixel { y: 040 }, LumaPixel { y: 095 }, LumaPixel { y: 145 },
-      LumaPixel { y: 095 }, LumaPixel { y: 145 }, LumaPixel { y: 200 },
-      LumaPixel { y: 145 }, LumaPixel { y: 200 }, LumaPixel { y: 255 },
+      px!(040), px!(095), px!(145),
+      px!(095), px!(145), px!(200),
+      px!(145), px!(200), px!(255),
     ];
 
     assert_eq!(pixmap.pixels, expected_pixels);
@@ -496,15 +512,15 @@ mod tests {
 
   #[test]
   fn rotate_90() {
-    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+    let mut pixmap = LUMA_PIXMAP.clone();
 
     pixmap.rotate_90();
 
     #[rustfmt::skip]
     let expected_pixels = vec![
-      LumaPixel { y: 145 }, LumaPixel { y: 200 }, LumaPixel { y: 255 },
-      LumaPixel { y: 095 }, LumaPixel { y: 145 }, LumaPixel { y: 200 },
-      LumaPixel { y: 040 }, LumaPixel { y: 095 }, LumaPixel { y: 145 },
+      px!(145), px!(200), px!(255),
+      px!(095), px!(145), px!(200),
+      px!(040), px!(095), px!(145),
     ];
 
     assert_eq!(pixmap.pixels, expected_pixels);
@@ -512,15 +528,15 @@ mod tests {
 
   #[test]
   fn rotate_180() {
-    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+    let mut pixmap = LUMA_PIXMAP.clone();
 
     pixmap.rotate_180();
 
     #[rustfmt::skip]
     let expected_pixels = vec![
-      LumaPixel { y: 040 }, LumaPixel { y: 095 }, LumaPixel { y: 145 },
-      LumaPixel { y: 095 }, LumaPixel { y: 145 }, LumaPixel { y: 200 },
-      LumaPixel { y: 145 }, LumaPixel { y: 200 }, LumaPixel { y: 255 },
+      px!(040), px!(095), px!(145),
+      px!(095), px!(145), px!(200),
+      px!(145), px!(200), px!(255),
     ];
 
     assert_eq!(pixmap.pixels, expected_pixels);
@@ -528,15 +544,15 @@ mod tests {
 
   #[test]
   fn rotate_270() {
-    let mut pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+    let mut pixmap = LUMA_PIXMAP.clone();
 
     pixmap.rotate_270();
 
     #[rustfmt::skip]
     let expected_pixels = vec![
-      LumaPixel { y: 145 }, LumaPixel { y: 095 }, LumaPixel { y: 040 },
-      LumaPixel { y: 200 }, LumaPixel { y: 145 }, LumaPixel { y: 095 },
-      LumaPixel { y: 255 }, LumaPixel { y: 200 }, LumaPixel { y: 145 },
+      px!(145), px!(095), px!(040),
+      px!(200), px!(145), px!(095),
+      px!(255), px!(200), px!(145),
     ];
 
     assert_eq!(pixmap.pixels, expected_pixels);
@@ -544,7 +560,7 @@ mod tests {
 
   #[test]
   fn into_iter() {
-    let pixmap = LumaPixmap::new(3, 3, Vec::from(LUMA_PIXELS)).unwrap();
+    let pixmap = LUMA_PIXMAP.clone();
 
     #[rustfmt::skip]
     let expected_pixels = vec![

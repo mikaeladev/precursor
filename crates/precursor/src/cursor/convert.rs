@@ -13,14 +13,18 @@ pub trait FromCursor: Sized {
   /// The associated error that can be returned in the process.
   type Error;
 
-  /// Attempts to create a new value from a `Cursor` reference.
+  /// Attempts to create a new value from a [`Cursor`] reference.
   fn from_cursor(cursor: &Cursor) -> Result<Self, Self::Error>;
 }
 
 impl FromCursor for XcursorFile<'_> {
   type Error = Infallible;
 
-  /// Creates a new `XcursorFile` from a `Cursor` reference.
+  /// Constructs a new [`XcursorFile`] from a [`Cursor`] reference.
+  ///
+  /// # Errors
+  ///
+  /// This function is infallible. Yay!
   ///
   /// # Panics
   ///
@@ -47,16 +51,18 @@ impl FromCursor for XcursorFile<'_> {
   }
 }
 
-/// Attempts to create a new `CurFile` from a `Cursor` reference.
-///
-/// Fails with a `RasterError` if the pixmap is malformed.
-///
-/// # Panics
-///
-/// Panics if any icon hotspot is out of bounds.
 impl FromCursor for CurFile {
   type Error = RasterError;
 
+  /// Attempts to construct a new [`CurFile`] from a [`Cursor`] reference.
+  ///
+  /// # Errors
+  ///
+  /// Fails with a [`RasterError`] if any pixmap is malformed.
+  ///
+  /// # Panics
+  ///
+  /// Panics if any icon hotspot is out of bounds.
   fn from_cursor(cursor: &Cursor) -> Result<Self, RasterError> {
     let frame = cursor.frames.first().unwrap();
 
@@ -67,9 +73,11 @@ impl FromCursor for CurFile {
 impl FromCursor for AniFile {
   type Error = RasterError;
 
-  /// Attempts to create a new `AniFile` from a `Cursor` reference.
+  /// Attempts to construct a new [`AniFile`] from a [`Cursor`] reference.
   ///
-  /// Fails with a `RasterError` if the pixmap is malformed.
+  /// # Errors
+  ///
+  /// Fails with a [`RasterError`] if any pixmap is malformed.
   ///
   /// # Panics
   ///
@@ -93,7 +101,11 @@ impl FromCursor for AniFile {
   }
 }
 
-/// Creates a new `CurFile` from a `CursorFrame` reference.
+/// Attempts to construct a new [`CurFile`] from a [`CursorFrame`] reference.
+///
+/// # Errors
+///
+/// Fails with a [`RasterError`] if any pixmap is malformed.
 ///
 /// # Panics
 ///

@@ -1,4 +1,4 @@
-use std::ops::Mul;
+use std::ops::{Mul, MulAssign};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Hotspot {
@@ -20,5 +20,12 @@ impl Mul<u32> for Hotspot {
       x: self.x * rhs,
       y: self.y * rhs,
     }
+  }
+}
+
+impl MulAssign<u32> for Hotspot {
+  fn mul_assign(&mut self, rhs: u32) {
+    self.x *= rhs;
+    self.y *= rhs;
   }
 }

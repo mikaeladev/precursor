@@ -169,24 +169,24 @@ macro_rules! impl_from_indexed_for_basic_alpha {
 impl_from_basic_for_basic!(
   LumaAlphaPixmap,
   LumaPixmap,
-  "Converts a `LumaAlphaPixmap` into a `LumaPixmap`."
+  "Converts a [`LumaAlphaPixmap`] into a [`LumaPixmap`]."
 );
 
 impl_from_basic_for_basic!(
   RgbPixmap,
   LumaPixmap,
-  "Converts an `RgbPixmap` into a `LumaPixmap`."
+  "Converts an [`RgbPixmap`] into a [`LumaPixmap`]."
 );
 
 impl_from_basic_for_basic!(
   RgbAlphaPixmap,
   LumaPixmap,
-  "Converts an `RgbAlphaPixmap` into a `LumaPixmap`."
+  "Converts an [`RgbAlphaPixmap`] into a [`LumaPixmap`]."
 );
 
 impl_from_indexed_for_basic_opaq!(
   LumaPixmap,
-  "Converts an `IndexedPixmap` into a `LumaPixmap`."
+  "Converts an [`IndexedPixmap`] into a [`LumaPixmap`]."
 );
 
 // -------------------------------------------------------------------------- //
@@ -194,24 +194,24 @@ impl_from_indexed_for_basic_opaq!(
 impl_from_basic_for_basic!(
   LumaPixmap,
   LumaAlphaPixmap,
-  "Converts a `LumaPixmap` into a `LumaAlphaPixmap`."
+  "Converts a [`LumaPixmap`] into a [`LumaAlphaPixmap`]."
 );
 
 impl_from_basic_for_basic!(
   RgbPixmap,
   LumaAlphaPixmap,
-  "Converts an `RgbPixmap` into a `LumaAlphaPixmap`."
+  "Converts an [`RgbPixmap`] into a [`LumaAlphaPixmap`]."
 );
 
 impl_from_basic_for_basic!(
   RgbAlphaPixmap,
   LumaAlphaPixmap,
-  "Converts an `RgbAlphaPixmap` into a `LumaAlphaPixmap`."
+  "Converts an [`RgbAlphaPixmap`] into a [`LumaAlphaPixmap`]."
 );
 
 impl_from_indexed_for_basic_alpha!(
   LumaAlphaPixmap,
-  "Converts an `IndexedPixmap` into a `LumaAlphaPixmap`."
+  "Converts an [`IndexedPixmap`] into a [`LumaAlphaPixmap`]."
 );
 
 // -------------------------------------------------------------------------- //
@@ -219,24 +219,24 @@ impl_from_indexed_for_basic_alpha!(
 impl_from_basic_for_basic!(
   LumaPixmap,
   RgbPixmap,
-  "Converts a `LumaPixmap` into an `RgbPixmap`."
+  "Converts a [`LumaPixmap`] into an [`RgbPixmap`]."
 );
 
 impl_from_basic_for_basic!(
   LumaAlphaPixmap,
   RgbPixmap,
-  "Converts a `LumaAlphaPixmap` into an `RgbPixmap`."
+  "Converts a [`LumaAlphaPixmap`] into an [`RgbPixmap`]."
 );
 
 impl_from_basic_for_basic!(
   RgbAlphaPixmap,
   RgbPixmap,
-  "Converts an `RgbAlphaPixmap` into an `RgbPixmap`."
+  "Converts an [`RgbAlphaPixmap`] into an [`RgbPixmap`]."
 );
 
 impl_from_indexed_for_basic_opaq!(
   RgbPixmap,
-  "Converts an `IndexedPixmap` into an `RgbAlphaPixmap`."
+  "Converts an [`IndexedPixmap`] into an [`RgbAlphaPixmap`]."
 );
 
 // -------------------------------------------------------------------------- //
@@ -244,44 +244,44 @@ impl_from_indexed_for_basic_opaq!(
 impl_from_basic_for_basic!(
   LumaPixmap,
   RgbAlphaPixmap,
-  "Converts a `LumaPixmap` into an `RgbAlphaPixmap`."
+  "Converts a [`LumaPixmap`] into an [`RgbAlphaPixmap`]."
 );
 
 impl_from_basic_for_basic!(
   LumaAlphaPixmap,
   RgbAlphaPixmap,
-  "Converts a `LumaAlphaPixmap` into an `RgbAlphaPixmap`."
+  "Converts a [`LumaAlphaPixmap`] into an [`RgbAlphaPixmap`]."
 );
 
 impl_from_basic_for_basic!(
   RgbPixmap,
   RgbAlphaPixmap,
-  "Converts an `RgbPixmap` into an `RgbAlphaPixmap`."
+  "Converts an [`RgbPixmap`] into an [`RgbAlphaPixmap`]."
 );
 
 impl_from_indexed_for_basic_alpha!(
   RgbAlphaPixmap,
-  "Converts an `IndexedPixmap` into an `RgbAlphaPixmap`."
+  "Converts an [`IndexedPixmap`] into an [`RgbAlphaPixmap`]."
 );
 
 // -------------------------------------------------------------------------- //
 
 impl_from_basic_for_indexed_opaq!(
   LumaPixmap,
-  "Converts a `LumaPixmap` into an `IndexedPixmap`."
+  "Converts a [`LumaPixmap`] into an [`IndexedPixmap`]."
 );
 
 impl_from_basic_for_indexed_alpha!(
   LumaAlphaPixmap,
-  "Converts a `LumaAlphaPixmap` into an `IndexedPixmap`."
+  "Converts a [`LumaAlphaPixmap`] into an [`IndexedPixmap`]."
 );
 
 impl_from_basic_for_indexed_opaq!(
   RgbPixmap,
-  "Converts an `RgbPixmap` into an `IndexedPixmap`."
+  "Converts an [`RgbPixmap`] into an [`IndexedPixmap`]."
 );
 
 impl_from_basic_for_indexed_alpha!(
   RgbAlphaPixmap,
-  "Converts an `RgbAlphaPixmap` into an `IndexedPixmap`."
+  "Converts an [`RgbAlphaPixmap`] into an [`IndexedPixmap`]."
 );

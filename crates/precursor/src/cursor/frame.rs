@@ -6,13 +6,29 @@ pub struct CursorFrame {
   pub duration: Option<CursorDuration>,
 }
 
+impl CursorFrame {
+  /// Constructs a new `CursorFrame`.
+  ///
+  /// # Panics
+  ///
+  /// Panics if `icons` is empty.
+  pub const fn new(
+    icons: Vec<CursorIcon>,
+    duration: Option<CursorDuration>,
+  ) -> Self {
+    assert!(!icons.is_empty(), "icons should not be empty");
+
+    Self { icons, duration }
+  }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CursorDuration(u32);
 
 impl CursorDuration {
   const JIFFY: f32 = 16.666666;
 
-  /// Creates a new `CursorDuration`.
+  /// Constructs a new `CursorDuration`.
   pub const fn new(ms: u32) -> Self {
     Self(ms)
   }

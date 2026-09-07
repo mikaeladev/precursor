@@ -11,18 +11,16 @@ use crate_pixmap::*;
 
 use crate::RasterResult;
 
-pub trait PngImage {
+pub trait PngImage: Sized {
   /// Decodes a PNG image into `Self`.
   ///
   /// # Panics
   ///
   /// Panics if the image buffer exceeds `isize::MAX`.
-  fn decode_png(reader: BufReader<File>) -> RasterResult<Self>
-  where
-    Self: Sized;
+  fn decode_png(reader: BufReader<File>) -> RasterResult<Self>;
 
-  /// Encodes `Self` into a PNG image.
-  fn encode_png(&self) -> RasterResult<Vec<u8>>;
+  /// Encodes this value into a PNG image.
+  fn encode_png(self) -> RasterResult<Vec<u8>>;
 
   /// Returns the associated PNG [`ColorType`].
   fn color_type(&self) -> ColorType;
@@ -129,7 +127,7 @@ impl PngImage for DynamicPixmap {
     })
   }
 
-  fn encode_png(&self) -> RasterResult<Vec<u8>> {
+  fn encode_png(self) -> RasterResult<Vec<u8>> {
     let width = self.width();
     let height = self.height();
 
@@ -142,7 +140,7 @@ impl PngImage for DynamicPixmap {
     encoder.set_color(self.color_type());
     encoder.set_compression(Compression::High);
 
-    if let DynamicPixmap::Indexed(indexed_pixmap) = self {
+    if let DynamicPixmap::Indexed(indexed_pixmap) = &self {
       let palette: Vec<_> = indexed_pixmap
         .palette()
         .iter()

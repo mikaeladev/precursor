@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use crate_pixmap::DynamicPixmap;
+use crate_pixmap::{DynamicPixmap, Pixmap};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
@@ -17,7 +17,9 @@ pub struct CurFile {
 impl CurFile {
   const HEADER_SIZE: usize = 6;
 
-  /// Attempts to creates a new `CurFile`.
+  /// Attempts to construct a new `CurFile`.
+  ///
+  /// # Errors
   ///
   /// Fails with a `RasterError` if any icon pixmap in `icons` is malformed.
   pub fn new(icons: Vec<CurIcon>) -> RasterResult<Self> {
@@ -97,7 +99,7 @@ pub struct CurIcon {
 }
 
 impl CurIcon {
-  /// Creates a new `CurIcon`.
+  /// Constructs a new `CurIcon`.
   ///
   /// # Panics
   ///

@@ -2,7 +2,7 @@ mod convert;
 
 pub use convert::*;
 
-pub trait Pixel: Clone + Copy + PartialEq + Eq {
+pub trait Pixel: Default + Clone + Copy + PartialEq + Eq {
   /// Number of channels in the pixel.
   const CHANNELS: usize;
 }
@@ -17,9 +17,14 @@ pub trait IntoBytes<const N: usize> {
   fn into_bytes(self) -> [u8; N];
 }
 
+pub trait IntoBoxedBytes {
+  /// Converts this type into a boxed byte array.
+  fn into_boxed_bytes(self) -> Box<[u8]>;
+}
+
 // -------------------------------------------------------------------------- //
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct LumaPixel {
   pub y: u8,
 }
@@ -41,9 +46,15 @@ impl IntoBytes<1> for LumaPixel {
   }
 }
 
+impl IntoBoxedBytes for LumaPixel {
+  fn into_boxed_bytes(self) -> Box<[u8]> {
+    Box::new([self.y])
+  }
+}
+
 // -------------------------------------------------------------------------- //
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct LumaAlphaPixel {
   pub y: u8,
   pub a: u8,
@@ -67,9 +78,16 @@ impl IntoBytes<2> for LumaAlphaPixel {
   }
 }
 
+impl IntoBoxedBytes for LumaAlphaPixel {
+  fn into_boxed_bytes(self) -> Box<[u8]> {
+    let Self { y, a } = self;
+    Box::new([y, a])
+  }
+}
+
 // -------------------------------------------------------------------------- //
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RgbPixel {
   pub r: u8,
   pub g: u8,
@@ -94,9 +112,16 @@ impl IntoBytes<3> for RgbPixel {
   }
 }
 
+impl IntoBoxedBytes for RgbPixel {
+  fn into_boxed_bytes(self) -> Box<[u8]> {
+    let Self { r, g, b } = self;
+    Box::new([r, g, b])
+  }
+}
+
 // -------------------------------------------------------------------------- //
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RgbAlphaPixel {
   pub r: u8,
   pub g: u8,
@@ -122,9 +147,16 @@ impl IntoBytes<4> for RgbAlphaPixel {
   }
 }
 
+impl IntoBoxedBytes for RgbAlphaPixel {
+  fn into_boxed_bytes(self) -> Box<[u8]> {
+    let Self { r, g, b, a } = self;
+    Box::new([r, g, b, a])
+  }
+}
+
 // -------------------------------------------------------------------------- //
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct IndexedPixel {
   pub i: u8,
 }
@@ -143,5 +175,11 @@ impl FromBytes<1> for IndexedPixel {
 impl IntoBytes<1> for IndexedPixel {
   fn into_bytes(self) -> [u8; 1] {
     [self.i]
+  }
+}
+
+impl IntoBoxedBytes for IndexedPixel {
+  fn into_boxed_bytes(self) -> Box<[u8]> {
+    Box::new([self.i])
   }
 }

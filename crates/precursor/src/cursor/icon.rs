@@ -18,9 +18,22 @@ pub struct CursorIcon {
 }
 
 impl CursorIcon {
-  /// Attemts to create a new `CursorIcon` from a `CursorIconConfig`.
+  /// Scales the icon up by `factor`.
   ///
-  /// Fails with a `PrecursorResult` if any of the following occurs:
+  /// # Panics
+  ///
+  /// Panics if the new length exceeds `isize::MAX`.
+  pub fn scale_up(&mut self, factor: usize) {
+    self.nominal *= factor as u32;
+    self.hotspot *= factor as u32;
+    self.pixmap.scale_up(factor);
+  }
+
+  /// Attemts to construct a new `CursorIcon` from a [`CursorIconConfig`].
+  ///
+  /// # Errors
+  ///
+  /// Fails with a [`PrecursorResult`] if any of the following are true:
   ///
   /// * The hotspot is out of bounds (i.e. > `nominal`).
   /// * The asset is not a `PNG` file.

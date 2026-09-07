@@ -10,14 +10,30 @@ pub struct Cursor {
 }
 
 impl Cursor {
+  /// Constructs a new [`Cursor`].
+  ///
+  /// # Panics
+  ///
+  /// Panics if `frames` is empty.
+  pub const fn new(
+    frames: Vec<CursorFrame>,
+    metadata: Option<CursorMetadata>,
+  ) -> Self {
+    assert!(!frames.is_empty(), "frames should not be empty");
+
+    Self { frames, metadata }
+  }
+
   /// Returns `true` if there are multiple frames in the cursor.
   pub const fn is_animated(&self) -> bool {
     self.frames.len() != 1
   }
 
-  /// Attempts to create a new `Cursor` from a `CursorConfig`.
+  /// Attempts to construct a new [`Cursor`] from a [`CursorConfig`].
   ///
-  /// Fails with a `PrecursorError` if any asset fails to decode.
+  /// # Errors
+  ///
+  /// Fails with a [`PrecursorError`] if any asset fails to decode.
   pub fn from_config(
     CursorConfig { subconfig, .. }: CursorConfig,
   ) -> PrecursorResult<Self> {
@@ -27,10 +43,19 @@ impl Cursor {
       ScaledStatic { icon: icon_config } => {
         let icon = CursorIcon::from_config(icon_config)?;
 
-        vec![CursorFrame {
-          icons: vec![icon],
-          duration: None,
-        }]
+        let mut icon_x2 = icon.clone();
+        icon_x2.scale_up(2);
+
+        let mut icon_x3 = icon.clone();
+        icon_x3.scale_up(3);
+
+        let mut icon_x4 = icon.clone();
+        icon_x4.scale_up(4);
+
+        vec![CursorFrame::new(
+          vec![icon, icon_x2, icon_x3, icon_x4],
+          None,
+        )]
       }
       ScaledAnimated {
         nominal,
@@ -46,10 +71,19 @@ impl Cursor {
             hotspot,
           })?;
 
-          frames.push(CursorFrame {
-            icons: vec![icon],
-            duration: Some(CursorDuration::new(duration)),
-          });
+          let mut icon_x2 = icon.clone();
+          icon_x2.scale_up(2);
+
+          let mut icon_x3 = icon.clone();
+          icon_x3.scale_up(3);
+
+          let mut icon_x4 = icon.clone();
+          icon_x4.scale_up(4);
+
+          frames.push(CursorFrame::new(
+            vec![icon, icon_x2, icon_x3, icon_x4],
+            Some(CursorDuration::new(duration)),
+          ));
         }
 
         frames
@@ -63,10 +97,7 @@ impl Cursor {
           icons.push(CursorIcon::from_config(icon_config)?);
         }
 
-        vec![CursorFrame {
-          icons,
-          duration: None,
-        }]
+        vec![CursorFrame::new(icons, None)]
       }
       VerboseAnimated { sequence } => {
         let mut frames = Vec::with_capacity(sequence.len());
@@ -78,20 +109,17 @@ impl Cursor {
             icons.push(CursorIcon::from_config(icon_config)?);
           }
 
-          frames.push(CursorFrame {
+          frames.push(CursorFrame::new(
             icons,
-            duration: Some(CursorDuration::new(frame_config.duration)),
-          });
+            Some(CursorDuration::new(frame_config.duration)),
+          ));
         }
 
         frames
       }
     };
 
-    Ok(Cursor {
-      frames,
-      metadata: None,
-    })
+    Ok(Cursor::new(frames, None))
   }
 }
 
