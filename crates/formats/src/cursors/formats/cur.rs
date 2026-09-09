@@ -1,88 +1,87 @@
-use std::io::Write;
-
-use crate_pixmap::{DynamicPixmap, Pixmap};
+use std::io::{self, Write};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use crate::cursors::Hotspot;
-use crate::png::PngImage;
-use crate::rasters::RasterResult;
-use crate::write::{WriteResult, WriteTo};
+use crate::cursors::{CursorFile, Hotspot};
+
+const FILE_HEADER_SIZE: u32 = 6;
+const ICON_ENTRY_SIZE: u32 = 16;
 
 pub struct CurFile {
   entries: Vec<CurIconEntry>,
-  pngs: Vec<Vec<u8>>,
+  pngs: Vec<Box<[u8]>>,
 }
 
 impl CurFile {
-  const HEADER_SIZE: usize = 6;
-
-  /// Attempts to construct a new `CurFile`.
+  /// Constructs a new `CurFile`.
   ///
-  /// # Errors
+  /// # Panics
   ///
-  /// Fails with a `RasterError` if any icon pixmap in `icons` is malformed.
-  pub fn new(icons: Vec<CurIcon>) -> RasterResult<Self> {
-    let num_icons = icons.len();
+  /// Panics if any [hotspot] in `icons` cannot be coerced to `u16`.
+  ///
+  /// [hotspot]: Hotspot
+  pub fn new(icons: Vec<CurIcon>) -> Self {
+    let icons_len = icons.len();
 
-    let mut entries = Vec::with_capacity(num_icons);
-    let mut pngs = Vec::with_capacity(num_icons);
+    let mut entries = Vec::with_capacity(icons_len);
+    let mut pngs = Vec::with_capacity(icons_len);
 
-    let mut data_offset =
-      (Self::HEADER_SIZE + CurIconEntry::SIZE * num_icons) as u32;
+    let mut data_pos = FILE_HEADER_SIZE + ICON_ENTRY_SIZE * icons_len as u32;
 
-    for CurIcon { hotspot, pixmap } in icons {
-      let (width, height) = pixmap.dimensions();
-
-      let png = pixmap.encode_png()?;
-      let png_size = png.len() as u32;
+    for CurIcon {
+      width,
+      height,
+      hotspot_x,
+      hotspot_y,
+      buffer,
+    } in icons
+    {
+      let data_size = buffer.len() as u32;
 
       let entry = CurIconEntry {
         width: if width > 255 { 0 } else { width as u8 },
         height: if height > 255 { 0 } else { height as u8 },
-        hotspot_x: hotspot.x as u16,
-        hotspot_y: hotspot.y as u16,
-        data_size: png_size,
-        data_offset: data_offset,
+        hotspot_x,
+        hotspot_y,
+        data_size,
+        data_pos,
       };
 
-      data_offset += png_size;
+      data_pos += data_size;
 
       entries.push(entry);
-      pngs.push(png);
+      pngs.push(buffer);
     }
 
-    Ok(Self { entries, pngs })
-  }
-
-  /// Returns the formatted data size in bytes.
-  pub const fn size(&self) -> usize {
-    let slice = self.pngs.as_slice();
-    let len = slice.len();
-
-    let mut index = 0;
-    let mut acc = Self::HEADER_SIZE + CurIconEntry::SIZE * len;
-
-    loop {
-      index += 1;
-
-      if index > len {
-        break acc;
-      }
-
-      acc += slice[index].len();
-    }
+    Self { entries, pngs }
   }
 }
 
-impl WriteTo for CurFile {
-  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
+impl CursorFile for CurFile {
+  fn size(&self) -> usize {
+    self.pngs.iter().fold(
+      FILE_HEADER_SIZE as usize + ICON_ENTRY_SIZE as usize * self.pngs.len(),
+      |acc, png| acc + png.len(),
+    )
+  }
+
+  fn write<W: Write>(self, writer: &mut W) -> io::Result<()> {
     writer.write_u16::<LittleEndian>(0)?; // reserved
     writer.write_u16::<LittleEndian>(2)?; // magic type
     writer.write_u16::<LittleEndian>(self.entries.len() as u16)?;
 
     for entry in self.entries {
-      entry.write_to(&mut writer)?;
+      writer.write_u8(entry.width)?;
+      writer.write_u8(entry.height)?;
+
+      writer.write_u8(0)?; // colour count (0 for 8-bit)
+      writer.write_u8(0)?; // reserved
+
+      writer.write_u16::<LittleEndian>(entry.hotspot_x)?;
+      writer.write_u16::<LittleEndian>(entry.hotspot_y)?;
+
+      writer.write_u32::<LittleEndian>(entry.data_size)?;
+      writer.write_u32::<LittleEndian>(entry.data_pos)?;
     }
 
     for png in self.pngs {
@@ -94,8 +93,11 @@ impl WriteTo for CurFile {
 }
 
 pub struct CurIcon {
-  hotspot: Hotspot,
-  pixmap: DynamicPixmap,
+  width: u16,
+  height: u16,
+  hotspot_x: u16,
+  hotspot_y: u16,
+  buffer: Box<[u8]>,
 }
 
 impl CurIcon {
@@ -104,13 +106,25 @@ impl CurIcon {
   /// # Panics
   ///
   /// Panics if `hotspot` is out of bounds.
-  pub fn new(hotspot: Hotspot, pixmap: DynamicPixmap) -> Self {
-    let (width, height) = pixmap.dimensions();
+  pub const fn new(
+    width: u16,
+    height: u16,
+    hotspot: Hotspot,
+    buffer: Box<[u8]>,
+  ) -> Self {
+    let hotspot_x = hotspot.x as u16;
+    let hotspot_y = hotspot.y as u16;
 
-    assert!(hotspot.x <= width, "hotspot.x should be ≤ pixmap width");
-    assert!(hotspot.y <= height, "hotspot.y should be ≤ pixmap height");
+    assert!(hotspot_x <= width, "hotspot_x should be ≤ width");
+    assert!(hotspot_y <= height, "hotspot_y should be ≤ height");
 
-    Self { hotspot, pixmap }
+    Self {
+      width,
+      height,
+      hotspot_x,
+      hotspot_y,
+      buffer,
+    }
   }
 }
 
@@ -120,28 +134,5 @@ struct CurIconEntry {
   hotspot_x: u16,
   hotspot_y: u16,
   data_size: u32,
-  data_offset: u32,
-}
-
-impl CurIconEntry {
-  /// Formatted data size in bytes.
-  pub const SIZE: usize = 16;
-}
-
-impl WriteTo for CurIconEntry {
-  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
-    writer.write_u8(self.width)?;
-    writer.write_u8(self.height)?;
-
-    writer.write_u8(0)?; // colour count (0 for 8-bit)
-    writer.write_u8(0)?; // reserved
-
-    writer.write_u16::<LittleEndian>(self.hotspot_x)?;
-    writer.write_u16::<LittleEndian>(self.hotspot_y)?;
-
-    writer.write_u32::<LittleEndian>(self.data_size)?;
-    writer.write_u32::<LittleEndian>(self.data_offset)?;
-
-    Ok(())
-  }
+  data_pos: u32,
 }

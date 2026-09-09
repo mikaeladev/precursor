@@ -1,13 +1,14 @@
 use std::env;
 use std::fs::{self, File};
-use std::io::{ErrorKind as IoErrorKind, Result as IoResult};
+use std::io;
 use std::path::PathBuf;
 
 use crate_config::CursorTargets;
-use crate_formats::ani::AniFile;
-use crate_formats::cur::CurFile;
-use crate_formats::write::WriteTo;
-use crate_formats::xcursor::XcursorFile;
+
+use crate_formats::cursors::CursorFile;
+use crate_formats::cursors::ani::AniFile;
+use crate_formats::cursors::cur::CurFile;
+use crate_formats::cursors::xcursor::XcursorFile;
 
 use crate::args::BuildArgs;
 use crate::config;
@@ -45,10 +46,14 @@ pub fn build(
 
       if cursor.is_animated() {
         cursor_path.set_extension("ani");
-        AniFile::from_cursor(&cursor)?.write_to(File::create(cursor_path)?)?;
+
+        AniFile::from_cursor(&cursor)?
+          .write(&mut File::create(cursor_path)?)?;
       } else {
         cursor_path.set_extension("cur");
-        CurFile::from_cursor(&cursor)?.write_to(File::create(cursor_path)?)?;
+
+        CurFile::from_cursor(&cursor)?
+          .write(&mut File::create(cursor_path)?)?;
       }
     }
 
@@ -58,7 +63,7 @@ pub fn build(
 
       XcursorFile::from_cursor(&cursor)
         .unwrap() // infallible
-        .write_to(File::create(&cursor_path)?)?;
+        .write(&mut File::create(&cursor_path)?)?;
 
       #[cfg(target_family = "unix")]
       if let Some(aliases) = linux_aliases {
@@ -80,10 +85,10 @@ pub fn build(
 /// Returns a path to the target directory.
 ///
 /// Falls back to the current working directory if the value is `None`.
-fn get_target_dir(target_dir: Option<PathBuf>) -> IoResult<PathBuf> {
+fn get_target_dir(target_dir: Option<PathBuf>) -> io::Result<PathBuf> {
   if let Some(value) = target_dir {
     if !fs::metadata(&value)?.is_dir() {
-      Err(IoErrorKind::NotADirectory.into())
+      Err(io::ErrorKind::NotADirectory.into())
     } else {
       Ok(value)
     }

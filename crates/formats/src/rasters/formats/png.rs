@@ -9,7 +9,7 @@ use png::{
 use crate_pixmap::pixels::*;
 use crate_pixmap::*;
 
-use crate::RasterResult;
+use crate::rasters::RasterResult;
 
 pub trait PngImage: Sized {
   /// Decodes a PNG image into `Self`.

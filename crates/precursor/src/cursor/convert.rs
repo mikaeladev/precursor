@@ -1,11 +1,12 @@
 use std::convert::Infallible;
 
-use crate_formats::ani::AniFile;
-use crate_formats::cur::{CurFile, CurIcon};
+use crate_formats::cursors::ani::AniFile;
+use crate_formats::cursors::cur::{CurFile, CurIcon};
+use crate_formats::cursors::xcursor::{XcursorChunk, XcursorFile};
+use crate_formats::rasters::png::PngImage;
 use crate_formats::rasters::{RasterError, RasterResult};
-use crate_formats::xcursor::{XcursorFile, XcursorImageChunk};
 
-use crate_pixmap::IntoPixmap;
+use crate_pixmap::{IntoPixmap, RgbAlphaPixmap};
 
 use super::{Cursor, CursorFrame};
 
@@ -17,7 +18,7 @@ pub trait FromCursor: Sized {
   fn from_cursor(cursor: &Cursor) -> Result<Self, Self::Error>;
 }
 
-impl FromCursor for XcursorFile<'_> {
+impl FromCursor for XcursorFile {
   type Error = Infallible;
 
   /// Constructs a new [`XcursorFile`] from a [`Cursor`] reference.
@@ -28,22 +29,35 @@ impl FromCursor for XcursorFile<'_> {
   ///
   /// # Panics
   ///
-  /// Panics if any icon hotspot is out of bounds.
+  /// Panics if there are no chunks, or if the number of chunks exceeds
+  /// `u32::MAX`.
   fn from_cursor(cursor: &Cursor) -> Result<Self, Infallible> {
     let num_chunks = cursor.frames.iter().fold(0, |acc, f| acc + f.icons.len());
 
     let mut chunks = Vec::with_capacity(num_chunks);
 
     for frame in &cursor.frames {
-      let duration = frame.duration.and_then(|d| Some(d.milliseconds()));
+      let duration = frame
+        .duration
+        .and_then(|d| Some(d.milliseconds()))
+        .unwrap_or_default();
 
       for icon in &frame.icons {
-        chunks.push(XcursorImageChunk::new(
-          icon.nominal,
-          icon.hotspot,
-          icon.pixmap.clone().into_pixmap(),
+        let rgba: RgbAlphaPixmap = icon.pixmap.clone().into_pixmap();
+        let mut pixels: Box<[u8]> = rgba.into_iter().collect();
+
+        for chunk in pixels.as_chunks_mut::<4>().0 {
+          chunk.swap(0, 2); // rgba -> bgra
+        }
+
+        chunks.push(XcursorChunk::Image {
+          nominal: icon.nominal,
+          width: icon.pixmap.width(),
+          height: icon.pixmap.height(),
+          hotspot: icon.hotspot,
           duration,
-        ));
+          pixels,
+        });
       }
     }
 
@@ -62,11 +76,11 @@ impl FromCursor for CurFile {
   ///
   /// # Panics
   ///
-  /// Panics if any icon hotspot is out of bounds.
+  /// Panics if any icon [hotspot] is out of bounds.
+  ///
+  /// [hotspot]: crate_formats::cursors::Hotspot
   fn from_cursor(cursor: &Cursor) -> Result<Self, RasterError> {
-    let frame = cursor.frames.first().unwrap();
-
-    Ok(frame_to_cur(frame)?)
+    frame_to_cur(cursor.frames.first().unwrap())
   }
 }
 
@@ -81,7 +95,9 @@ impl FromCursor for AniFile {
   ///
   /// # Panics
   ///
-  /// Panics if any icon hotspot is out of bounds.
+  /// Panics if any icon [hotspot] is out of bounds.
+  ///
+  /// [hotspot]: crate_formats::cursors::Hotspot
   fn from_cursor(cursor: &Cursor) -> Result<Self, RasterError> {
     let num_frames = cursor.frames.len();
 
@@ -97,7 +113,7 @@ impl FromCursor for AniFile {
       sequence.push(index as u32);
     }
 
-    Ok(AniFile::new(frames, rates, sequence))
+    Ok(AniFile::new(frames, rates, sequence)?)
   }
 }
 
@@ -109,13 +125,20 @@ impl FromCursor for AniFile {
 ///
 /// # Panics
 ///
-/// Panics if any icon hotspot is out of bounds.
+/// Panics if any icon [hotspot] is out of bounds.
+///
+/// [hotspot]: crate_formats::cursors::Hotspot
 fn frame_to_cur(frame: &CursorFrame) -> RasterResult<CurFile> {
-  let icons = frame
-    .icons
-    .iter()
-    .map(|icon| CurIcon::new(icon.hotspot, icon.pixmap.clone()))
-    .collect();
+  let mut icons = Vec::with_capacity(frame.icons.len());
 
-  CurFile::new(icons)
+  for icon in &frame.icons {
+    icons.push(CurIcon::new(
+      icon.pixmap.width() as u16,
+      icon.pixmap.height() as u16,
+      icon.hotspot,
+      icon.pixmap.clone().encode_png()?.into_boxed_slice(),
+    ));
+  }
+
+  Ok(CurFile::new(icons))
 }

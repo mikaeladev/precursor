@@ -4,7 +4,7 @@ use std::io::{BufRead, BufReader};
 use crate_config::{AssetValue, CursorIconConfig, RotateValue};
 
 use crate_formats::cursors::Hotspot;
-use crate_formats::png::PngImage;
+use crate_formats::rasters::png::PngImage;
 
 use crate_pixmap::DynamicPixmap;
 

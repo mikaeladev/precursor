@@ -1,200 +1,109 @@
-use std::io::Write;
+use std::io::{self, Cursor, Seek, Write};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use crate::cur::CurFile;
-use crate::write::{WriteResult, WriteTo};
+use crate::containers::riff::{ChunkId, ChunkValue};
+use crate::cursors::CursorFile;
+use crate::cursors::cur::CurFile;
 
-pub struct AniFile {
-  header: HeaderChunk,
-  rates: RatesChunk,
-  sequence: SequenceChunk,
-  frames: FramesChunk,
-}
-
-const ID_SIZE: usize = 4;
-const LEN_SIZE: usize = 4;
+pub struct AniFile(ChunkValue);
 
 impl AniFile {
-  /// Creates a new `AniFile`.
-  pub const fn new(
+  /// Attempts to construct a new `AniFile`.
+  ///
+  /// # Panics
+  ///
+  /// Panics if there are more `icons` than indices in `sequence`.
+  pub fn new(
     icons: Vec<CurFile>,
     rates: Vec<u32>,
     sequence: Vec<u32>,
-  ) -> Self {
-    Self {
-      header: HeaderChunk::new(icons.len() as u32, sequence.len() as u32),
-      rates: RatesChunk(rates),
-      sequence: SequenceChunk(sequence),
-      frames: FramesChunk(icons),
-    }
-  }
+  ) -> io::Result<Self> {
+    let icons_len = icons.len() as u32;
+    let sequence_len = sequence.len() as u32;
 
-  /// Returns the formatted data size in bytes.
-  pub const fn size(&self) -> usize {
-    ID_SIZE + LEN_SIZE + self.inner_size()
-  }
-
-  /// Returns the inner formatted data size in bytes.
-  const fn inner_size(&self) -> usize {
-    ID_SIZE
-      + HeaderChunk::SIZE
-      + self.rates.size()
-      + self.sequence.size()
-      + ID_SIZE
-      + LEN_SIZE
-      + self.frames.size()
-  }
-}
-
-impl WriteTo for AniFile {
-  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
-    let riff_size = (self.inner_size()) as u32;
-
-    writer.write_all(b"RIFF")?;
-    writer.write_u32::<LittleEndian>(riff_size)?;
-
-    writer.write_all(b"ACON")?;
-    self.header.write_to(&mut writer)?;
-    self.rates.write_to(&mut writer)?;
-    self.sequence.write_to(&mut writer)?;
-
-    let list_size = self.frames.size() as u32;
-
-    writer.write_all(b"LIST")?;
-    writer.write_u32::<LittleEndian>(list_size)?;
-
-    self.frames.write_to(writer)?;
-
-    Ok(())
-  }
-}
-
-struct HeaderChunk {
-  /// Number of unique icons in the animation.
-  icon_count: u32,
-  /// Number of frames in the animation.
-  frame_count: u32,
-}
-
-impl HeaderChunk {
-  /// Formatted data size in bytes.
-  const SIZE: usize = ID_SIZE + Self::INNER_SIZE;
-
-  /// Inner formatted data size in bytes.
-  const INNER_SIZE: usize = 36;
-
-  /// Creates a new `HeaderChunk`.
-  const fn new(icon_count: u32, frame_count: u32) -> Self {
     assert!(
-      icon_count <= frame_count,
-      "icon_count should be ≤ frame_count"
+      icons_len <= sequence_len,
+      "icons_len should be ≤ sequence_len"
     );
 
-    Self {
-      icon_count,
-      frame_count,
-    }
+    Ok(Self(ChunkValue::riff(
+      ChunkId(*b"ACON"),
+      vec![
+        ChunkValue::anih(icons_len, sequence_len)?,
+        ChunkValue::rate(rates)?,
+        ChunkValue::seq_(sequence)?,
+        ChunkValue::fram(icons)?,
+      ],
+    )))
   }
 }
 
-impl WriteTo for HeaderChunk {
-  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
-    writer.write_all(b"anih")?;
+impl CursorFile for AniFile {
+  fn size(&self) -> usize {
+    self.0.size()
+  }
 
-    writer.write_u32::<LittleEndian>(Self::INNER_SIZE as u32)?;
-    writer.write_u32::<LittleEndian>(self.icon_count)?;
-    writer.write_u32::<LittleEndian>(self.frame_count)?;
-    writer.write_u32::<LittleEndian>(0)?; // width (unused)
-    writer.write_u32::<LittleEndian>(0)?; // height (unused)
-    writer.write_u32::<LittleEndian>(0)?; // colour depth (unused)
-    writer.write_u32::<LittleEndian>(0)?; // num planes (unused)
-    writer.write_u32::<LittleEndian>(0)?; // default rate (unused)
-    writer.write_u32::<LittleEndian>(1)?; // sequence flag
-
+  fn write<W: Write + Seek>(self, writer: &mut W) -> io::Result<()> {
+    self.0.write(writer)?;
     Ok(())
   }
 }
 
-struct RatesChunk(Vec<u32>);
+trait ChunkValueAniExt {
+  fn anih(icons_len: u32, sequence_len: u32) -> io::Result<ChunkValue> {
+    let mut header_buf = Vec::with_capacity(40);
 
-impl RatesChunk {
-  /// Returns the formatted data size in bytes.
-  const fn size(&self) -> usize {
-    ID_SIZE + self.0.len()
+    header_buf.write_all(b"anih")?;
+    header_buf.write_u32::<LittleEndian>(36)?; // header size
+    header_buf.write_u32::<LittleEndian>(icons_len as u32)?;
+    header_buf.write_u32::<LittleEndian>(sequence_len as u32)?;
+    header_buf.write_u32::<LittleEndian>(0)?; // width (unused)
+    header_buf.write_u32::<LittleEndian>(0)?; // height (unused)
+    header_buf.write_u32::<LittleEndian>(0)?; // colour depth (unused)
+    header_buf.write_u32::<LittleEndian>(0)?; // num planes (unused)
+    header_buf.write_u32::<LittleEndian>(0)?; // default rate (unused)
+    header_buf.write_u32::<LittleEndian>(1)?; // sequence flag
+
+    Ok(ChunkValue::Raw(header_buf))
   }
-}
 
-impl WriteTo for RatesChunk {
-  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
-    writer.write_all(b"rate")?;
+  fn rate(rates: Vec<u32>) -> io::Result<ChunkValue> {
+    let mut rates_buf = Vec::with_capacity(4 * (1 + rates.len()));
 
-    for rate in self.0.into_iter() {
-      writer.write_u32::<LittleEndian>(rate)?;
+    rates_buf.write_all(b"rate")?;
+    for rate in rates {
+      rates_buf.write_u32::<LittleEndian>(rate)?;
     }
 
-    Ok(())
+    Ok(ChunkValue::Raw(rates_buf))
   }
-}
 
-struct SequenceChunk(Vec<u32>);
+  fn seq_(sequence: Vec<u32>) -> io::Result<ChunkValue> {
+    let mut sequence_buf = Vec::with_capacity(4 * (1 + sequence.len()));
 
-impl SequenceChunk {
-  /// Returns the formatted data size in bytes.
-  const fn size(&self) -> usize {
-    ID_SIZE + self.0.len()
-  }
-}
-
-impl WriteTo for SequenceChunk {
-  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
-    writer.write_all(b"seq ")?;
-
-    for seq in self.0.into_iter() {
-      writer.write_u32::<LittleEndian>(seq)?;
+    sequence_buf.write_all(b"seq ")?;
+    for index in sequence {
+      sequence_buf.write_u32::<LittleEndian>(index)?;
     }
 
-    Ok(())
-  }
-}
-
-struct FramesChunk(Vec<CurFile>);
-
-impl FramesChunk {
-  /// Returns the formatted data size in bytes.
-  const fn size(&self) -> usize {
-    ID_SIZE + self.inner_size()
+    Ok(ChunkValue::Raw(sequence_buf))
   }
 
-  /// Returns the inner formatted data size in bytes.
-  const fn inner_size(&self) -> usize {
-    let slice = self.0.as_slice();
-    let len = slice.len();
+  fn fram(icons: Vec<CurFile>) -> io::Result<ChunkValue> {
+    let mut frame_chunks = Vec::with_capacity(icons.len());
 
-    let mut index = 0;
-    let mut acc = 0;
+    for icon in icons {
+      let mut buf = Cursor::new(Vec::with_capacity(4 + icon.size()));
 
-    loop {
-      index += 1;
+      buf.write_all(b"icon")?;
+      icon.write(&mut buf)?;
 
-      if index > len {
-        break acc;
-      }
-
-      acc += ID_SIZE + slice[index].size()
-    }
-  }
-}
-
-impl WriteTo for FramesChunk {
-  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
-    writer.write_all(b"fram")?;
-
-    for icon in self.0 {
-      writer.write_all(b"icon")?;
-      icon.write_to(&mut writer)?;
+      frame_chunks.push(ChunkValue::Raw(buf.into_inner()));
     }
 
-    Ok(())
+    Ok(ChunkValue::list(ChunkId(*b"fram"), frame_chunks))
   }
 }
+
+impl ChunkValueAniExt for ChunkValue {}

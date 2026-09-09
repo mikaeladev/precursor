@@ -1,4 +1,4 @@
-use std::io::Error as IoError;
+use std::io;
 
 use crate_pixmap::PixmapError;
 
@@ -7,7 +7,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum RasterError {
   #[error("io error: {0}")]
-  IoError(#[from] IoError),
+  IoError(#[from] io::Error),
 
   #[error("pixmap error: {0}")]
   PixmapError(#[from] PixmapError),

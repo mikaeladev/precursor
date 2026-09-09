@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 use std::fs::File;
-use std::io::{BufReader, Result as IoResult};
+use std::io::{self, BufReader};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
@@ -19,7 +19,7 @@ impl Default for InputArg {
 
 impl InputArg {
   /// Attempts to open the input in read-only mode.
-  pub fn open(&self) -> IoResult<BufReader<File>> {
+  pub fn open(&self) -> io::Result<BufReader<File>> {
     Ok(BufReader::new(match self {
       Self::Path(buf) => File::open(buf)?,
       #[cfg(target_family = "unix")]

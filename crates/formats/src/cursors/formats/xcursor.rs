@@ -1,261 +1,182 @@
-use std::io::Write;
+use std::io::{self, Write};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use crate_pixmap::{Pixmap, RgbAlphaPixmap};
+use crate::cursors::{CursorFile, Hotspot};
 
-use crate::cursors::Hotspot;
-use crate::write::{WriteResult, WriteTo};
+const FILE_HEADER_SIZE: u32 = 16;
+const FILE_VERSION: u32 = 0x10000;
 
-pub struct XcursorFile<'c> {
-  chunks: Vec<XcursorChunk<'c>>,
+const TOC_ENTRY_SIZE: u32 = 12;
+
+const CHUNK_VERSION: u32 = 1;
+
+const COMMENT_HEADER_SIZE: u32 = 20;
+const COMMENT_CHUNK_TYPE: u32 = 0xfffe0001;
+
+const IMAGE_HEADER_SIZE: u32 = 36;
+const IMAGE_CHUNK_TYPE: u32 = 0xfffd0002;
+
+#[derive(Debug)]
+pub struct XcursorFile {
+  chunks: Vec<XcursorChunk>,
 }
 
-impl<'c> XcursorFile<'c> {
-  const HEADER_SIZE: usize = 16;
-  const HEADER_VERSION: u32 = 0x10000;
-
-  /// Creates a new `XcursorFile`.
+impl XcursorFile {
+  /// Constructs a new `XcursorFile`.
   ///
   /// # Panics
   ///
-  /// Panics if `chunks` length exceeds `u32::MAX`.
-  pub fn new(chunks: Vec<impl Into<XcursorChunk<'c>>>) -> Self {
+  /// Panics if `chunks` is empty, or if the length exceeds `u32::MAX`.
+  pub const fn new(chunks: Vec<XcursorChunk>) -> Self {
+    assert!(!chunks.is_empty(), "chunks should not be empty");
+
     assert!(
       chunks.len() <= u32::MAX as usize,
-      "chunks length should be ≤ u32::MAX"
+      "chunks length should not exceed u32::MAX"
     );
-
-    let chunks: Vec<_> = chunks.into_iter().map(|c| c.into()).collect();
 
     Self { chunks }
   }
-
-  /// Returns the formatted data size in bytes.
-  pub fn size(&self) -> usize {
-    let slice = self.chunks.as_slice();
-    let len = slice.len();
-
-    let mut index = 0;
-    let mut acc = Self::HEADER_SIZE + XcursorTocEntry::SIZE * len;
-
-    loop {
-      index += 1;
-
-      if index > len {
-        break acc;
-      }
-
-      acc += slice[index].size();
-    }
-  }
 }
 
-impl WriteTo for XcursorFile<'_> {
-  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
-    let num_chunks = self.chunks.len();
+impl CursorFile for XcursorFile {
+  /// Attempts to write the file to `writer`.
+  ///
+  /// # Errors
+  ///
+  /// Fails with an [`io::Error`] if the number of chunks, or the length of any
+  /// chunk value, exceeds `u32::MAX`.
+  fn write<W: Write>(self, writer: &mut W) -> io::Result<()> {
+    let chunks_len = self.chunks.len();
+
+    if chunks_len > u32::MAX as usize {
+      return Err(io::Error::new(
+        io::ErrorKind::InvalidData,
+        "chunks length exceeds u32::MAX",
+      ));
+    }
 
     writer.write_all(b"Xcur")?;
-    writer.write_u32::<LittleEndian>(Self::HEADER_SIZE as u32)?;
-    writer.write_u32::<LittleEndian>(Self::HEADER_VERSION)?;
-    writer.write_u32::<LittleEndian>(num_chunks as u32)?;
+    writer.write_u32::<LittleEndian>(FILE_HEADER_SIZE)?;
+    writer.write_u32::<LittleEndian>(FILE_VERSION)?;
+    writer.write_u32::<LittleEndian>(chunks_len as u32)?;
 
-    let mut data_offset =
-      Self::HEADER_SIZE + XcursorTocEntry::SIZE * num_chunks;
+    let mut data_pos = FILE_HEADER_SIZE + TOC_ENTRY_SIZE * chunks_len as u32;
 
     for chunk in &self.chunks {
-      let entry: XcursorTocEntry = chunk.into();
+      let chunk_type;
+      let chunk_kind;
+      let chunk_size;
 
-      writer.write_u32::<LittleEndian>(entry.r#type)?;
-      writer.write_u32::<LittleEndian>(entry.subtype)?;
-      writer.write_u32::<LittleEndian>(data_offset as u32)?;
+      match chunk {
+        XcursorChunk::Comment { kind, value } => {
+          chunk_type = COMMENT_CHUNK_TYPE;
+          chunk_kind = *kind as u32;
+          chunk_size = COMMENT_HEADER_SIZE as usize + value.len();
+        }
 
-      data_offset += chunk.size();
+        XcursorChunk::Image {
+          nominal, pixels, ..
+        } => {
+          // TODO: paremeter error for hotspot, width/height max value
+
+          chunk_type = IMAGE_CHUNK_TYPE;
+          chunk_kind = *nominal;
+          chunk_size = IMAGE_HEADER_SIZE as usize + pixels.len();
+        }
+      }
+
+      if chunk_size > u32::MAX as usize {
+        return Err(io::Error::new(
+          io::ErrorKind::InvalidData,
+          "chunk length exceeds u32::MAX",
+        ));
+      }
+
+      writer.write_u32::<LittleEndian>(chunk_type)?;
+      writer.write_u32::<LittleEndian>(chunk_kind)?;
+      writer.write_u32::<LittleEndian>(data_pos)?;
+
+      data_pos += chunk_size as u32;
     }
 
     for chunk in self.chunks {
-      chunk.write_to(&mut writer)?;
+      match chunk {
+        XcursorChunk::Comment { kind, value } => {
+          writer.write_u32::<LittleEndian>(COMMENT_HEADER_SIZE)?;
+          writer.write_u32::<LittleEndian>(COMMENT_CHUNK_TYPE)?;
+          writer.write_u32::<LittleEndian>(kind as u32)?;
+          writer.write_u32::<LittleEndian>(CHUNK_VERSION)?;
+          writer.write_u32::<LittleEndian>(value.len() as u32)?;
+
+          writer.write_all(value.as_bytes())?;
+        }
+
+        XcursorChunk::Image {
+          nominal,
+          width,
+          height,
+          hotspot,
+          duration,
+          pixels,
+        } => {
+          writer.write_u32::<LittleEndian>(IMAGE_HEADER_SIZE)?;
+          writer.write_u32::<LittleEndian>(IMAGE_CHUNK_TYPE)?;
+          writer.write_u32::<LittleEndian>(nominal)?;
+          writer.write_u32::<LittleEndian>(CHUNK_VERSION)?;
+          writer.write_u32::<LittleEndian>(width)?;
+          writer.write_u32::<LittleEndian>(height)?;
+          writer.write_u32::<LittleEndian>(hotspot.x)?;
+          writer.write_u32::<LittleEndian>(hotspot.y)?;
+          writer.write_u32::<LittleEndian>(duration)?;
+
+          writer.write_all(&pixels)?;
+        }
+      }
     }
 
     Ok(())
   }
-}
 
-struct XcursorTocEntry {
-  r#type: u32,
-  subtype: u32,
-}
+  fn size(&self) -> usize {
+    let f = |acc: usize, chunk: &XcursorChunk| {
+      let chunk_size = match chunk {
+        XcursorChunk::Comment { value, .. } => {
+          COMMENT_HEADER_SIZE as usize + value.len()
+        }
+        XcursorChunk::Image { pixels, .. } => {
+          IMAGE_HEADER_SIZE as usize + pixels.len()
+        }
+      };
 
-impl XcursorTocEntry {
-  const SIZE: usize = 12;
-}
+      acc + TOC_ENTRY_SIZE as usize + chunk_size
+    };
 
-pub enum XcursorChunk<'c> {
-  Comment(XcursorCommentChunk<'c>),
-  Image(XcursorImageChunk),
-}
-
-impl XcursorChunk<'_> {
-  /// Returns the formatted data size in bytes.
-  pub fn size(&self) -> usize {
-    match self {
-      Self::Comment(c) => c.size(),
-      Self::Image(c) => c.size(),
-    }
+    self.chunks.iter().fold(FILE_HEADER_SIZE as usize, f)
   }
 }
 
-impl WriteTo for XcursorChunk<'_> {
-  fn write_to<W: Write>(self, writer: W) -> WriteResult {
-    match self {
-      Self::Comment(c) => c.write_to(writer),
-      Self::Image(c) => c.write_to(writer),
-    }
-  }
+#[derive(Debug, Clone)]
+pub enum XcursorChunk {
+  Comment {
+    kind: XcursorCommentKind,
+    value: Box<str>,
+  },
+  Image {
+    nominal: u32,
+    width: u32,
+    height: u32,
+    hotspot: Hotspot,
+    duration: u32,
+    pixels: Box<[u8]>,
+  },
 }
 
-impl From<&XcursorChunk<'_>> for XcursorTocEntry {
-  fn from(value: &XcursorChunk<'_>) -> Self {
-    match value {
-      XcursorChunk::Comment(c) => Self {
-        r#type: XcursorCommentChunk::HEADER_TYPE,
-        subtype: c.subtype as u32,
-      },
-      XcursorChunk::Image(c) => Self {
-        r#type: XcursorImageChunk::HEADER_TYPE,
-        subtype: c.nominal,
-      },
-    }
-  }
-}
-
-pub struct XcursorCommentChunk<'s> {
-  subtype: XcursorCommentSubtype,
-  string: &'s str,
-}
-
-impl<'s> XcursorCommentChunk<'s> {
-  const HEADER_SIZE: usize = 20;
-  const HEADER_TYPE: u32 = 0xfffe0001;
-  const HEADER_VERSION: u32 = 1;
-
-  /// Creates a new `XcursorCommentChunk`.
-  ///
-  /// # Panics
-  ///
-  /// Panics if `string` length exceeds `u32::MAX`.
-  pub const fn new(subtype: XcursorCommentSubtype, string: &'s str) -> Self {
-    assert!(
-      string.len() <= u32::MAX as usize,
-      "string length should be ≤ u32::MAX"
-    );
-
-    Self { subtype, string }
-  }
-
-  /// Returns the formatted data size in bytes.
-  pub const fn size(&self) -> usize {
-    Self::HEADER_SIZE + self.string.len()
-  }
-}
-
-impl WriteTo for XcursorCommentChunk<'_> {
-  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
-    writer.write_u32::<LittleEndian>(Self::HEADER_SIZE as u32)?;
-    writer.write_u32::<LittleEndian>(Self::HEADER_TYPE)?;
-    writer.write_u32::<LittleEndian>(self.subtype as u32)?;
-    writer.write_u32::<LittleEndian>(Self::HEADER_VERSION)?;
-    writer.write_u32::<LittleEndian>(self.string.len() as u32)?;
-
-    writer.write_all(self.string.as_bytes())?;
-    Ok(())
-  }
-}
-
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 #[repr(u32)]
-pub enum XcursorCommentSubtype {
+pub enum XcursorCommentKind {
   Copyright = 1,
   License = 2,
   Other = 3,
-}
-
-impl<'c> From<XcursorCommentChunk<'c>> for XcursorChunk<'c> {
-  fn from(value: XcursorCommentChunk<'c>) -> Self {
-    Self::Comment(value)
-  }
-}
-
-pub struct XcursorImageChunk {
-  nominal: u32,
-  hotspot: Hotspot,
-  pixmap: RgbAlphaPixmap,
-  duration: u32,
-}
-
-impl XcursorImageChunk {
-  const HEADER_SIZE: usize = 36;
-  const HEADER_TYPE: u32 = 0xfffd0002;
-  const HEADER_VERSION: u32 = 1;
-
-  /// Creates a new `XcursorImageChunk`.
-  ///
-  /// # Panics
-  ///
-  /// Panics if `hotspot` is out of bounds.
-  pub fn new(
-    nominal: u32,
-    hotspot: Hotspot,
-    pixmap: RgbAlphaPixmap,
-    duration: Option<u32>,
-  ) -> Self {
-    assert!(
-      hotspot.x <= pixmap.width(),
-      "hotspot.x should be ≤ pixmap width"
-    );
-    assert!(
-      hotspot.y <= pixmap.height(),
-      "hotspot.y should be ≤ pixmap height"
-    );
-
-    let duration = duration.unwrap_or_default();
-
-    Self {
-      nominal,
-      hotspot,
-      pixmap,
-      duration,
-    }
-  }
-
-  /// Returns the formatted data size in bytes.
-  pub fn size(&self) -> usize {
-    Self::HEADER_SIZE + self.pixmap.pixels().len()
-  }
-}
-
-impl WriteTo for XcursorImageChunk {
-  fn write_to<W: Write>(self, mut writer: W) -> WriteResult {
-    writer.write_u32::<LittleEndian>(Self::HEADER_SIZE as u32)?;
-    writer.write_u32::<LittleEndian>(Self::HEADER_TYPE)?;
-    writer.write_u32::<LittleEndian>(self.nominal)?;
-    writer.write_u32::<LittleEndian>(Self::HEADER_VERSION)?;
-    writer.write_u32::<LittleEndian>(self.pixmap.width())?;
-    writer.write_u32::<LittleEndian>(self.pixmap.height())?;
-    writer.write_u32::<LittleEndian>(self.hotspot.x)?;
-    writer.write_u32::<LittleEndian>(self.hotspot.y)?;
-    writer.write_u32::<LittleEndian>(self.duration)?;
-
-    for byte in self.pixmap.into_iter() {
-      writer.write_u8(byte)?;
-    }
-
-    Ok(())
-  }
-}
-
-impl From<XcursorImageChunk> for XcursorChunk<'_> {
-  fn from(value: XcursorImageChunk) -> Self {
-    Self::Image(value)
-  }
 }
