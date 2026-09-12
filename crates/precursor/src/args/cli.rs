@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::sync::OnceLock;
 
 use clap::{Args, Parser, Subcommand};
 
@@ -110,24 +109,7 @@ pub struct InspectArgs {
   pub cursor_file_input: InputArg,
 }
 
-pub static DEBUG: OnceLock<bool> = OnceLock::new();
-
 /// Parse from `std::env::args_os()`, exit on error.
 pub fn parse() -> Cli {
-  let args = Cli::parse();
-
-  DEBUG.set(args.debug).unwrap();
-
-  args
-}
-
-#[macro_export]
-macro_rules! debug {
-  ($($arg:tt)*) => {
-    if let Some(value) = crate::args::DEBUG.get()
-      && value == &true
-    {
-      eprintln!("[DEBUG]: {}", format_args!($($arg)*))
-    }
-  };
+  Cli::parse()
 }
