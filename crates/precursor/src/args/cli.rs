@@ -48,7 +48,6 @@ const_input_help!(CONFIG_INPUT_HELP, "config");
 const_input_help!(CURSOR_INPUT_HELP, "cursor");
 
 #[derive(Args)]
-#[group(id = "target_types", multiple = true, required = true)]
 pub struct BuildArgs {
   #[arg(short = 'c', long = "config-file", value_name = "FILE_PATH", default_value = "./precursor.toml", help = CONFIG_INPUT_HELP)]
   pub config_file_input: InputArg,
@@ -57,10 +56,17 @@ pub struct BuildArgs {
   #[arg(short = 't', long = "target-directory", value_name = "DIRECTORY")]
   pub target_dir_path: Option<PathBuf>,
 
+  #[command(flatten)]
+  pub target_types: BuildTargetTypeArgs,
+
   /// Remove existing destination files.
   #[arg(short = 'f', long)]
   pub force: bool,
+}
 
+#[derive(Args, Clone, Copy)]
+#[group(id = "target_types", multiple = true, required = true)]
+pub struct BuildTargetTypeArgs {
   /// Equivalent to setting -swx.
   #[arg(short = 'A', long, group = "target_types")]
   pub all: bool,

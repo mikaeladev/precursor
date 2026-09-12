@@ -1,13 +1,14 @@
 use std::fs::File;
+use std::path::Path;
 
-use crate_config::{Config, CursorTargets};
+use crate_config::{Config, CursorConfig, CursorTargets};
 
 use crate_formats::cursors::CursorFile;
 use crate_formats::cursors::ani::AniFile;
 use crate_formats::cursors::cur::CurFile;
 use crate_formats::cursors::xcursor::XcursorFile;
 
-use crate::args::BuildArgs;
+use crate::args::{BuildArgs, BuildTargetTypeArgs};
 use crate::cursor::{Cursor, FromCursor};
 use crate::error::PrecursorResult;
 use crate::filesys;
@@ -16,11 +17,8 @@ pub fn build(
   BuildArgs {
     config_file_input,
     target_dir_path,
+    target_types,
     force,
-    all,
-    scalable,
-    windows,
-    xcursor,
   }: BuildArgs,
 ) -> PrecursorResult {
   let working_dir_path = filesys::get_working_dir_path()?;
@@ -32,7 +30,7 @@ pub fn build(
 
   let config: Config = toml::from_str(&config_string)?;
 
-  let target_dir = match target_dir_path {
+  let target_dir_path = match target_dir_path {
     None => working_dir_path,
     Some(dir_path) => {
       filesys::check_target_dir_path(&dir_path)?;
@@ -41,59 +39,92 @@ pub fn build(
   };
 
   for cursor_config in config.cursors {
-    let cursor_name = cursor_config.name.clone();
-    let cursor_targets = cursor_config.targets.clone();
-    let cursor = Cursor::from_config(cursor_config)?;
+    build_cursor(BuildCursorArgs {
+      cursor_config,
+      target_dir_path: target_dir_path.as_path(),
+      target_types: target_types.clone(),
+      force,
+    })?;
+  }
 
-    #[cfg(target_family = "unix")]
-    let linux_aliases = get_linux_aliases(&cursor_targets);
+  Ok(())
+}
 
-    if all || scalable {
-      // TODO
-    }
+struct BuildCursorArgs<'a> {
+  cursor_config: CursorConfig,
+  target_types: BuildTargetTypeArgs,
+  target_dir_path: &'a Path,
+  force: bool,
+}
 
-    if all || windows {
-      let mut cursor_path = target_dir
-        .join(get_windows_name(&cursor_targets).unwrap_or(&cursor_name));
+fn build_cursor(
+  BuildCursorArgs {
+    cursor_config,
+    target_types,
+    target_dir_path,
+    force,
+  }: BuildCursorArgs,
+) -> PrecursorResult {
+  let cursor_name = cursor_config.name.clone();
+  let cursor_targets = cursor_config.targets.clone();
 
-      if cursor.is_animated() {
-        cursor_path.set_extension("ani");
+  #[cfg(target_family = "unix")]
+  let cursor_aliases = get_linux_aliases(&cursor_targets);
 
-        filesys::prepare_target_file_path(&cursor_path, force)?;
+  let cursor = Cursor::from_config(cursor_config)?;
 
-        AniFile::from_cursor(&cursor)?
-          .write(&mut File::create_new(cursor_path)?)?;
-      } else {
-        cursor_path.set_extension("cur");
+  let BuildTargetTypeArgs {
+    all,
+    scalable,
+    windows,
+    xcursor,
+  } = target_types;
 
-        filesys::prepare_target_file_path(&cursor_path, force)?;
+  if all || scalable {
+    todo!("scalable cursors not yet implemented")
+  }
 
-        CurFile::from_cursor(&cursor)?
-          .write(&mut File::create_new(cursor_path)?)?;
-      }
-    }
+  if all || windows {
+    let mut cursor_path = target_dir_path
+      .join(get_windows_name(&cursor_targets).unwrap_or(&cursor_name));
 
-    if all || xcursor {
-      let cursor_path = target_dir
-        .join(get_linux_name(&cursor_targets).unwrap_or(&cursor_name));
+    if cursor.is_animated() {
+      cursor_path.set_extension("ani");
 
       filesys::prepare_target_file_path(&cursor_path, force)?;
 
-      XcursorFile::from_cursor(&cursor)
-        .unwrap() // infallible
-        .write(&mut File::create_new(&cursor_path)?)?;
+      AniFile::from_cursor(&cursor)?
+        .write(&mut File::create_new(cursor_path)?)?;
+    } else {
+      cursor_path.set_extension("cur");
 
-      #[cfg(target_family = "unix")]
-      if let Some(aliases) = linux_aliases {
-        use std::os::unix::fs as unix_fs;
+      filesys::prepare_target_file_path(&cursor_path, force)?;
 
-        for alias in aliases {
-          let alias_path = target_dir.join(alias);
+      CurFile::from_cursor(&cursor)?
+        .write(&mut File::create_new(cursor_path)?)?;
+    }
+  }
 
-          filesys::prepare_target_file_path(&alias_path, force)?;
+  if all || xcursor {
+    let cursor_path = target_dir_path
+      .join(get_linux_name(&cursor_targets).unwrap_or(&cursor_name));
 
-          unix_fs::symlink(&cursor_path.file_name().unwrap(), alias_path)?;
-        }
+    filesys::prepare_target_file_path(&cursor_path, force)?;
+
+    XcursorFile::from_cursor(&cursor)
+      .unwrap() // infallible
+      .write(&mut File::create_new(&cursor_path)?)?;
+
+    #[cfg(target_family = "unix")]
+    if let Some(aliases) = cursor_aliases {
+      use std::os::unix::fs as unix_fs;
+
+      for alias in aliases {
+        let alias_path = target_dir_path.join(alias);
+
+        filesys::prepare_target_file_path(&alias_path, force)?;
+
+        unix_fs::symlink(&cursor_path.file_name().unwrap(), alias_path)?;
       }
     }
   }
