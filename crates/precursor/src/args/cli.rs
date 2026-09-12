@@ -1,8 +1,9 @@
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use clap::{Args, Parser, Subcommand};
 
-use super::InputArg;
+use crate::args::input::InputArg;
 
 #[derive(Parser)]
 #[command(version, about, long_about)]
@@ -10,6 +11,10 @@ use super::InputArg;
 pub struct Cli {
   #[command(subcommand)]
   pub command: Command,
+
+  /// Enable debug logs.
+  #[arg(long)]
+  pub debug: bool,
 }
 
 #[derive(Subcommand)]
@@ -45,12 +50,20 @@ const_input_help!(CURSOR_INPUT_HELP, "cursor");
 #[derive(Args)]
 #[group(id = "target_types", multiple = true, required = true)]
 pub struct BuildArgs {
-  #[clap(default_value = "./precursor.toml", help = CONFIG_INPUT_HELP)]
-  pub input: InputArg,
+  #[arg(short = 'c', long = "config-file", value_name = "FILE_PATH", default_value = "./precursor.toml", help = CONFIG_INPUT_HELP)]
+  pub config_file_input: InputArg,
 
   /// Specify the target directory.
   #[arg(short = 't', long = "target-directory", value_name = "DIRECTORY")]
-  pub target_dir: Option<PathBuf>,
+  pub target_dir_path: Option<PathBuf>,
+
+  /// Remove existing destination files.
+  #[arg(short = 'f', long)]
+  pub force: bool,
+
+  /// Equivalent to setting -swx.
+  #[arg(short = 'A', long, group = "target_types")]
+  pub all: bool,
 
   /// Build SVG cursors.
   #[arg(short = 's', long, group = "target_types", conflicts_with = "all")]
@@ -63,22 +76,22 @@ pub struct BuildArgs {
   /// Build X11 cursors.
   #[arg(short = 'x', long, group = "target_types", conflicts_with = "all")]
   pub xcursor: bool,
-
-  /// Equivalent to setting -swx.
-  #[arg(short = 'A', long, group = "target_types")]
-  pub all: bool,
 }
 
 #[derive(Args)]
 pub struct CheckArgs {
-  #[clap(default_value = "./precursor.toml", help = CONFIG_INPUT_HELP)]
-  pub input: InputArg,
+  #[arg(short = 'c', long = "config-file", value_name = "FILE_PATH", default_value = "./precursor.toml", help = CONFIG_INPUT_HELP)]
+  pub config_file_input: InputArg,
 }
 
 #[derive(Args)]
 pub struct ExtractArgs {
-  #[clap(help = CURSOR_INPUT_HELP)]
-  pub input: InputArg,
+  #[clap(value_name = "FILE_PATH", help = CURSOR_INPUT_HELP)]
+  pub cursor_file_input: InputArg,
+
+  /// Specify the target directory.
+  #[arg(short = 't', long = "target-directory", value_name = "DIRECTORY")]
+  pub target_dir: Option<PathBuf>,
 
   /// Specify frames to extract (0-based).
   #[arg(short = 'f', long, value_name = "INDICES")]
@@ -87,12 +100,28 @@ pub struct ExtractArgs {
 
 #[derive(Args)]
 pub struct InspectArgs {
-  #[clap(help = CURSOR_INPUT_HELP)]
-  pub input: InputArg,
+  #[clap(value_name = "FILE_PATH", help = CURSOR_INPUT_HELP)]
+  pub cursor_file_input: InputArg,
 }
+
+pub static DEBUG: OnceLock<bool> = OnceLock::new();
 
 /// Parse from `std::env::args_os()`, exit on error.
 pub fn parse() -> Cli {
-  // TODO: return a result
-  Cli::parse()
+  let args = Cli::parse();
+
+  DEBUG.set(args.debug).unwrap();
+
+  args
+}
+
+#[macro_export]
+macro_rules! debug {
+  ($($arg:tt)*) => {
+    if let Some(value) = crate::args::DEBUG.get()
+      && value == &true
+    {
+      eprintln!("[DEBUG]: {}", format_args!($($arg)*))
+    }
+  };
 }

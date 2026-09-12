@@ -1,9 +1,6 @@
-use std::env;
-use std::fs::{self, File};
-use std::io;
-use std::path::PathBuf;
+use std::fs::File;
 
-use crate_config::CursorTargets;
+use crate_config::{Config, CursorTargets};
 
 use crate_formats::cursors::CursorFile;
 use crate_formats::cursors::ani::AniFile;
@@ -11,22 +8,37 @@ use crate_formats::cursors::cur::CurFile;
 use crate_formats::cursors::xcursor::XcursorFile;
 
 use crate::args::BuildArgs;
-use crate::config;
 use crate::cursor::{Cursor, FromCursor};
 use crate::error::PrecursorResult;
+use crate::filesys;
 
 pub fn build(
   BuildArgs {
-    input,
-    target_dir,
+    config_file_input,
+    target_dir_path,
+    force,
+    all,
     scalable,
     windows,
     xcursor,
-    all,
   }: BuildArgs,
 ) -> PrecursorResult {
-  let config = config::read(input.open()?)?;
-  let target_dir = get_target_dir(target_dir)?;
+  let working_dir_path = filesys::get_working_dir_path()?;
+
+  let config_string = filesys::read_config_string_from_input(
+    &working_dir_path,
+    config_file_input,
+  )?;
+
+  let config: Config = toml::from_str(&config_string)?;
+
+  let target_dir = match target_dir_path {
+    None => working_dir_path,
+    Some(dir_path) => {
+      filesys::check_target_dir_path(&dir_path)?;
+      dir_path
+    }
+  };
 
   for cursor_config in config.cursors {
     let cursor_name = cursor_config.name.clone();
@@ -47,13 +59,17 @@ pub fn build(
       if cursor.is_animated() {
         cursor_path.set_extension("ani");
 
+        filesys::prepare_target_file_path(&cursor_path, force)?;
+
         AniFile::from_cursor(&cursor)?
-          .write(&mut File::create(cursor_path)?)?;
+          .write(&mut File::create_new(cursor_path)?)?;
       } else {
         cursor_path.set_extension("cur");
 
+        filesys::prepare_target_file_path(&cursor_path, force)?;
+
         CurFile::from_cursor(&cursor)?
-          .write(&mut File::create(cursor_path)?)?;
+          .write(&mut File::create_new(cursor_path)?)?;
       }
     }
 
@@ -61,40 +77,28 @@ pub fn build(
       let cursor_path = target_dir
         .join(get_linux_name(&cursor_targets).unwrap_or(&cursor_name));
 
+      filesys::prepare_target_file_path(&cursor_path, force)?;
+
       XcursorFile::from_cursor(&cursor)
         .unwrap() // infallible
-        .write(&mut File::create(&cursor_path)?)?;
+        .write(&mut File::create_new(&cursor_path)?)?;
 
       #[cfg(target_family = "unix")]
       if let Some(aliases) = linux_aliases {
         use std::os::unix::fs as unix_fs;
 
         for alias in aliases {
-          unix_fs::symlink(
-            &cursor_path.file_name().unwrap(),
-            target_dir.join(alias),
-          )?;
+          let alias_path = target_dir.join(alias);
+
+          filesys::prepare_target_file_path(&alias_path, force)?;
+
+          unix_fs::symlink(&cursor_path.file_name().unwrap(), alias_path)?;
         }
       }
     }
   }
 
   Ok(())
-}
-
-/// Returns a path to the target directory.
-///
-/// Falls back to the current working directory if the value is `None`.
-fn get_target_dir(target_dir: Option<PathBuf>) -> io::Result<PathBuf> {
-  if let Some(value) = target_dir {
-    if !fs::metadata(&value)?.is_dir() {
-      Err(io::ErrorKind::NotADirectory.into())
-    } else {
-      Ok(value)
-    }
-  } else {
-    env::current_dir()
-  }
 }
 
 fn get_windows_name(cursor_targets: &Option<CursorTargets>) -> Option<&String> {

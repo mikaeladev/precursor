@@ -33,7 +33,7 @@ impl CursorIcon {
   ///
   /// # Errors
   ///
-  /// Fails with a [`PrecursorResult`] if any of the following are true:
+  /// Fails with a [`PrecursorError`] if any of the following are true:
   ///
   /// * The hotspot is out of bounds (i.e. > `nominal`).
   /// * The asset is not a `PNG` file.
