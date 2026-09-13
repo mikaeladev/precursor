@@ -5,6 +5,11 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct PackageConfig {
   pub name: String,
+  pub linux: LinuxPackageConfig,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+pub struct LinuxPackageConfig {
   pub comment: String,
   pub example: Option<String>,
   pub hidden: Option<bool>,

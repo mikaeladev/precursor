@@ -10,13 +10,11 @@
     },
     "package_name": {
       "type": "string",
-      "description": "Short name of the cursor pack.",
-      "examples": ["My Cursor Pack"]
+      "description": "Short name of the cursor pack to be shown in selection UIs."
     },
     "package_comment": {
       "type": "string",
-      "description": "Description of the cursor pack.",
-      "examples": ["My cursor pack (made by me)"]
+      "description": "Description of the cursor pack to be shown in selection UIs."
     },
     "cursor_name": {
       "type": "string",
@@ -98,24 +96,29 @@
       "type": "object",
       "properties": {
         "name": { "$ref": "#/definitions/package_name" },
-        "comment": { "$ref": "#/definitions/package_comment" },
-        "example": {
-          "type": "string",
-          "description": "Name of a specific cursor to use as an example in selection UIs.\n\nOnly applies when packaged for Linux.",
-          "examples": ["arrow", "pointer", "spinner"]
-        },
-        "hidden": {
-          "type": "boolean",
-          "description": "Whether to hide the cursor theme in selection UIs, usually enabled for fallback themes.\n\nOnly applies when packaged for Linux."
-        },
-        "locales": {
+        "linux": {
           "type": "object",
-          "description": "Map of localised values for `name` and `comment`.\n\nOnly applies when packaged for Linux.",
-          "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "name": { "$ref": "#/definitions/package_name" },
-              "comment": { "$ref": "#/definitions/package_comment" }
+          "properties": {
+            "comment": { "$ref": "#/definitions/package_comment" },
+            "example": {
+              "type": "string",
+              "description": "Name of a specific cursor to use as an example in selection UIs.",
+              "examples": ["arrow", "pointer", "spinner"]
+            },
+            "hidden": {
+              "type": "boolean",
+              "description": "Whether to hide the cursor theme in selection UIs, typically enabled for fallback themes."
+            },
+            "locales": {
+              "type": "object",
+              "description": "Map of localised values for `name` and `comment`.",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "name": { "$ref": "#/definitions/package_name" },
+                  "comment": { "$ref": "#/definitions/package_comment" }
+                }
+              }
             }
           }
         }
