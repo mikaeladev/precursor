@@ -1,4 +1,6 @@
-use crate_config::{CursorConfig, CursorIconConfig, CursorSubconfig};
+use crate_config::{
+  CursorConfig, CursorIconConfig, CursorSubconfig, CursorTargets,
+};
 
 use crate::cursor::{CursorDuration, CursorFrame, CursorIcon};
 use crate::error::PrecursorResult;
@@ -6,19 +8,16 @@ use crate::error::PrecursorResult;
 #[derive(Debug, Clone)]
 pub struct Cursor {
   pub frames: Vec<CursorFrame>,
-  pub metadata: Option<CursorMetadata>,
+  pub metadata: CursorMetadata,
 }
 
 impl Cursor {
-  /// Constructs a new [`Cursor`].
+  /// Constructs a new `Cursor`.
   ///
   /// # Panics
   ///
   /// Panics if `frames` is empty.
-  pub const fn new(
-    frames: Vec<CursorFrame>,
-    metadata: Option<CursorMetadata>,
-  ) -> Self {
+  pub const fn new(frames: Vec<CursorFrame>, metadata: CursorMetadata) -> Self {
     assert!(!frames.is_empty(), "frames should not be empty");
 
     Self { frames, metadata }
@@ -29,13 +28,20 @@ impl Cursor {
     self.frames.len() != 1
   }
 
-  /// Attempts to construct a new [`Cursor`] from a [`CursorConfig`].
+  /// Attempts to construct a new `Cursor` from a [`CursorConfig`].
   ///
   /// # Errors
   ///
   /// Fails with a [`PrecursorError`] if any asset fails to decode.
+  ///
+  /// [`CursorConfig`]: CursorConfig
+  /// [`PrecursorError`]: crate::error::PrecursorError
   pub fn from_config(
-    CursorConfig { subconfig, .. }: CursorConfig,
+    CursorConfig {
+      name,
+      targets,
+      subconfig,
+    }: CursorConfig,
   ) -> PrecursorResult<Self> {
     use CursorSubconfig::*;
 
@@ -57,6 +63,7 @@ impl Cursor {
           None,
         )]
       }
+
       ScaledAnimated {
         nominal,
         hotspot,
@@ -88,6 +95,7 @@ impl Cursor {
 
         frames
       }
+
       VerboseStatic {
         icons: icon_configs,
       } => {
@@ -99,6 +107,7 @@ impl Cursor {
 
         vec![CursorFrame::new(icons, None)]
       }
+
       VerboseAnimated { sequence } => {
         let mut frames = Vec::with_capacity(sequence.len());
 
@@ -119,11 +128,49 @@ impl Cursor {
       }
     };
 
-    Ok(Cursor::new(frames, None))
+    Ok(Cursor::new(frames, CursorMetadata { name, targets }))
   }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CursorMetadata {
-  // TODO
+  pub name: String,
+  pub targets: Option<CursorTargets>,
+}
+
+impl CursorMetadata {
+  pub const fn get_linux_name(&self) -> Option<&String> {
+    if let Some(targets) = &self.targets
+      && let Some(linux) = &targets.linux
+      && let Some(name) = &linux.name
+    {
+      Some(name)
+    } else {
+      None
+    }
+  }
+
+  #[cfg(target_family = "unix")]
+  pub const fn get_linux_aliases(&self) -> Option<&Vec<String>> {
+    if let Some(targets) = &self.targets
+      && let Some(linux) = &targets.linux
+      && let Some(aliases) = &linux.aliases
+      && !aliases.is_empty()
+    {
+      Some(aliases)
+    } else {
+      None
+    }
+  }
+
+  pub const fn get_windows_name(&self) -> Option<&String> {
+    if let Some(targets) = &self.targets
+      && let Some(windows) = &targets.windows
+      && let Some(name) = &windows.name
+    {
+      Some(name)
+    } else {
+      None
+    }
+  }
 }

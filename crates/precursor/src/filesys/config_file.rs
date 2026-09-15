@@ -3,8 +3,7 @@ use std::io;
 use std::path::PathBuf;
 
 use crate::args::InputArg;
-use crate::debug;
-use crate::path_error_msg;
+use crate::{debug, path_error_msg};
 
 pub fn read_config_string_from_input(
   working_dir_path: &PathBuf,
@@ -37,14 +36,14 @@ pub fn read_config_string_from_input(
           ),
           PermissionDenied => io::Error::new(
             err_kind,
-            path_error_msg!(denied_action: "read config file", file_path),
+            path_error_msg!(action_denied: "read config file", file_path),
           ),
           _ => {
             debug!("{err}");
 
             io::Error::new(
               err_kind,
-              path_error_msg!(failed_action: "read config file", file_path),
+              path_error_msg!(action_failed: "read config file", file_path),
             )
           }
         })
@@ -67,7 +66,6 @@ pub fn read_config_string_from_input(
           ),
           _ => {
             debug!("{err}");
-
             io::Error::new(err_kind, "failed to read config from stdin")
           }
         })
@@ -79,7 +77,7 @@ pub fn read_config_string_from_input(
 }
 
 pub fn check_config_file_path(file_path: &PathBuf) -> io::Result<()> {
-  if !super::entity_exists(super::EntityKind::File, "config", &file_path)? {
+  if !super::entity_exists(super::EntityKind::File, &file_path)? {
     Err(io::Error::new(
       io::ErrorKind::NotFound,
       path_error_msg!(not_found: "config file", file_path),
