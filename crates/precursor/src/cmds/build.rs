@@ -1,4 +1,3 @@
-use std::fs::File;
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -32,34 +31,46 @@ pub fn build(
   let config: Config = toml::from_str(&config_string)?;
 
   let base_path = match target_dir_path {
-    None => working_dir_path,
     Some(dir_path) => {
       filesys::check_target_dir_path(&dir_path)?;
+      dir_path
+    }
+    None => {
+      let dir_path = working_dir_path.join("out");
+      filesys::ensure_dir(&dir_path, "target")?;
       dir_path
     }
   };
 
   let (linux_base_path, windows_base_path) =
-    get_target_base_paths(target_types, base_path)?;
+    get_forked_base_paths(target_types, base_path)?;
 
   for cursor_config in config.cursors {
     let cursor = &Cursor::from_config(cursor_config)?;
 
     if let Some(base_path) = &linux_base_path {
-      let base_path = base_path.as_path();
-
-      let build_cursor_args = BuildCursorArgs {
-        cursor,
-        base_path,
-        force,
-      };
-
       if target_types.all || target_types.scalable {
-        build_svg_cursor(build_cursor_args)?;
+        let base_path = &base_path.join("cursors_scalable");
+
+        filesys::ensure_dir(base_path, "scalable linux cursors")?;
+
+        build_svg_cursor(BuildCursorArgs {
+          cursor,
+          base_path,
+          force,
+        })?;
       }
 
       if target_types.all || target_types.xcursor {
-        build_x11_cursor(build_cursor_args)?;
+        let base_path = &base_path.join("cursors");
+
+        filesys::ensure_dir(base_path, "linux cursors")?;
+
+        build_x11_cursor(BuildCursorArgs {
+          cursor,
+          base_path,
+          force,
+        })?;
       }
     }
 
@@ -74,10 +85,19 @@ pub fn build(
     }
   }
 
+  if let Some(base_path) = linux_base_path {
+    let mut file = filesys::create_new_file(
+      base_path.join("index.theme"),
+      "linux theme index",
+    )?;
+
+    filesys::write_icon_theme_index(&mut file, config.package)?;
+  }
+
   Ok(())
 }
 
-fn get_target_base_paths(
+fn get_forked_base_paths(
   BuildTargetTypeArgs {
     all,
     scalable,
@@ -169,7 +189,7 @@ fn build_x11_cursor(build_args: BuildCursorArgs) -> PrecursorResult {
 
   XcursorFile::from_cursor(&cursor)
     .unwrap() // infallible
-    .write(&mut File::create_new(&cursor_path)?)?;
+    .write(&mut filesys::create_new_file(cursor_path, "cursor")?)?;
 
   #[cfg(target_family = "unix")]
   symlink_linux_aliases(build_args)?;
