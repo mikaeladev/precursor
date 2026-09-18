@@ -87,14 +87,14 @@ pub fn build(
   }
 
   if let Some(base_path) = linux_base_path {
-    // FIXME: respect force flag
+    let file_path = base_path.join("index.theme");
 
-    let mut file = filesys::create_new_file(
-      base_path.join("index.theme"),
-      "linux theme index",
+    filesys::prepare_file(&file_path, "linux theme index", force)?;
+
+    filesys::write_icon_theme_index(
+      &mut filesys::create_new_file(file_path, "linux theme index")?,
+      config.package,
     )?;
-
-    filesys::write_icon_theme_index(&mut file, config.package)?;
   }
 
   Ok(())
@@ -128,14 +128,14 @@ fn build_windows_cursor(
   if cursor.is_animated() {
     cursor_path.set_extension("ani");
 
-    filesys::prepare_cursor_file_path(&cursor_path, force)?;
+    filesys::prepare_cursor_file(&cursor_path, force)?;
 
     AniFile::from_cursor(&cursor)?
       .write(&mut filesys::create_new_file(cursor_path, "cursor")?)?;
   } else {
     cursor_path.set_extension("cur");
 
-    filesys::prepare_cursor_file_path(&cursor_path, force)?;
+    filesys::prepare_cursor_file(&cursor_path, force)?;
 
     CurFile::from_cursor(&cursor)?
       .write(&mut filesys::create_new_file(cursor_path, "cursor")?)?;
@@ -158,7 +158,7 @@ fn build_x11_cursor(build_args: BuildCursorArgs) -> PrecursorResult {
 
   let cursor_path = base_path.join(cursor_name);
 
-  filesys::prepare_cursor_file_path(&cursor_path, force)?;
+  filesys::prepare_cursor_file(&cursor_path, force)?;
 
   XcursorFile::from_cursor(&cursor)
     .unwrap() // infallible
@@ -185,7 +185,7 @@ fn symlink_linux_aliases(
     for alias_name in aliases {
       let alias_path = base_path.join(alias_name);
 
-      filesys::prepare_cursor_file_path(&alias_path, force)?;
+      filesys::prepare_cursor_file(&alias_path, force)?;
 
       filesys::symlink_cursor_file(base_path, cursor_name, alias_name)?;
     }

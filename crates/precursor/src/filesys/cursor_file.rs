@@ -1,52 +1,16 @@
-use std::fs;
 use std::io;
 use std::path::Path;
-use std::path::PathBuf;
 
-use crate::{debug, path_error_msg};
+use crate::debug;
+use crate::path_error_msg;
 
 use super::EntityKind;
 
-pub fn prepare_cursor_file_path(
-  file_path: &PathBuf,
+pub fn prepare_cursor_file(
+  path: impl AsRef<Path>,
   force: bool,
 ) -> io::Result<()> {
-  if super::entity_exists(EntityKind::File, file_path)? {
-    if force {
-      remove_cursor_file(file_path)
-    } else {
-      Err(io::Error::new(
-        io::ErrorKind::AlreadyExists,
-        path_error_msg!(already_exists: "cursor file", file_path),
-      ))
-    }
-  } else {
-    Ok(())
-  }
-}
-
-pub fn remove_cursor_file(file_path: &PathBuf) -> io::Result<()> {
-  if let Err(err) = fs::remove_file(file_path) {
-    let action = "remove cursor file";
-    let err_kind = err.kind();
-
-    Err(match err_kind {
-      io::ErrorKind::PermissionDenied => io::Error::new(
-        err_kind,
-        path_error_msg!(action_denied: action, file_path),
-      ),
-      _ => {
-        debug!("{err}");
-
-        io::Error::new(
-          err_kind,
-          path_error_msg!(action_failed: action, file_path),
-        )
-      }
-    })
-  } else {
-    Ok(())
-  }
+  super::prepare_file(path, "cursor file", force)
 }
 
 #[cfg(target_family = "unix")]
