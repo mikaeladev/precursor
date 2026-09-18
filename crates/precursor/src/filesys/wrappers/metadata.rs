@@ -6,7 +6,7 @@ use crate::{debug, path_error_msg};
 
 /// Queries the file system to get information about the `path`.
 ///
-/// See the [`metadata`] function for more information.
+/// See the [`fs::metadata`] function for more information.
 ///
 /// # Errors
 ///
