@@ -1,12 +1,25 @@
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::Path;
+
+use crate_config::Config;
 
 use crate::args::InputArg;
+use crate::error::PrecursorResult;
 use crate::{debug, path_error_msg};
 
-pub fn read_config_string_from_input(
-  working_dir_path: &PathBuf,
+pub fn get_config(
+  working_dir_path: impl AsRef<Path>,
+  input_arg: InputArg,
+) -> PrecursorResult<Config> {
+  let config_string = get_config_string(working_dir_path, input_arg)?;
+  let config_value = toml::from_str(&config_string)?;
+
+  Ok(config_value)
+}
+
+pub fn get_config_string(
+  working_dir_path: impl AsRef<Path>,
   input_arg: InputArg,
 ) -> io::Result<String> {
   use io::ErrorKind::{InvalidData, NotFound, PermissionDenied};
@@ -15,10 +28,15 @@ pub fn read_config_string_from_input(
     InputArg::Path(path) => {
       let file_path = match path.is_absolute() {
         true => path,
-        false => working_dir_path.join(path),
+        false => working_dir_path.as_ref().join(path),
       };
 
-      check_config_file_path(&file_path)?;
+      if !super::entity_exists(super::EntityKind::File, &file_path)? {
+        return Err(io::Error::new(
+          NotFound,
+          path_error_msg!(not_found: "config file", file_path),
+        ));
+      }
 
       let string_result = fs::read_to_string(&file_path);
 
@@ -29,10 +47,6 @@ pub fn read_config_string_from_input(
           InvalidData => io::Error::new(
             err_kind,
             path_error_msg!(invalid_data: "config file", file_path),
-          ),
-          NotFound => io::Error::new(
-            err_kind,
-            path_error_msg!(not_found: "config file", file_path),
           ),
           PermissionDenied => io::Error::new(
             err_kind,
@@ -73,16 +87,5 @@ pub fn read_config_string_from_input(
         string_result
       }
     }
-  }
-}
-
-pub fn check_config_file_path(file_path: &PathBuf) -> io::Result<()> {
-  if !super::entity_exists(super::EntityKind::File, &file_path)? {
-    Err(io::Error::new(
-      io::ErrorKind::NotFound,
-      path_error_msg!(not_found: "config file", file_path),
-    ))
-  } else {
-    Ok(())
   }
 }

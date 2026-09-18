@@ -1,12 +1,10 @@
 mod config_file;
 mod cursor_file;
-mod target_dir;
 mod theme_file;
 mod wrappers;
 
 pub use config_file::*;
 pub use cursor_file::*;
-pub use target_dir::*;
 pub use theme_file::*;
 pub use wrappers::*;
 

@@ -3,6 +3,7 @@ mod cmds;
 mod cursor;
 mod error;
 mod filesys;
+mod paths;
 
 use std::env;
 use std::process::exit;

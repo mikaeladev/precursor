@@ -1,17 +1,16 @@
 use std::io;
-use std::path::{Path, PathBuf};
-
-use crate_config::Config;
+use std::path::Path;
 
 use crate_formats::cursors::CursorFile;
 use crate_formats::cursors::ani::AniFile;
 use crate_formats::cursors::cur::CurFile;
 use crate_formats::cursors::xcursor::XcursorFile;
 
-use crate::args::{BuildArgs, BuildTargetTypeArgs};
+use crate::args::BuildArgs;
 use crate::cursor::{Cursor, FromCursor};
 use crate::error::PrecursorResult;
 use crate::filesys;
+use crate::paths;
 
 pub fn build(
   BuildArgs {
@@ -21,62 +20,64 @@ pub fn build(
     force,
   }: BuildArgs,
 ) -> PrecursorResult {
-  let working_dir_path = filesys::get_working_dir_path()?;
+  let working_dir_path = paths::get_working_dir_path()?;
 
-  let config_string = filesys::read_config_string_from_input(
-    &working_dir_path,
-    config_file_input,
-  )?;
+  let target_dir_path = working_dir_path.join(target_dir_path);
+  filesys::ensure_dir(&target_dir_path, "target")?;
 
-  let config: Config = toml::from_str(&config_string)?;
+  let linux_base_path =
+    paths::get_linux_base_path(&target_dir_path, target_types);
 
-  let base_path = match target_dir_path {
-    Some(dir_path) => {
-      filesys::check_target_dir_path(&dir_path)?;
-      dir_path
+  let windows_base_path =
+    paths::get_windows_base_path(target_dir_path, target_types);
+
+  let mut linux_base_path_svg = None;
+  let mut linux_base_path_x11 = None;
+
+  if let Some(base_path) = &linux_base_path {
+    filesys::ensure_dir(base_path, "linux target")?;
+
+    if target_types.all || target_types.scalable {
+      let svg_base_path = base_path.join("cursors_scalable");
+
+      filesys::ensure_dir(&svg_base_path, "scalable linux cursors")?;
+      linux_base_path_svg = Some(svg_base_path);
     }
-    None => {
-      let dir_path = working_dir_path.join("out");
-      filesys::ensure_dir(&dir_path, "target")?;
-      dir_path
-    }
-  };
 
-  let (linux_base_path, windows_base_path) =
-    get_forked_base_paths(target_types, base_path)?;
+    if target_types.all || target_types.xcursor {
+      let x11_base_path = base_path.join("cursors");
+
+      filesys::ensure_dir(&x11_base_path, "x11 linux cursors")?;
+      linux_base_path_x11 = Some(x11_base_path);
+    }
+  }
+
+  if let Some(base_path) = &windows_base_path {
+    filesys::ensure_dir(base_path, "windows target")?;
+  }
+
+  let config = filesys::get_config(working_dir_path, config_file_input)?;
 
   for cursor_config in config.cursors {
     let cursor = &Cursor::from_config(cursor_config)?;
 
-    if let Some(base_path) = &linux_base_path {
-      if target_types.all || target_types.scalable {
-        let base_path = &base_path.join("cursors_scalable");
+    if let Some(base_path) = &linux_base_path_svg {
+      build_svg_cursor(BuildCursorArgs {
+        cursor,
+        base_path,
+        force,
+      })?;
+    }
 
-        filesys::ensure_dir(base_path, "scalable linux cursors")?;
-
-        build_svg_cursor(BuildCursorArgs {
-          cursor,
-          base_path,
-          force,
-        })?;
-      }
-
-      if target_types.all || target_types.xcursor {
-        let base_path = &base_path.join("cursors");
-
-        filesys::ensure_dir(base_path, "linux cursors")?;
-
-        build_x11_cursor(BuildCursorArgs {
-          cursor,
-          base_path,
-          force,
-        })?;
-      }
+    if let Some(base_path) = &linux_base_path_x11 {
+      build_x11_cursor(BuildCursorArgs {
+        cursor,
+        base_path,
+        force,
+      })?;
     }
 
     if let Some(base_path) = &windows_base_path {
-      let base_path = base_path.as_path();
-
       build_windows_cursor(BuildCursorArgs {
         cursor,
         base_path,
@@ -86,6 +87,8 @@ pub fn build(
   }
 
   if let Some(base_path) = linux_base_path {
+    // FIXME: respect force flag
+
     let mut file = filesys::create_new_file(
       base_path.join("index.theme"),
       "linux theme index",
@@ -95,36 +98,6 @@ pub fn build(
   }
 
   Ok(())
-}
-
-fn get_forked_base_paths(
-  BuildTargetTypeArgs {
-    all,
-    scalable,
-    windows,
-    xcursor,
-  }: BuildTargetTypeArgs,
-  base_path: PathBuf,
-) -> io::Result<(Option<PathBuf>, Option<PathBuf>)> {
-  let mut linux_base_path = None;
-  let mut windows_base_path = None;
-
-  if !all && !windows {
-    linux_base_path = Some(base_path);
-  } else if !all && !scalable && !xcursor {
-    windows_base_path = Some(base_path);
-  } else {
-    let linux_path = base_path.join("linux");
-    let windows_path = base_path.join("windows");
-
-    filesys::ensure_dir(&linux_path, "linux target")?;
-    filesys::ensure_dir(&windows_path, "windows target")?;
-
-    linux_base_path = Some(linux_path);
-    windows_base_path = Some(windows_path);
-  }
-
-  Ok((linux_base_path, windows_base_path))
 }
 
 #[derive(Clone, Copy)]

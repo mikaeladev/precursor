@@ -5,8 +5,7 @@ use clap::{Args, Parser, Subcommand};
 use crate::args::input::InputArg;
 
 #[derive(Parser)]
-#[command(version, about, long_about)]
-#[command(propagate_version = true)]
+#[command(version, about, long_about, propagate_version = true)]
 pub struct Cli {
   #[command(subcommand)]
   pub command: Command,
@@ -21,15 +20,18 @@ pub enum Command {
   /// Build cursor files.
   #[command(visible_alias = "b")]
   Build(BuildArgs),
+
   /// Check a config file for errors.
   #[command(visible_alias = "c")]
   Check(CheckArgs),
-  /// Extract frames from a cursor file.
-  #[command(visible_alias = "x")]
-  Extract(ExtractArgs),
+
   /// Inspect a cursor file for metadata.
   #[command(visible_alias = "i")]
   Inspect(InspectArgs),
+
+  /// Extract frames from a cursor file.
+  #[command(visible_alias = "x")]
+  Extract(ExtractArgs),
 }
 
 macro_rules! const_input_help {
@@ -48,12 +50,23 @@ const_input_help!(CURSOR_INPUT_HELP, "cursor");
 
 #[derive(Args)]
 pub struct BuildArgs {
-  #[arg(short = 'c', long = "config-file", value_name = "FILE_PATH", default_value = "./precursor.toml", help = CONFIG_INPUT_HELP)]
+  #[arg(
+    short = 'c',
+    long = "config-file",
+    value_name = "FILE_PATH",
+    default_value = "./precursor.toml"
+  )]
+  #[arg(help = CONFIG_INPUT_HELP)]
   pub config_file_input: InputArg,
 
   /// Specify the target directory.
-  #[arg(short = 't', long = "target-directory", value_name = "DIRECTORY")]
-  pub target_dir_path: Option<PathBuf>,
+  #[arg(
+    short = 't',
+    long = "target-directory",
+    value_name = "DIRECTORY",
+    default_value = "./out"
+  )]
+  pub target_dir_path: PathBuf,
 
   #[command(flatten)]
   pub target_types: BuildTargetTypeArgs,
@@ -85,18 +98,30 @@ pub struct BuildTargetTypeArgs {
 
 #[derive(Args)]
 pub struct CheckArgs {
-  #[arg(short = 'c', long = "config-file", value_name = "FILE_PATH", default_value = "./precursor.toml", help = CONFIG_INPUT_HELP)]
+  #[arg(
+    short = 'c',
+    long = "config-file",
+    value_name = "FILE_PATH",
+    default_value = "./precursor.toml"
+  )]
+  #[arg(help = CONFIG_INPUT_HELP)]
   pub config_file_input: InputArg,
 }
 
 #[derive(Args)]
 pub struct ExtractArgs {
-  #[clap(value_name = "FILE_PATH", help = CURSOR_INPUT_HELP)]
+  #[arg(value_name = "FILE_PATH")]
+  #[arg(help = CURSOR_INPUT_HELP)]
   pub cursor_file_input: InputArg,
 
   /// Specify the target directory.
-  #[arg(short = 't', long = "target-directory", value_name = "DIRECTORY")]
-  pub target_dir: Option<PathBuf>,
+  #[arg(
+    short = 't',
+    long = "target-directory",
+    value_name = "DIRECTORY",
+    default_value = "./out"
+  )]
+  pub target_dir_path: PathBuf,
 
   /// Specify frames to extract (0-based).
   #[arg(short = 'f', long, value_name = "INDICES")]
@@ -105,7 +130,8 @@ pub struct ExtractArgs {
 
 #[derive(Args)]
 pub struct InspectArgs {
-  #[clap(value_name = "FILE_PATH", help = CURSOR_INPUT_HELP)]
+  #[arg(value_name = "FILE_PATH")]
+  #[arg(help = CURSOR_INPUT_HELP)]
   pub cursor_file_input: InputArg,
 }
 

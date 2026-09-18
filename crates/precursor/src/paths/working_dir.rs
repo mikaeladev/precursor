@@ -4,6 +4,14 @@ use std::path::PathBuf;
 
 use crate::debug;
 
+/// Returns the path to the current working directory.
+///
+/// # Errors
+///
+/// Fails with an error in the following (non-exhaustive) situations:
+///
+/// - Current directory doesn't exist.
+/// - User lacks permissions to access the current directory.
 pub fn get_working_dir_path() -> io::Result<PathBuf> {
   let working_dir_res = env::current_dir();
 
