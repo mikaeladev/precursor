@@ -11,13 +11,13 @@ pub struct Cli {
   pub command: Command,
 
   /// Enable debug logs.
-  #[arg(long)]
+  #[arg(short = 'd', long)]
   pub debug: bool,
 }
 
 #[derive(Subcommand)]
 pub enum Command {
-  /// Build cursor files.
+  /// Build cursor files from a config file.
   #[command(visible_alias = "b")]
   Build(BuildArgs),
 
@@ -71,6 +71,10 @@ pub struct BuildArgs {
   #[command(flatten)]
   pub target_types: BuildTargetTypeArgs,
 
+  /// Remove contents of DIRECTORY before building.
+  #[arg(short = 'e', long, alias = "clear")]
+  pub empty: bool,
+
   /// Remove existing destination files.
   #[arg(short = 'f', long)]
   pub force: bool,
@@ -79,7 +83,7 @@ pub struct BuildArgs {
 #[derive(Args, Clone, Copy)]
 #[group(id = "target_types", multiple = true, required = true)]
 pub struct BuildTargetTypeArgs {
-  /// Equivalent to setting -swx.
+  /// Build all targets (-swx).
   #[arg(short = 'A', long, group = "target_types")]
   pub all: bool,
 

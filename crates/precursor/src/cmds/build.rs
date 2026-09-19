@@ -17,13 +17,19 @@ pub fn build(
     config_file_input,
     target_dir_path,
     target_types,
+    empty,
     force,
   }: BuildArgs,
 ) -> PrecursorResult {
   let working_dir_path = paths::get_working_dir_path()?;
 
   let target_dir_path = working_dir_path.join(target_dir_path);
-  filesys::ensure_dir(&target_dir_path, "target")?;
+
+  if empty {
+    filesys::ensure_dir_empty(&target_dir_path, "target")?;
+  } else {
+    filesys::ensure_dir(&target_dir_path, "target")?;
+  }
 
   let linux_base_path =
     paths::get_linux_base_path(&target_dir_path, target_types);
