@@ -1,8 +1,10 @@
 use std::io::{self, Write};
 
+use crate_point::Point;
+
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use crate::cursors::{CursorFile, Hotspot};
+use crate::cursors::CursorFile;
 
 const FILE_HEADER_SIZE: u32 = 16;
 const FILE_VERSION: u32 = 0x10000;
@@ -167,7 +169,7 @@ pub enum XcursorChunk {
     nominal: u32,
     width: u32,
     height: u32,
-    hotspot: Hotspot,
+    hotspot: Point<u32>,
     duration: u32,
     pixels: Box<[u8]>,
   },

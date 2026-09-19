@@ -1,8 +1,10 @@
 use std::io::{self, Write};
 
+use crate_point::Point;
+
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use crate::cursors::{CursorFile, Hotspot};
+use crate::cursors::CursorFile;
 
 const FILE_HEADER_SIZE: u32 = 6;
 const ICON_ENTRY_SIZE: u32 = 16;
@@ -19,7 +21,7 @@ impl CurFile {
   ///
   /// Panics if any [hotspot] in `icons` cannot be coerced to `u16`.
   ///
-  /// [hotspot]: Hotspot
+  /// [hotspot]: Point
   pub fn new(icons: Vec<CurIcon>) -> Self {
     let icons_len = icons.len();
 
@@ -31,8 +33,7 @@ impl CurFile {
     for CurIcon {
       width,
       height,
-      hotspot_x,
-      hotspot_y,
+      hotspot,
       buffer,
     } in icons
     {
@@ -41,8 +42,7 @@ impl CurFile {
       let entry = CurIconEntry {
         width: if width > 255 { 0 } else { width as u8 },
         height: if height > 255 { 0 } else { height as u8 },
-        hotspot_x,
-        hotspot_y,
+        hotspot,
         data_size,
         data_pos,
       };
@@ -77,8 +77,8 @@ impl CursorFile for CurFile {
       writer.write_u8(0)?; // colour count (0 for 8-bit)
       writer.write_u8(0)?; // reserved
 
-      writer.write_u16::<LittleEndian>(entry.hotspot_x)?;
-      writer.write_u16::<LittleEndian>(entry.hotspot_y)?;
+      writer.write_u16::<LittleEndian>(entry.hotspot.x)?;
+      writer.write_u16::<LittleEndian>(entry.hotspot.y)?;
 
       writer.write_u32::<LittleEndian>(entry.data_size)?;
       writer.write_u32::<LittleEndian>(entry.data_pos)?;
@@ -95,8 +95,7 @@ impl CursorFile for CurFile {
 pub struct CurIcon {
   width: u16,
   height: u16,
-  hotspot_x: u16,
-  hotspot_y: u16,
+  hotspot: Point<u16>,
   buffer: Box<[u8]>,
 }
 
@@ -109,20 +108,16 @@ impl CurIcon {
   pub const fn new(
     width: u16,
     height: u16,
-    hotspot: Hotspot,
+    hotspot: Point<u16>,
     buffer: Box<[u8]>,
   ) -> Self {
-    let hotspot_x = hotspot.x as u16;
-    let hotspot_y = hotspot.y as u16;
-
-    assert!(hotspot_x <= width, "hotspot_x should be ≤ width");
-    assert!(hotspot_y <= height, "hotspot_y should be ≤ height");
+    assert!(hotspot.x <= width, "hotspot_x should be ≤ width");
+    assert!(hotspot.y <= height, "hotspot_y should be ≤ height");
 
     Self {
       width,
       height,
-      hotspot_x,
-      hotspot_y,
+      hotspot,
       buffer,
     }
   }
@@ -131,8 +126,7 @@ impl CurIcon {
 struct CurIconEntry {
   width: u8,
   height: u8,
-  hotspot_x: u16,
-  hotspot_y: u16,
+  hotspot: Point<u16>,
   data_size: u32,
   data_pos: u32,
 }

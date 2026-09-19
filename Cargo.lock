@@ -137,6 +137,7 @@ version = "0.1.0"
 dependencies = [
  "byteorder",
  "crate_pixmap",
+ "crate_point",
  "png",
  "thiserror",
 ]
@@ -148,6 +149,10 @@ dependencies = [
  "indexmap",
  "thiserror",
 ]
+
+[[package]]
+name = "crate_point"
+version = "0.1.0"
 
 [[package]]
 name = "crc32fast"
@@ -248,6 +253,7 @@ dependencies = [
  "crate_config",
  "crate_formats",
  "crate_pixmap",
+ "crate_point",
  "thiserror",
  "toml",
 ]

@@ -5,8 +5,8 @@ use crate_formats::cursors::cur::{CurFile, CurIcon};
 use crate_formats::cursors::xcursor::{XcursorChunk, XcursorFile};
 use crate_formats::rasters::png::PngImage;
 use crate_formats::rasters::{RasterError, RasterResult};
-
 use crate_pixmap::{IntoPixmap, RgbAlphaPixmap};
+use crate_point::Point;
 
 use super::{Cursor, CursorFrame};
 
@@ -78,7 +78,7 @@ impl FromCursor for CurFile {
   ///
   /// Panics if any icon [hotspot] is out of bounds.
   ///
-  /// [hotspot]: crate_formats::cursors::Hotspot
+  /// [hotspot]: Point
   fn from_cursor(cursor: &Cursor) -> Result<Self, RasterError> {
     frame_to_cur(cursor.frames.first().unwrap())
   }
@@ -97,7 +97,7 @@ impl FromCursor for AniFile {
   ///
   /// Panics if any icon [hotspot] is out of bounds.
   ///
-  /// [hotspot]: crate_formats::cursors::Hotspot
+  /// [hotspot]: Point
   fn from_cursor(cursor: &Cursor) -> Result<Self, RasterError> {
     let num_frames = cursor.frames.len();
 
@@ -127,7 +127,7 @@ impl FromCursor for AniFile {
 ///
 /// Panics if any icon [hotspot] is out of bounds.
 ///
-/// [hotspot]: crate_formats::cursors::Hotspot
+/// [hotspot]: Point
 fn frame_to_cur(frame: &CursorFrame) -> RasterResult<CurFile> {
   let mut icons = Vec::with_capacity(frame.icons.len());
 
@@ -135,7 +135,7 @@ fn frame_to_cur(frame: &CursorFrame) -> RasterResult<CurFile> {
     icons.push(CurIcon::new(
       icon.pixmap.width() as u16,
       icon.pixmap.height() as u16,
-      icon.hotspot,
+      Point::from((icon.hotspot.x as u16, icon.hotspot.y as u16)),
       icon.pixmap.clone().encode_png()?.into_boxed_slice(),
     ));
   }

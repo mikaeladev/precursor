@@ -2,18 +2,16 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 use crate_config::{AssetValue, CursorIconConfig, RotateValue};
-
-use crate_formats::cursors::Hotspot;
 use crate_formats::rasters::png::PngImage;
-
 use crate_pixmap::DynamicPixmap;
+use crate_point::Point;
 
 use crate::error::{PrecursorError, PrecursorResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CursorIcon {
   pub nominal: u32,
-  pub hotspot: Hotspot,
+  pub hotspot: Point<u32>,
   pub pixmap: DynamicPixmap,
 }
 
@@ -81,10 +79,7 @@ impl CursorIcon {
       }
     }
 
-    let hotspot = Hotspot {
-      x: hotspot.0,
-      y: hotspot.1,
-    };
+    let hotspot = Point::from(hotspot);
 
     Ok(CursorIcon {
       nominal,
