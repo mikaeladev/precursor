@@ -1,11 +1,13 @@
 mod create_dir;
 mod create_file;
-mod exists;
 mod metadata;
-mod remove;
+mod read_dir;
+mod remove_dir;
+mod remove_file;
 
 pub use create_dir::*;
 pub use create_file::*;
-pub use exists::*;
 pub use metadata::*;
-pub use remove::*;
+pub use read_dir::*;
+pub use remove_dir::*;
+pub use remove_file::*;

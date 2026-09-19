@@ -6,6 +6,7 @@ use crate::path_error_msg;
 
 use super::EntityKind;
 
+// TODO: doc
 pub fn prepare_cursor_file(
   path: impl AsRef<Path>,
   force: bool,
@@ -16,15 +17,15 @@ pub fn prepare_cursor_file(
 #[cfg(target_family = "unix")]
 use std::ffi::OsStr;
 
+// TODO: doc
 #[cfg(target_family = "unix")]
 pub fn symlink_cursor_file(
   base_path: impl AsRef<Path>,
   cursor_name: impl AsRef<OsStr>,
   alias_name: impl AsRef<OsStr>,
 ) -> io::Result<()> {
+  use io::ErrorKind;
   use std::os::unix::fs as unix_fs;
-
-  use io::ErrorKind::{AlreadyExists, NotFound, PermissionDenied};
 
   let base_path = base_path.as_ref();
   let cursor_name = cursor_name.as_ref();
@@ -35,24 +36,24 @@ pub fn symlink_cursor_file(
 
   if !super::entity_exists(EntityKind::Either, &cursor_path)? {
     return Err(io::Error::new(
-      NotFound,
+      ErrorKind::NotFound,
       path_error_msg!(not_found: "cursor file or directory", cursor_path),
     ));
   }
 
   if super::entity_exists(EntityKind::Either, &link_path)? {
     return Err(io::Error::new(
-      AlreadyExists,
+      ErrorKind::AlreadyExists,
       path_error_msg!(already_exists: "cursor file or directory", cursor_path),
     ));
   }
 
-  if let Err(err) = unix_fs::symlink(cursor_name, &link_path) {
+  unix_fs::symlink(cursor_name, &link_path).map_err(|err| {
     let action = "symlink cursor file or directory";
     let err_kind = err.kind();
 
-    return Err(match err_kind {
-      PermissionDenied => io::Error::new(
+    match err_kind {
+      ErrorKind::PermissionDenied => io::Error::new(
         err_kind,
         path_error_msg!(action_denied: action, link_path),
       ),
@@ -64,8 +65,6 @@ pub fn symlink_cursor_file(
           path_error_msg!(action_failed: action, link_path),
         )
       }
-    });
-  }
-
-  Ok(())
+    }
+  })
 }

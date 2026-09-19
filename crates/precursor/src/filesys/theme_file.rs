@@ -2,6 +2,7 @@ use std::io::{self, Write};
 
 use crate_config::PackageConfig;
 
+// TODO: doc
 pub fn write_icon_theme_index(
   writer: &mut impl Write,
   config: PackageConfig,

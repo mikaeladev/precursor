@@ -4,7 +4,8 @@ use std::path::Path;
 use crate::filesys::EntityKind;
 use crate::path_error_msg;
 
-pub fn prepare_file<S: Into<String>>(
+// TODO: doc
+pub fn prepare_file<S: ToString>(
   path: impl AsRef<Path>,
   kind: impl Into<Option<S>>,
   force: bool,
@@ -16,7 +17,7 @@ pub fn prepare_file<S: Into<String>>(
       super::remove_file(path, kind)
     } else {
       let kind = if let Some(value) = kind.into() {
-        format_args!("{} file", value.into())
+        format_args!("{} file", value.to_string())
       } else {
         format_args!("file")
       };

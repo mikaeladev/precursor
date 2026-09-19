@@ -1,8 +1,9 @@
 use std::fs::{self, Metadata};
-use std::io;
+use std::io::{self, ErrorKind};
 use std::path::Path;
 
-use crate::{debug, path_error_msg};
+use crate::debug;
+use crate::path_error_msg;
 
 /// Queries the file system to get information about the `path`.
 ///
@@ -12,34 +13,28 @@ use crate::{debug, path_error_msg};
 ///
 /// Fails with an error in the following (non-exhaustive) situations:
 ///
-/// - User lacks permissions to access the `path`.
-/// - A parent directory in `path` doesn't exist.
+/// - A parent directory in `path` does not exist;
+/// - User lacks permissions to access `path`.
 ///
 /// [`fs::metadata`]: fs::metadata
 pub fn get_metadata(path: impl AsRef<Path>) -> io::Result<Metadata> {
   let path = path.as_ref();
 
-  let metadata_result = fs::metadata(&path);
-
-  if let Err(err) = metadata_result {
-    use io::ErrorKind::{NotFound, PermissionDenied};
-
+  fs::metadata(&path).map_err(|err| {
     let err_kind = err.kind();
 
-    Err(match err_kind {
-      NotFound => io::Error::new(
+    match err_kind {
+      ErrorKind::NotFound => io::Error::new(
         err_kind,
         path_error_msg!(not_found: "file or directory", path),
       ),
-      PermissionDenied => {
+      ErrorKind::PermissionDenied => {
         io::Error::new(err_kind, path_error_msg!(access_denied: path))
       }
       _ => {
         debug!("{err}");
         io::Error::new(err_kind, path_error_msg!(access_failed: path))
       }
-    })
-  } else {
-    metadata_result
-  }
+    }
+  })
 }

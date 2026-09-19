@@ -1,10 +1,11 @@
 use std::fs::File;
-use std::io;
+use std::io::{self, ErrorKind};
 use std::path::Path;
 
-use crate::{debug, path_error_msg};
+use crate::debug;
+use crate::path_error_msg;
 
-/// Creates a new file at the provided `file_path`.
+/// Creates a new file at the provided `path`.
 ///
 /// See the [`File::create_new`] method for more information.
 ///
@@ -12,49 +13,39 @@ use crate::{debug, path_error_msg};
 ///
 /// Fails with an error in the following (non-exhaustive) situations:
 ///
-/// - User lacks permissions to access or create file at `file_path`.
-/// - A file or directory already exists at `file_path`.
-/// - A parent directory in `file_path` doesn't exist.
+/// - A parent directory in `path` does not exist;
+/// - A file or directory already exists at `path`;
+/// - User lacks permissions to create file at `path`.
 ///
 /// [`File::create_new`]: File::create_new
-pub fn create_new_file<S: Into<String>>(
-  file_path: impl AsRef<Path>,
-  file_kind: impl Into<Option<S>>,
+pub fn create_new_file<S: ToString>(
+  path: impl AsRef<Path>,
+  kind: impl Into<Option<S>>,
 ) -> io::Result<File> {
-  use io::ErrorKind::{AlreadyExists, PermissionDenied};
+  let path = path.as_ref();
 
-  let file_path = file_path.as_ref();
-
-  let create_result = File::create_new(file_path);
-
-  if let Err(err) = create_result {
-    let action = if let Some(kind) = file_kind.into() {
-      format_args!("create {} file", kind.into())
+  File::create_new(path).map_err(|err| {
+    let action = if let Some(value) = kind.into() {
+      format_args!("create {} file", value.to_string())
     } else {
       format_args!("create file")
     };
 
     let err_kind = err.kind();
 
-    Err(match err_kind {
-      AlreadyExists => io::Error::new(
+    match err_kind {
+      ErrorKind::AlreadyExists => io::Error::new(
         err_kind,
-        path_error_msg!(already_exists: "file or directory", file_path),
+        path_error_msg!(already_exists: "file or directory", path),
       ),
-      PermissionDenied => io::Error::new(
-        err_kind,
-        path_error_msg!(action_denied: action, file_path),
-      ),
+      ErrorKind::PermissionDenied => {
+        io::Error::new(err_kind, path_error_msg!(action_denied: action, path))
+      }
       _ => {
         debug!("{err}");
 
-        io::Error::new(
-          err_kind,
-          path_error_msg!(action_failed: action, file_path),
-        )
+        io::Error::new(err_kind, path_error_msg!(action_failed: action, path))
       }
-    })
-  } else {
-    create_result
-  }
+    }
+  })
 }

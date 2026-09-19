@@ -1,17 +1,18 @@
-use std::fmt;
-use std::io;
+use std::fmt::{self, Display, Formatter};
+use std::io::{self, ErrorKind};
 use std::path::Path;
 
 use crate::path_error_msg;
 
+#[derive(PartialEq, Eq)]
 pub enum EntityKind {
   File,
   Directory,
   Either,
 }
 
-impl fmt::Display for EntityKind {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for EntityKind {
+  fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
     f.write_str(match self {
       Self::File => "file",
       Self::Directory => "directory",
@@ -20,12 +21,11 @@ impl fmt::Display for EntityKind {
   }
 }
 
+// TODO: doc
 pub fn entity_exists(
   kind: EntityKind,
   path: impl AsRef<Path>,
 ) -> io::Result<bool> {
-  use io::ErrorKind::{IsADirectory, NotADirectory, NotFound};
-
   let path = path.as_ref();
 
   match super::get_metadata(path) {
@@ -34,7 +34,7 @@ pub fn entity_exists(
         match kind {
           EntityKind::Either | EntityKind::File => Ok(true),
           EntityKind::Directory => Err(io::Error::new(
-            NotADirectory,
+            ErrorKind::NotADirectory,
             path_error_msg!(expected_found: "a directory", "a file", path),
           )),
         }
@@ -42,7 +42,7 @@ pub fn entity_exists(
         match kind {
           EntityKind::Either | EntityKind::Directory => Ok(true),
           EntityKind::File => Err(io::Error::new(
-            IsADirectory,
+            ErrorKind::IsADirectory,
             path_error_msg!(expected_found: "a file", "a directory", path),
           )),
         }
@@ -53,9 +53,7 @@ pub fn entity_exists(
         }
       }
     }
-    Err(err) => match err.kind() {
-      NotFound => Ok(false),
-      _ => Err(err),
-    },
+    Err(err) if err.kind() == ErrorKind::NotFound => Ok(false),
+    Err(err) => Err(err),
   }
 }

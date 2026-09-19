@@ -1,11 +1,15 @@
 mod config_file;
 mod cursor_file;
+mod ensure_dir;
+mod entity_exists;
 mod prepare_file;
 mod theme_file;
 mod wrappers;
 
 pub use config_file::*;
 pub use cursor_file::*;
+pub use ensure_dir::*;
+pub use entity_exists::*;
 pub use prepare_file::*;
 pub use theme_file::*;
 pub use wrappers::*;
