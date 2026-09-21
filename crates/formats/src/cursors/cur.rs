@@ -3,7 +3,6 @@ use std::io::{self, Write};
 use crate_point::Point;
 
 use crate::containers::ico::{CursorDir, CursorDirEntry};
-use crate::cursors::CursorFile;
 
 pub struct CurFile(CursorDir);
 
@@ -23,16 +22,23 @@ impl CurFile {
 
     Self(CursorDir(images.collect()))
   }
-}
 
-impl CursorFile for CurFile {
-  fn size(&self) -> usize {
-    self.0.exact_size()
+  /// Writes a CUR file to `writer`, returning how many bytes were written.
+  ///
+  /// # Errors
+  ///
+  /// This method returns the same errors as [`Write::write_all`].
+  ///
+  /// [`Write::write_all`]: Write::write_all
+  pub fn write<W: Write>(self, writer: &mut W) -> io::Result<usize> {
+    self.0.write(writer)
   }
 
-  fn write<W: Write>(self, writer: &mut W) -> io::Result<()> {
-    self.0.write(writer)?;
-    Ok(())
+  /// Returns how many bytes will be written by [`write`].
+  ///
+  /// [`write`]: Self::write
+  pub fn exact_size(&self) -> usize {
+    self.0.exact_size()
   }
 }
 

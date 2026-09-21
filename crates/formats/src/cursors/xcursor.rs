@@ -4,8 +4,6 @@ use crate_point::Point;
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use crate::cursors::CursorFile;
-
 const FILE_HEADER_SIZE: u32 = 16;
 const FILE_VERSION: u32 = 0x10000;
 
@@ -29,8 +27,12 @@ impl XcursorFile {
   ///
   /// # Panics
   ///
-  /// Panics if `chunks` is empty, or if the length exceeds `u32::MAX`.
-  pub const fn new(chunks: Vec<XcursorChunk>) -> Self {
+  /// Panics in the following situations:
+  ///
+  /// - `chunks` is empty;
+  /// - `chunks` exceeds `u32::MAX` in length;
+  /// - Any individal chunk exceeds `u32::MAX` in size.
+  pub fn new(chunks: Vec<XcursorChunk>) -> Self {
     assert!(!chunks.is_empty(), "chunks should not be empty");
 
     assert!(
@@ -38,26 +40,34 @@ impl XcursorFile {
       "chunks length should not exceed u32::MAX"
     );
 
+    for chunk in &chunks {
+      let chunk_size = match chunk {
+        XcursorChunk::Comment { value, .. } => {
+          COMMENT_HEADER_SIZE as usize + value.len()
+        }
+        XcursorChunk::Image { pixels, .. } => {
+          IMAGE_HEADER_SIZE as usize + pixels.len()
+        }
+      };
+
+      assert!(
+        chunk_size <= u32::MAX as usize,
+        "chunk size should not exceed u32::MAX"
+      )
+    }
+
     Self { chunks }
   }
-}
 
-impl CursorFile for XcursorFile {
-  /// Attempts to write the file to `writer`.
+  /// Writes an Xcursor file to `writer`, returning how many bytes were written.
   ///
   /// # Errors
   ///
-  /// Fails with an [`io::Error`] if the number of chunks, or the length of any
-  /// chunk value, exceeds `u32::MAX`.
-  fn write<W: Write>(self, writer: &mut W) -> io::Result<()> {
+  /// This method returns the same errors as [`Write::write_all`].
+  ///
+  /// [`Write::write_all`]: Write::write_all
+  pub fn write<W: Write>(self, writer: &mut W) -> io::Result<usize> {
     let chunks_len = self.chunks.len();
-
-    if chunks_len > u32::MAX as usize {
-      return Err(io::Error::new(
-        io::ErrorKind::InvalidData,
-        "chunks length exceeds u32::MAX",
-      ));
-    }
 
     writer.write_all(b"Xcur")?;
     writer.write_u32::<LittleEndian>(FILE_HEADER_SIZE)?;
@@ -81,19 +91,10 @@ impl CursorFile for XcursorFile {
         XcursorChunk::Image {
           nominal, pixels, ..
         } => {
-          // TODO: paremeter error for hotspot, width/height max value
-
           chunk_type = IMAGE_CHUNK_TYPE;
           chunk_kind = *nominal;
           chunk_size = IMAGE_HEADER_SIZE as usize + pixels.len();
         }
-      }
-
-      if chunk_size > u32::MAX as usize {
-        return Err(io::Error::new(
-          io::ErrorKind::InvalidData,
-          "chunk length exceeds u32::MAX",
-        ));
       }
 
       writer.write_u32::<LittleEndian>(chunk_type)?;
@@ -138,10 +139,13 @@ impl CursorFile for XcursorFile {
       }
     }
 
-    Ok(())
+    Ok(data_pos as usize)
   }
 
-  fn size(&self) -> usize {
+  /// Returns how many bytes will be written by [`write`].
+  ///
+  /// [`write`]: Self::write
+  pub fn exact_size(&self) -> usize {
     let f = |acc: usize, chunk: &XcursorChunk| {
       let chunk_size = match chunk {
         XcursorChunk::Comment { value, .. } => {

@@ -1,7 +1,6 @@
 use std::io;
 use std::path::Path;
 
-use crate_formats::cursors::CursorFile;
 use crate_formats::cursors::ani::AniFile;
 use crate_formats::cursors::cur::CurFile;
 use crate_formats::cursors::xcursor::XcursorFile;

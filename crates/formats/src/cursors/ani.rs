@@ -1,19 +1,24 @@
-use std::io::{self, Cursor, Seek, Write};
+use std::io::{self, Seek, Write};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
 use crate::containers::riff::{ChunkId, ChunkValue};
-use crate::cursors::CursorFile;
 use crate::cursors::cur::CurFile;
 
 pub struct AniFile(ChunkValue);
 
 impl AniFile {
-  /// Attempts to construct a new `AniFile`.
+  /// Constructs a new `AniFile`.
+  ///
+  /// # Errors
+  ///
+  /// This method returns the same errors as [`Write::write_all`].
   ///
   /// # Panics
   ///
   /// Panics if there are more `icons` than indices in `sequence`.
+  ///
+  /// [`Write::write_all`]: Write::write_all
   pub fn new(
     icons: Vec<CurFile>,
     rates: Vec<u32>,
@@ -37,16 +42,23 @@ impl AniFile {
       ],
     )))
   }
-}
 
-impl CursorFile for AniFile {
-  fn size(&self) -> usize {
-    self.0.size()
+  /// Writes an ANI file to `writer`, returning how many bytes were written.
+  ///
+  /// # Errors
+  ///
+  /// This method returns the same errors as [`Write::write_all`].
+  ///
+  /// [`Write::write_all`]: Write::write_all
+  pub fn write<W: Write + Seek>(self, writer: &mut W) -> io::Result<usize> {
+    self.0.write(writer)
   }
 
-  fn write<W: Write + Seek>(self, writer: &mut W) -> io::Result<()> {
-    self.0.write(writer)?;
-    Ok(())
+  /// Returns how many bytes will be written by [`write`].
+  ///
+  /// [`write`]: Self::write
+  pub fn exact_size(&self) -> usize {
+    self.0.size()
   }
 }
 
@@ -94,12 +106,12 @@ trait ChunkValueAniExt {
     let mut frame_chunks = Vec::with_capacity(icons.len());
 
     for icon in icons {
-      let mut buf = Cursor::new(Vec::with_capacity(4 + icon.size()));
+      let mut buf = Vec::with_capacity(4 + icon.exact_size());
 
       buf.write_all(b"icon")?;
       icon.write(&mut buf)?;
 
-      frame_chunks.push(ChunkValue::Raw(buf.into_inner()));
+      frame_chunks.push(ChunkValue::Raw(buf));
     }
 
     Ok(ChunkValue::list(ChunkId(*b"fram"), frame_chunks))

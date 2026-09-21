@@ -1,5 +1,3 @@
-mod file;
-mod formats;
-
-pub use file::*;
-pub use formats::*;
+pub mod ani;
+pub mod cur;
+pub mod xcursor;
