@@ -58,7 +58,7 @@ impl AniFile {
   ///
   /// [`write`]: Self::write
   pub fn exact_size(&self) -> usize {
-    self.0.size()
+    self.0.exact_size()
   }
 }
 
