@@ -1,11 +1,21 @@
-use std::io::{self, Write};
+use std::io::{self, BufRead, Seek, Write};
 
-use super::common::*;
+use super::common::{self, DirEntry};
+use super::error::ReadResult;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct IconDir(pub(crate) Vec<(IconDirEntry, Box<[u8]>)>);
 
 impl IconDir {
+  /// Reads an ICO file from `reader`, returning the constructed `CursorDir`.
+  ///
+  /// # Errors
+  ///
+  /// TODO
+  pub(crate) fn read<R: BufRead + Seek>(reader: &mut R) -> ReadResult<Self> {
+    Ok(Self(common::read_impl(reader)?))
+  }
+
   /// Writes an ICO file to `writer`, returning how many bytes were written.
   ///
   /// # Errors
@@ -14,14 +24,14 @@ impl IconDir {
   ///
   /// [`Write::write_all`]: Write::write_all
   pub(crate) fn write<W: Write>(self, writer: &mut W) -> io::Result<usize> {
-    write_impl(writer, 1, self.0)
+    common::write_impl(writer, self.0)
   }
 
   /// Returns how many bytes will be written by [`write`].
   ///
   /// [`write`]: Self::write
   pub(crate) fn exact_size(&self) -> usize {
-    exact_size_impl(&self.0)
+    common::exact_size_impl(&self.0)
   }
 }
 
@@ -34,7 +44,25 @@ pub(crate) struct IconDirEntry {
   pub bit_depth: u16,
 }
 
-impl IcoDirEntry for IconDirEntry {
+impl DirEntry for IconDirEntry {
+  const RESOURCE_TYPE: u16 = 1;
+
+  fn new(
+    width: u8,
+    height: u8,
+    color_count: u8,
+    planes_or_hotx: u16,
+    depth_or_hoty: u16,
+  ) -> Self {
+    Self {
+      width,
+      height,
+      color_count,
+      color_planes: planes_or_hotx,
+      bit_depth: depth_or_hoty,
+    }
+  }
+
   fn width(&self) -> u8 {
     self.width
   }
