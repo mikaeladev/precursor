@@ -113,7 +113,7 @@ impl FromCursor for AniFile {
       sequence.push(index as u32);
     }
 
-    Ok(AniFile::new(frames, rates, sequence)?)
+    Ok(AniFile::new(frames, rates, sequence))
   }
 }
 
