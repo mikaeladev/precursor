@@ -2,7 +2,6 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 use crate_config::{AssetValue, CursorIconConfig, RotateValue};
-use crate_formats::rasters::png::PngImage;
 use crate_pixmap::DynamicPixmap;
 use crate_point::Point;
 
@@ -53,7 +52,8 @@ impl CursorIcon {
     let buffer = reader.fill_buf()?;
 
     if buffer.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
-      pixmap = DynamicPixmap::decode_png(reader)?;
+      pixmap = crate_pixmap_png::decode(&mut reader)?;
+      drop(reader);
     } else {
       return Err(PrecursorError::InvalidAssetType);
     }

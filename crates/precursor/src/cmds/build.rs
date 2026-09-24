@@ -1,9 +1,9 @@
 use std::io;
 use std::path::Path;
 
-use crate_formats::cursors::ani::AniFile;
-use crate_formats::cursors::cur::CurFile;
-use crate_formats::cursors::xcursor::XcursorFile;
+use crate_formats::ani::AniFile;
+use crate_formats::cur::CurFile;
+use crate_formats::xcursor::XcursorFile;
 
 use crate::args::BuildArgs;
 use crate::cursor::{Cursor, FromCursor};

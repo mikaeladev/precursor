@@ -1,20 +1,19 @@
 use std::convert::Infallible;
 
-use crate_formats::cursors::ani::AniFile;
-use crate_formats::cursors::cur::{CurFile, CurIcon};
-use crate_formats::cursors::xcursor::{XcursorChunk, XcursorFile};
-use crate_formats::rasters::png::PngImage;
-use crate_formats::rasters::{RasterError, RasterResult};
+use crate_formats::ani::AniFile;
+use crate_formats::cur::{CurFile, CurIcon};
+use crate_formats::xcursor::{XcursorChunk, XcursorFile};
 use crate_pixmap::{IntoPixmap, RgbAlphaPixmap};
+use crate_pixmap_png::{self, EncodeError, EncodeResult};
 use crate_point::Point;
 
 use super::{Cursor, CursorFrame};
 
 pub trait FromCursor: Sized {
-  /// The associated error that can be returned in the process.
+  /// The error that can be returned in the process.
   type Error;
 
-  /// Attempts to create a new value from a [`Cursor`] reference.
+  /// Constructs a new value from a [`Cursor`] reference.
   fn from_cursor(cursor: &Cursor) -> Result<Self, Self::Error>;
 }
 
@@ -66,39 +65,39 @@ impl FromCursor for XcursorFile {
 }
 
 impl FromCursor for CurFile {
-  type Error = RasterError;
+  type Error = EncodeError;
 
-  /// Attempts to construct a new [`CurFile`] from a [`Cursor`] reference.
+  /// Constructs a new [`CurFile`] from a [`Cursor`] reference.
   ///
   /// # Errors
   ///
-  /// Fails with a [`RasterError`] if any pixmap is malformed.
+  /// Returns the same errors as [`crate_pixmap_png::encode`].
   ///
   /// # Panics
   ///
   /// Panics if any icon [hotspot] is out of bounds.
   ///
   /// [hotspot]: Point
-  fn from_cursor(cursor: &Cursor) -> Result<Self, RasterError> {
+  fn from_cursor(cursor: &Cursor) -> EncodeResult<Self> {
     frame_to_cur(cursor.frames.first().unwrap())
   }
 }
 
 impl FromCursor for AniFile {
-  type Error = RasterError;
+  type Error = EncodeError;
 
-  /// Attempts to construct a new [`AniFile`] from a [`Cursor`] reference.
+  /// Constructs a new [`AniFile`] from a [`Cursor`] reference.
   ///
   /// # Errors
   ///
-  /// Fails with a [`RasterError`] if any pixmap is malformed.
+  /// Returns the same errors as [`crate_pixmap_png::encode`].
   ///
   /// # Panics
   ///
   /// Panics if any icon [hotspot] is out of bounds.
   ///
   /// [hotspot]: Point
-  fn from_cursor(cursor: &Cursor) -> Result<Self, RasterError> {
+  fn from_cursor(cursor: &Cursor) -> EncodeResult<Self> {
     let num_frames = cursor.frames.len();
 
     let mut frames = Vec::with_capacity(num_frames);
@@ -117,26 +116,33 @@ impl FromCursor for AniFile {
   }
 }
 
-/// Attempts to construct a new [`CurFile`] from a [`CursorFrame`] reference.
+/// Constructs a new [`CurFile`] from a [`CursorFrame`] reference.
 ///
 /// # Errors
 ///
-/// Fails with a [`RasterError`] if any pixmap is malformed.
+/// Returns the same errors as [`crate_pixmap_png::encode`].
 ///
 /// # Panics
 ///
 /// Panics if any icon [hotspot] is out of bounds.
 ///
 /// [hotspot]: Point
-fn frame_to_cur(frame: &CursorFrame) -> RasterResult<CurFile> {
+fn frame_to_cur(frame: &CursorFrame) -> EncodeResult<CurFile> {
   let mut icons = Vec::with_capacity(frame.icons.len());
 
   for icon in &frame.icons {
+    let (width, height) = icon.pixmap.dimensions();
+
+    let hotspot = Point::from((icon.hotspot.x as u16, icon.hotspot.y as u16));
+
+    let mut buffer = Vec::with_capacity(width as usize * height as usize);
+    crate_pixmap_png::encode(icon.pixmap.clone(), &mut buffer)?;
+
     icons.push(CurIcon::new(
-      icon.pixmap.width() as u16,
-      icon.pixmap.height() as u16,
-      Point::from((icon.hotspot.x as u16, icon.hotspot.y as u16)),
-      icon.pixmap.clone().encode_png()?.into_boxed_slice(),
+      width as u16,
+      height as u16,
+      hotspot,
+      buffer.into_boxed_slice(),
     ));
   }
 

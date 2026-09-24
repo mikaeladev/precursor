@@ -8,8 +8,9 @@ license.workspace = true
 [dependencies]
 clap.workspace = true
 crate_config.workspace = true
-crate_pixmap.workspace = true
 crate_formats.workspace = true
+crate_pixmap.workspace = true
+crate_pixmap_png.workspace = true
+crate_point.workspace = true
 thiserror.workspace = true
 toml.workspace = true
-crate_point.workspace = true

@@ -1,10 +1,10 @@
-use std::io::{self, BufRead, Read, Seek, SeekFrom, Write};
+use std::io::{self, Read, Seek, SeekFrom, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use super::error::{ReadError, ReadResult};
 
-pub(super) trait DirEntry {
+pub trait DirEntry {
   const RESOURCE_TYPE: u16;
 
   fn new(
@@ -22,7 +22,7 @@ pub(super) trait DirEntry {
   fn depth_or_hoty(&self) -> u16;
 }
 
-pub(super) fn read_impl<D: DirEntry, R: BufRead + Seek>(
+pub fn read_impl<D: DirEntry, R: Read + Seek>(
   reader: &mut R,
 ) -> ReadResult<Vec<(D, Box<[u8]>)>> {
   if reader.read_u16::<LittleEndian>()? != 0 {
@@ -75,7 +75,7 @@ pub(super) fn read_impl<D: DirEntry, R: BufRead + Seek>(
   Ok(entries)
 }
 
-pub(super) fn write_impl<D: DirEntry, W: Write>(
+pub fn write_impl<D: DirEntry, W: Write>(
   writer: &mut W,
   entries: Vec<(D, Box<[u8]>)>,
 ) -> io::Result<usize> {
@@ -118,7 +118,7 @@ pub(super) fn write_impl<D: DirEntry, W: Write>(
   Ok(data_len)
 }
 
-pub(super) fn exact_size_impl<T>(entries: &[(T, Box<[u8]>)]) -> usize {
+pub fn exact_size_impl<T>(entries: &[(T, Box<[u8]>)]) -> usize {
   entries
     .iter()
     .fold(6 + 16 * entries.len(), |acc, (_, buf)| acc + buf.len())

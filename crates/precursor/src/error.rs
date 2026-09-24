@@ -1,7 +1,7 @@
 use std::fmt;
 use std::io;
 
-use crate_formats::rasters::RasterError;
+use crate_pixmap_png::{DecodeError, EncodeError};
 
 use thiserror::Error;
 use toml::de;
@@ -15,7 +15,10 @@ pub enum PrecursorError {
   FmtError(#[from] fmt::Error),
 
   #[error("{0}")]
-  RasterError(#[from] RasterError),
+  DecodeError(#[from] DecodeError),
+
+  #[error("{0}")]
+  EncodeError(#[from] EncodeError),
 
   #[error("{0}")]
   TomlError(#[from] de::Error),

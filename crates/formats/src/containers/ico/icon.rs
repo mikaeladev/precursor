@@ -1,10 +1,10 @@
-use std::io::{self, BufRead, Seek, Write};
+use std::io::{self, Read, Seek, Write};
 
 use super::common::{self, DirEntry};
 use super::error::ReadResult;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct IconDir(pub(crate) Vec<(IconDirEntry, Box<[u8]>)>);
+pub struct IconDir(pub Vec<(IconDirEntry, Box<[u8]>)>);
 
 impl IconDir {
   /// Reads an ICO file from `reader`, returning the constructed `CursorDir`.
@@ -12,7 +12,7 @@ impl IconDir {
   /// # Errors
   ///
   /// TODO
-  pub(crate) fn read<R: BufRead + Seek>(reader: &mut R) -> ReadResult<Self> {
+  pub fn read<R: Read + Seek>(reader: &mut R) -> ReadResult<Self> {
     Ok(Self(common::read_impl(reader)?))
   }
 
@@ -23,20 +23,20 @@ impl IconDir {
   /// This method returns the same errors as [`Write::write_all`].
   ///
   /// [`Write::write_all`]: Write::write_all
-  pub(crate) fn write<W: Write>(self, writer: &mut W) -> io::Result<usize> {
+  pub fn write<W: Write>(self, writer: &mut W) -> io::Result<usize> {
     common::write_impl(writer, self.0)
   }
 
   /// Returns how many bytes will be written by [`write`].
   ///
   /// [`write`]: Self::write
-  pub(crate) fn exact_size(&self) -> usize {
+  pub fn exact_size(&self) -> usize {
     common::exact_size_impl(&self.0)
   }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct IconDirEntry {
+pub struct IconDirEntry {
   pub width: u8,
   pub height: u8,
   pub color_count: u8,

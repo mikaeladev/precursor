@@ -1,2 +1,2 @@
-pub mod ico;
-pub mod riff;
+pub(crate) mod ico;
+pub(crate) mod riff;
