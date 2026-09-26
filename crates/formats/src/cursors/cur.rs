@@ -1,8 +1,11 @@
-use std::io::{self, Write};
+use std::io::{self, Read, Seek, Write};
 
 use crate_point::Point;
 
 use crate::containers::ico::{CursorDir, CursorDirEntry};
+
+pub type ReadError = crate::containers::ico::ReadError;
+pub type ReadResult<T> = crate::containers::ico::ReadResult<T>;
 
 pub struct CurFile(CursorDir);
 
@@ -23,6 +26,15 @@ impl CurFile {
     Self(CursorDir(images.collect()))
   }
 
+  /// Reads a CUR file from reader, returning the constructed `CurFile`.
+  ///
+  /// # Errors
+  ///
+  /// TODO
+  pub fn read<R: Read + Seek>(reader: &mut R) -> ReadResult<Self> {
+    Ok(Self(CursorDir::read(reader)?))
+  }
+
   /// Writes a CUR file to `writer`, returning how many bytes were written.
   ///
   /// # Errors
@@ -40,13 +52,33 @@ impl CurFile {
   pub fn exact_size(&self) -> usize {
     self.0.exact_size()
   }
+
+  /// Converts `self` into a `Vec<`[`CurIcon`]`>`.
+  ///
+  /// Note that the `width` and `height` fields of a given icon may be zero.
+  /// This is because the ICO format cannot hold width/height values over `255`,
+  /// and as such the true values should be gained by inspecting the PNG/BMP
+  /// buffer.
+  pub fn into_icons(self) -> Vec<CurIcon> {
+    let CurFile(CursorDir(entries)) = self;
+
+    entries
+      .into_iter()
+      .map(|(entry, buffer)| CurIcon {
+        width: entry.width as u16,
+        height: entry.height as u16,
+        hotspot: entry.hotspot,
+        buffer,
+      })
+      .collect()
+  }
 }
 
 pub struct CurIcon {
-  width: u16,
-  height: u16,
-  hotspot: Point<u16>,
-  buffer: Box<[u8]>,
+  pub width: u16,
+  pub height: u16,
+  pub hotspot: Point<u16>,
+  pub buffer: Box<[u8]>,
 }
 
 impl CurIcon {

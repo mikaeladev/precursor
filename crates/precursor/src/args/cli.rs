@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::args::input::InputArg;
 
@@ -112,6 +112,18 @@ pub struct CheckArgs {
   pub config_file_input: InputArg,
 }
 
+#[derive(Debug, Clone, ValueEnum)]
+pub enum CursorKindHint {
+  #[clap(alias = "a")]
+  Ani,
+  #[clap(alias = "c")]
+  Cur,
+  #[clap(aliases = ["s", "scalable"])]
+  Svg,
+  #[clap(aliases = ["x", "x11", "xcursor"])]
+  Xcur,
+}
+
 #[derive(Args)]
 pub struct ExtractArgs {
   #[arg(value_name = "FILE_PATH")]
@@ -127,9 +139,17 @@ pub struct ExtractArgs {
   )]
   pub target_dir_path: PathBuf,
 
-  /// Specify frames to extract (0-based).
-  #[arg(short = 'f', long, value_name = "INDICES")]
-  pub frames: Option<u32>,
+  /// Specify the kind of cursor to expect.
+  #[arg(short = 'k', long = "kind", value_name = "KIND")]
+  pub kind_hint: Option<CursorKindHint>,
+
+  /// Remove contents of DIRECTORY before building.
+  #[arg(short = 'e', long, alias = "clear")]
+  pub empty: bool,
+
+  /// Remove existing destination files.
+  #[arg(short = 'f', long)]
+  pub force: bool,
 }
 
 #[derive(Args)]

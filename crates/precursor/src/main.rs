@@ -23,7 +23,7 @@ fn main() {
   let result = match args.command {
     Command::Build(build_args) => cmds::build(build_args),
     Command::Check(check_args) => cmds::check(check_args),
-    Command::Extract(_) => todo!(),
+    Command::Extract(extract_args) => cmds::extract(extract_args),
     Command::Inspect(_) => todo!(),
   };
 

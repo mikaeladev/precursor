@@ -1,7 +1,8 @@
 use std::fmt;
 use std::io;
 
-use crate_pixmap_png::{DecodeError, EncodeError};
+use crate_formats::cur;
+use crate_pixmap_png as png;
 
 use thiserror::Error;
 use toml::de;
@@ -15,16 +16,24 @@ pub enum PrecursorError {
   FmtError(#[from] fmt::Error),
 
   #[error("{0}")]
-  DecodeError(#[from] DecodeError),
+  CurDecodeError(#[from] cur::ReadError),
 
   #[error("{0}")]
-  EncodeError(#[from] EncodeError),
+  PngDecodeError(#[from] png::DecodeError),
+
+  #[error("{0}")]
+  PngEncodeError(#[from] png::EncodeError),
 
   #[error("{0}")]
   TomlError(#[from] de::Error),
 
   #[error("invalid asset type, expected a PNG")]
   InvalidAssetType,
+
+  #[error(
+    "unrecognised cursor format, consider passing the '--kind' argument and trying again"
+  )]
+  UnrecognisedCursorFormat,
 }
 
 pub type PrecursorResult<T = ()> = Result<T, PrecursorError>;
