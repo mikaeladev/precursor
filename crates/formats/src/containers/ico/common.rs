@@ -62,12 +62,14 @@ pub fn read_impl<D: DirEntry, R: Read + Seek>(
     let data_size = reader.read_u32::<LittleEndian>()?;
     let data_pos = reader.read_u32::<LittleEndian>()?;
 
+    let end_pos = reader.stream_position()?;
+
     reader.seek(SeekFrom::Start(data_pos as u64))?;
 
     let mut buffer = Vec::with_capacity(data_size as usize);
     reader.take(data_size as u64).read_to_end(&mut buffer)?;
 
-    reader.seek_relative(-(data_pos as i64))?;
+    reader.seek(SeekFrom::Start(end_pos))?;
 
     entries.push((entry, buffer.into_boxed_slice()));
   }
@@ -280,5 +282,60 @@ mod tests {
     let mut writer = Vec::with_capacity(expected_size);
     assert_eq!(write_impl(&mut writer, entries).unwrap(), expected_size);
     assert_eq!(&writer, SINGLE_IMAGE_BUFFER)
+  }
+
+  #[rustfmt::skip]
+  const MULTI_IMAGES_BUF: &[u8] = &[
+    00, 00, // reserved
+    00, 00, // res_type
+    02, 00, // entries_count
+
+    00, // width
+    00, // height
+    00, // color_count
+    00, // reserved
+    00, 00, // color_planes
+    00, 00, // bit_depth
+    05, 00, 00, 00, // data_size
+    38, 00, 00, 00, // data_offset
+
+    00, // width
+    00, // height
+    00, // color_count
+    00, // reserved
+    00, 00, // color_planes
+    00, 00, // bit_depth
+    05, 00, 00, 00, // data_size
+    43, 00, 00, 00, // data_offset
+
+    0x68, 0x65, 0x6C, 0x6C, 0x6F, // "hello"
+
+    0x77, 0x6F, 0x72, 0x6C, 0x64, // "world"
+  ];
+
+  #[test]
+  fn read_multi_images() {
+    let entries = vec![
+      (TestDirEntry::default(), Box::new(*b"hello") as Box<[u8]>),
+      (TestDirEntry::default(), Box::new(*b"world") as Box<[u8]>),
+    ];
+
+    let mut reader = BufReader::new(Cursor::new(MULTI_IMAGES_BUF));
+    assert_eq!(read_impl(&mut reader).unwrap(), entries);
+  }
+
+  #[test]
+  fn write_multi_images() {
+    let entries = vec![
+      (TestDirEntry::default(), Box::new(*b"hello") as Box<[u8]>),
+      (TestDirEntry::default(), Box::new(*b"world") as Box<[u8]>),
+    ];
+
+    let expected_size = MULTI_IMAGES_BUF.len();
+    assert_eq!(exact_size_impl(&entries), expected_size);
+
+    let mut writer = Vec::with_capacity(expected_size);
+    assert_eq!(write_impl(&mut writer, entries).unwrap(), expected_size);
+    assert_eq!(&writer, MULTI_IMAGES_BUF)
   }
 }
