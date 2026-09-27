@@ -1,9 +1,5 @@
-use std::convert::Infallible;
 use std::io::{self, ErrorKind};
 use std::path::Path;
-
-use crate::debug;
-use crate::path_error_msg;
 
 /// Ensures a directory exists at the provided `path`, creating it if necessary.
 ///
@@ -48,31 +44,7 @@ pub fn ensure_dir_empty<S: ToString>(
   let path = path.as_ref();
 
   if !ensure_dir(path, kind)? {
-    let mut iter = super::read_dir(path, kind)?;
-
-    while let Some(entry_res) = iter.next() {
-      match entry_res {
-        Ok(entry) => {
-          let subpath = entry.path();
-          let metadata = super::get_metadata(&subpath, false)?;
-
-          if metadata.is_file() || metadata.is_symlink() {
-            super::remove_file::<Infallible>(subpath, None)?;
-          } else if metadata.is_dir() {
-            super::remove_dir_all::<Infallible>(subpath, None)?;
-          }
-        }
-        Err(err) => {
-          debug!("{err}");
-
-          return Err(io::Error::new(
-            err.kind(),
-            path_error_msg!(action_failed: "read directory", path),
-          ));
-        }
-      }
-    }
-
+    super::empty_dir(path, kind)?;
     Ok(false)
   } else {
     Ok(true)

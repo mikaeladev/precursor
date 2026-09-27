@@ -17,8 +17,6 @@ use crate::path_error_msg;
 /// - `path` is not a directory;
 /// - Directory is not empty;
 /// - User lacks permissions to remove directory at `path`.
-///
-/// [`fs::remove_dir`]: fs::remove_dir
 pub fn remove_dir<S: ToString>(
   path: impl AsRef<Path>,
   kind: impl Into<Option<S>>,
@@ -63,7 +61,8 @@ pub fn remove_dir<S: ToString>(
 /// Removes the directory at the provided `path`, after removing all of its
 /// contents.
 ///
-/// See the [`fs::remove_dir_all`] function for more information.
+/// This function does **not** follow symbolic links and it will simply remove
+/// the symbolic link itself.
 ///
 /// # Errors
 ///
@@ -72,52 +71,27 @@ pub fn remove_dir<S: ToString>(
 /// - `path` does not exist;
 /// - `path` is not a directory;
 /// - Directory is being concurrently written to;
+/// - User lacks permissions to access and remove contents of `path`.
 /// - User lacks permissions to remove directory at `path`.
-///
-/// [`fs::remove_dir_all`]: fs::remove_dir_all
 pub fn remove_dir_all<S: ToString>(
   path: impl AsRef<Path>,
-  kind: impl Into<Option<S>>,
+  kind: impl Into<Option<S>> + Clone,
 ) -> io::Result<()> {
   let path = path.as_ref();
+  let path_meta = super::get_metadata(path, true)?;
 
-  fs::remove_dir_all(path).map_err(|err| {
+  if path_meta.is_symlink() {
     let kind = if let Some(value) = kind.into() {
-      format_args!("{} directory", value.to_string())
+      format_args!("{} symlink", value.to_string())
     } else {
-      format_args!("directory")
+      format_args!("symlink")
     };
 
-    let action = format_args!("remove {kind} and its contents");
+    // maybe handle behind a flag at a later date?
+    super::remove_file(path, kind)
+  } else {
+    super::empty_dir(path, kind.clone())?;
 
-    let err_kind = err.kind();
-
-    match err_kind {
-      ErrorKind::DirectoryNotEmpty => io::Error::new(
-        err_kind,
-        path_error_msg!(
-          format_args!(
-            "failed to {} as it is being concurrently written to at path",
-            action
-          ),
-          path
-        ),
-      ),
-      ErrorKind::NotADirectory => io::Error::new(
-        err_kind,
-        path_error_msg!(expected_found: "a directory", "a file", path),
-      ),
-      ErrorKind::NotFound => {
-        io::Error::new(err_kind, path_error_msg!(not_found: kind, path))
-      }
-      ErrorKind::PermissionDenied => {
-        io::Error::new(err_kind, path_error_msg!(action_denied: action, path))
-      }
-      _ => {
-        debug!("{err}");
-
-        io::Error::new(err_kind, path_error_msg!(action_failed: action, path))
-      }
-    }
-  })
+    remove_dir(path, kind)
+  }
 }

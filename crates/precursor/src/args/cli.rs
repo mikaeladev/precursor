@@ -75,7 +75,7 @@ pub struct BuildArgs {
   #[arg(short = 'e', long, alias = "clear")]
   pub empty: bool,
 
-  /// Remove existing destination files.
+  /// Replace existing destination files.
   #[arg(short = 'f', long)]
   pub force: bool,
 }
@@ -147,7 +147,7 @@ pub struct ExtractArgs {
   #[arg(short = 'e', long, alias = "clear")]
   pub empty: bool,
 
-  /// Remove existing destination files.
+  /// Replace existing destination files.
   #[arg(short = 'f', long)]
   pub force: bool,
 }
