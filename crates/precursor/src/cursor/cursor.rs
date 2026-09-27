@@ -1,26 +1,25 @@
-use crate_config::{
-  CursorConfig, CursorIconConfig, CursorSubconfig, CursorTargets,
-};
+use crate_config::{CursorConfig, CursorTargets, CursorVariant};
+
+use crate_formats::ani::AniFile;
+use crate_formats::cur::CurFile;
+use crate_formats::xcursor::{XcursorChunk, XcursorFile};
+
+use crate_pixmap::{IntoPixmap, RgbAlphaPixmap};
+use crate_pixmap_png::{self, EncodeResult};
 
 use crate::cursor::{CursorDuration, CursorFrame, CursorIcon};
 use crate::error::PrecursorResult;
 
 #[derive(Debug, Clone)]
 pub struct Cursor {
-  pub frames: Vec<CursorFrame>,
-  pub metadata: CursorMetadata,
+  frames: Vec<CursorFrame>,
+  metadata: CursorMetadata,
 }
 
 impl Cursor {
-  /// Constructs a new `Cursor`.
-  ///
-  /// # Panics
-  ///
-  /// Panics if `frames` is empty.
-  pub const fn new(frames: Vec<CursorFrame>, metadata: CursorMetadata) -> Self {
-    assert!(!frames.is_empty(), "frames should not be empty");
-
-    Self { frames, metadata }
+  /// Returns a reference to the underlying [`CursorMetadata`].
+  pub const fn metadata(&self) -> &CursorMetadata {
+    &self.metadata
   }
 
   /// Returns `true` if there are multiple frames in the cursor.
@@ -28,24 +27,104 @@ impl Cursor {
     self.frames.len() != 1
   }
 
-  /// Attempts to construct a new `Cursor` from a [`CursorConfig`].
+  /// Constructs a new [`AniFile`].
   ///
   /// # Errors
   ///
-  /// Fails with a [`PrecursorError`] if any asset fails to decode.
+  /// Returns the same errors as [`crate_pixmap_png::encode`].
   ///
-  /// [`CursorConfig`]: CursorConfig
-  /// [`PrecursorError`]: crate::error::PrecursorError
+  /// # Panics
+  ///
+  /// Panics if any icon [hotspot] is out of bounds.
+  ///
+  /// [hotspot]: crate_point::Point
+  pub fn to_windows_ani(&self) -> EncodeResult<AniFile> {
+    let num_frames = self.frames.len();
+
+    let mut frames = Vec::with_capacity(num_frames);
+    let mut rates = Vec::with_capacity(num_frames);
+    let mut sequence = Vec::with_capacity(num_frames);
+
+    for index in 0..=self.frames.len() {
+      let frame = self.frames.get(index).unwrap();
+
+      frames.push(frame.to_cur()?);
+      rates.push(frame.duration.unwrap().jiffies());
+      sequence.push(index as u32);
+    }
+
+    Ok(AniFile::new(frames, rates, sequence))
+  }
+
+  /// Constructs a new [`CurFile`].
+  ///
+  /// # Errors
+  ///
+  /// Returns the same errors as [`crate_pixmap_png::encode`].
+  ///
+  /// # Panics
+  ///
+  /// Panics if any icon [hotspot] is out of bounds.
+  ///
+  /// [hotspot]: crate_point::Point
+  pub fn to_windows_cur(&self) -> EncodeResult<CurFile> {
+    self.frames.first().unwrap().to_cur()
+  }
+
+  /// Constructs a new [`XcursorFile`].
+  ///
+  /// # Panics
+  ///
+  /// Panics if there are no chunks, or if the number of chunks exceeds
+  /// `u32::MAX`.
+  pub fn to_xcursor(&self) -> XcursorFile {
+    let num_chunks = self.frames.iter().fold(0, |acc, f| acc + f.icons.len());
+
+    let mut chunks = Vec::with_capacity(num_chunks);
+
+    for frame in &self.frames {
+      let duration = frame
+        .duration
+        .and_then(|d| Some(d.milliseconds()))
+        .unwrap_or_default();
+
+      for icon in &frame.icons {
+        let rgba: RgbAlphaPixmap = icon.pixmap.clone().into_pixmap();
+        let mut pixels: Box<[u8]> = rgba.into_iter().collect();
+
+        for chunk in pixels.as_chunks_mut::<4>().0 {
+          chunk.swap(0, 2); // rgba -> bgra
+        }
+
+        chunks.push(XcursorChunk::Image {
+          nominal: icon.nominal,
+          width: icon.pixmap.width(),
+          height: icon.pixmap.height(),
+          hotspot: icon.hotspot,
+          duration,
+          pixels,
+        });
+      }
+    }
+
+    XcursorFile::new(chunks)
+  }
+
+  /// Constructs a new `Cursor` from a [`CursorConfig`].
+  ///
+  /// # Errors
+  ///
+  /// Returns the same errors as [`CursorIcon::from_config`].
   pub fn from_config(
     CursorConfig {
       name,
       targets,
-      subconfig,
+      variant,
     }: CursorConfig,
   ) -> PrecursorResult<Self> {
-    use CursorSubconfig::*;
+    use CursorVariant::*;
 
-    let frames = match subconfig {
+    let frames = match variant {
       ScaledStatic { icon: icon_config } => {
         let icon = CursorIcon::from_config(icon_config)?;
 
@@ -72,11 +151,13 @@ impl Cursor {
         let mut frames = Vec::with_capacity(sequence.len());
 
         for (asset, duration) in sequence {
-          let icon = CursorIcon::from_config(CursorIconConfig {
+          let icon_config = crate_config::CursorIcon {
             asset,
             nominal,
             hotspot,
-          })?;
+          };
+
+          let icon = CursorIcon::from_config(icon_config)?;
 
           let mut icon_x2 = icon.clone();
           icon_x2.scale_up(2);
@@ -128,7 +209,10 @@ impl Cursor {
       }
     };
 
-    Ok(Cursor::new(frames, CursorMetadata { name, targets }))
+    Ok(Self {
+      frames,
+      metadata: CursorMetadata { name, targets },
+    })
   }
 }
 
@@ -139,38 +223,37 @@ pub struct CursorMetadata {
 }
 
 impl CursorMetadata {
-  pub const fn get_linux_name(&self) -> Option<&String> {
+  pub const fn linux_name(&self) -> &str {
     if let Some(targets) = &self.targets
       && let Some(linux) = &targets.linux
       && let Some(name) = &linux.name
     {
-      Some(name)
+      name.as_str()
     } else {
-      None
+      self.name.as_str()
     }
   }
 
-  #[cfg(target_family = "unix")]
-  pub const fn get_linux_aliases(&self) -> Option<&Vec<String>> {
+  pub const fn linux_aliases(&self) -> &[String] {
     if let Some(targets) = &self.targets
       && let Some(linux) = &targets.linux
       && let Some(aliases) = &linux.aliases
       && !aliases.is_empty()
     {
-      Some(aliases)
+      aliases.as_slice()
     } else {
-      None
+      &[]
     }
   }
 
-  pub const fn get_windows_name(&self) -> Option<&String> {
+  pub const fn windows_name(&self) -> &str {
     if let Some(targets) = &self.targets
       && let Some(windows) = &targets.windows
       && let Some(name) = &windows.name
     {
-      Some(name)
+      name.as_str()
     } else {
-      None
+      &self.name.as_str()
     }
   }
 }

@@ -1,9 +1,10 @@
 use std::fmt::{Formatter, Result as FmtResult};
 use std::path::PathBuf;
 
-use serde::de::{Error as DeError, IntoDeserializer, MapAccess, Visitor};
+use serde::de::{self, IntoDeserializer, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
-use serde_repr::Deserialize_repr;
+
+use crate::RotateValue;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AssetValue {
@@ -26,14 +27,6 @@ impl AssetValue {
   }
 }
 
-#[derive(Debug, Deserialize_repr, Clone, Copy, PartialEq, Eq)]
-#[repr(u16)]
-pub enum RotateValue {
-  Ninety = 90,
-  OneEighty = 180,
-  TwoSeventy = 270,
-}
-
 impl<'de> Deserialize<'de> for AssetValue {
   fn deserialize<D: Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
     struct ValueVisitor;
@@ -50,7 +43,7 @@ impl<'de> Deserialize<'de> for AssetValue {
     macro_rules! return_if_duplicate {
       ($var:expr, $field:literal) => {
         if $var.is_some() {
-          return Err(DeError::duplicate_field($field));
+          return Err(de::Error::duplicate_field($field));
         }
       };
     }
@@ -62,7 +55,7 @@ impl<'de> Deserialize<'de> for AssetValue {
         f.write_str("a path string or config struct")
       }
 
-      fn visit_str<E: DeError>(self, v: &str) -> Result<Self::Value, E> {
+      fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
         Ok(AssetValue::Short(PathBuf::deserialize(
           v.into_deserializer(),
         )?))
@@ -101,7 +94,7 @@ impl<'de> Deserialize<'de> for AssetValue {
         }
 
         if path.is_none() {
-          return Err(DeError::missing_field("path"));
+          return Err(de::Error::missing_field("path"));
         }
 
         Ok(AssetValue::Verbose {
@@ -137,6 +130,18 @@ mod tests {
   }
 
   #[test]
+  fn deserialize_from_empty_table() {
+    let raw_value = "{ }";
+
+    let toml_value: Value = raw_value.parse().unwrap();
+    let value = AssetValue::deserialize(toml_value);
+
+    let expected = Err(DeError::custom("missing field `path`"));
+
+    assert_eq!(value, expected)
+  }
+
+  #[test]
   fn deserialize_from_table() {
     let raw_value = r#"{ path = "/foo/bar" }"#;
 
@@ -149,18 +154,6 @@ mod tests {
       flop: None,
       rotate: None,
     };
-
-    assert_eq!(value, expected)
-  }
-
-  #[test]
-  fn deserialize_from_table_err() {
-    let raw_value = "{ }";
-
-    let toml_value: Value = raw_value.parse().unwrap();
-    let value = AssetValue::deserialize(toml_value);
-
-    let expected = Err(DeError::custom("missing field `path`"));
 
     assert_eq!(value, expected)
   }

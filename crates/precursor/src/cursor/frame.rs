@@ -1,4 +1,8 @@
-use super::CursorIcon;
+use crate_formats::cur::{CurFile, CurIcon};
+use crate_pixmap_png::EncodeResult;
+use crate_point::Point;
+
+use crate::cursor::CursorIcon;
 
 #[derive(Debug, Clone)]
 pub struct CursorFrame {
@@ -19,6 +23,39 @@ impl CursorFrame {
     assert!(!icons.is_empty(), "icons should not be empty");
 
     Self { icons, duration }
+  }
+
+  /// Constructs a new [`CurFile`].
+  ///
+  /// # Errors
+  ///
+  /// Returns the same errors as [`crate_pixmap_png::encode`].
+  ///
+  /// # Panics
+  ///
+  /// Panics if any icon [hotspot] is out of bounds.
+  ///
+  /// [hotspot]: Point
+  pub fn to_cur(&self) -> EncodeResult<CurFile> {
+    let mut icons = Vec::with_capacity(self.icons.len());
+
+    for icon in &self.icons {
+      let (width, height) = icon.pixmap.dimensions();
+
+      let hotspot = Point::from((icon.hotspot.x as u16, icon.hotspot.y as u16));
+
+      let mut buffer = Vec::with_capacity(width as usize * height as usize);
+      crate_pixmap_png::encode(icon.pixmap.clone(), &mut buffer)?;
+
+      icons.push(CurIcon::new(
+        width as u16,
+        height as u16,
+        hotspot,
+        buffer.into_boxed_slice(),
+      ));
+    }
+
+    Ok(CurFile::new(icons))
   }
 }
 

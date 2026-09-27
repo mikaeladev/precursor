@@ -6,8 +6,6 @@ use crate::args::InputArg;
 use crate::debug;
 use crate::path_error_msg;
 
-use super::EntityKind;
-
 pub enum CursorReader {
   File(BufReader<File>),
   #[cfg(target_family = "unix")]
@@ -88,65 +86,82 @@ pub fn get_cursor_reader(
   }
 }
 
-// TODO: doc
-pub fn prepare_cursor_file(
-  path: impl AsRef<Path>,
-  force: bool,
-) -> io::Result<()> {
-  super::prepare_file(path, "cursor file", force)
-}
-
 #[cfg(target_family = "unix")]
-use std::ffi::OsStr;
+mod unix {
+  use std::convert::Infallible;
+  use std::ffi::OsStr;
 
-// TODO: doc
-#[cfg(target_family = "unix")]
-pub fn symlink_cursor_file(
-  base_path: impl AsRef<Path>,
-  cursor_name: impl AsRef<OsStr>,
-  alias_name: impl AsRef<OsStr>,
-) -> io::Result<()> {
-  use io::ErrorKind;
-  use std::os::unix::fs as unix_fs;
+  use crate::filesys;
 
-  let base_path = base_path.as_ref();
-  let cursor_name = cursor_name.as_ref();
-  let alias_name = alias_name.as_ref();
+  use super::*;
 
-  let cursor_path = base_path.join(cursor_name);
-  let link_path = base_path.join(alias_name);
+  // TODO: doc
+  pub fn symlink_cursor(
+    base_path: impl AsRef<Path>,
+    cursor_name: impl AsRef<OsStr>,
+    alias_name: impl AsRef<OsStr>,
+    force: bool,
+  ) -> io::Result<()> {
+    use io::ErrorKind;
+    use std::os::unix::fs as unix_fs;
 
-  if !super::entity_exists(EntityKind::Either, &cursor_path)? {
-    return Err(io::Error::new(
-      ErrorKind::NotFound,
-      path_error_msg!(not_found: "cursor file or directory", cursor_path),
-    ));
-  }
+    let base_path = base_path.as_ref();
+    let cursor_name = cursor_name.as_ref();
+    let alias_name = alias_name.as_ref();
 
-  if super::entity_exists(EntityKind::Either, &link_path)? {
-    return Err(io::Error::new(
-      ErrorKind::AlreadyExists,
-      path_error_msg!(already_exists: "cursor file or directory", cursor_path),
-    ));
-  }
+    let cursor_path = base_path.join(cursor_name);
+    let link_path = base_path.join(alias_name);
 
-  unix_fs::symlink(cursor_name, &link_path).map_err(|err| {
-    let action = "symlink cursor file or directory";
-    let err_kind = err.kind();
-
-    match err_kind {
-      ErrorKind::PermissionDenied => io::Error::new(
-        err_kind,
-        path_error_msg!(action_denied: action, link_path),
-      ),
-      _ => {
-        debug!("{err}");
-
-        io::Error::new(
-          err_kind,
-          path_error_msg!(action_failed: action, link_path),
-        )
-      }
+    if let Err(err) = filesys::get_metadata(&cursor_path)
+      && err.kind() == ErrorKind::NotFound
+    {
+      return Err(io::Error::new(
+        ErrorKind::NotFound,
+        path_error_msg!(not_found: "cursor file or directory", cursor_path),
+      ));
     }
-  })
+
+    match filesys::get_metadata(&link_path) {
+      Ok(meta) => {
+        if !force {
+          return Err(io::Error::new(
+            ErrorKind::AlreadyExists,
+            path_error_msg!(already_exists: "cursor file or directory", cursor_path),
+          ));
+        } else if meta.is_dir() {
+          return Err(io::Error::new(
+            ErrorKind::IsADirectory,
+            path_error_msg!(expected_found: "optional file or symlink", "a directory", cursor_path),
+          ));
+        } else {
+          filesys::remove_file::<Infallible>(&link_path, None)?;
+        }
+      }
+      Err(err) if err.kind() == ErrorKind::NotFound => (),
+      Err(err) => return Err(err),
+    }
+
+    unix_fs::symlink(cursor_name, &link_path).map_err(|err| {
+      let action = "symlink cursor file or directory";
+      let err_kind = err.kind();
+
+      match err_kind {
+        ErrorKind::PermissionDenied => io::Error::new(
+          err_kind,
+          path_error_msg!(action_denied: action, link_path),
+        ),
+        _ => {
+          debug!("{err}");
+
+          io::Error::new(
+            err_kind,
+            path_error_msg!(action_failed: action, link_path),
+          )
+        }
+      }
+    })
+  }
 }
+
+#[cfg(target_family = "unix")]
+pub use unix::*;

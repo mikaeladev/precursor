@@ -1,12 +1,8 @@
 use std::io;
 use std::path::Path;
 
-use crate_formats::ani::AniFile;
-use crate_formats::cur::CurFile;
-use crate_formats::xcursor::XcursorFile;
-
 use crate::args::BuildArgs;
-use crate::cursor::{Cursor, FromCursor};
+use crate::cursor::Cursor;
 use crate::error::PrecursorResult;
 use crate::filesys;
 use crate::paths;
@@ -93,13 +89,15 @@ pub fn build(
 
   if let Some(base_path) = linux_base_path {
     let file_path = base_path.join("index.theme");
+    let file_kind = "linux theme index";
 
-    filesys::prepare_file(&file_path, "linux theme index", force)?;
+    let mut file = if force {
+      filesys::create_file(file_path, file_kind)
+    } else {
+      filesys::create_new_file(file_path, file_kind)
+    }?;
 
-    filesys::write_icon_theme_index(
-      &mut filesys::create_new_file(file_path, "linux theme index")?,
-      config.package,
-    )?;
+    filesys::write_icon_theme_index(&mut file, config.package)?;
   }
 
   Ok(())
@@ -123,27 +121,22 @@ fn build_windows_cursor(
     force,
   }: BuildCursorArgs,
 ) -> PrecursorResult {
-  let cursor_name = cursor
-    .metadata
-    .get_windows_name()
-    .unwrap_or(&cursor.metadata.name);
+  let cursor_metadata = cursor.metadata();
+  let cursor_name = cursor_metadata.windows_name();
 
-  let mut cursor_path = base_path.join(cursor_name);
+  let mut file_path = base_path.join(cursor_name);
+  file_path.set_extension(if cursor.is_animated() { "ani" } else { "cur" });
+
+  let mut file = if force {
+    filesys::create_file(file_path, "cursor")
+  } else {
+    filesys::create_new_file(file_path, "cursor")
+  }?;
 
   if cursor.is_animated() {
-    cursor_path.set_extension("ani");
-
-    filesys::prepare_cursor_file(&cursor_path, force)?;
-
-    AniFile::from_cursor(&cursor)?
-      .write(&mut filesys::create_new_file(cursor_path, "cursor")?)?;
+    cursor.to_windows_ani()?.write(&mut file)?;
   } else {
-    cursor_path.set_extension("cur");
-
-    filesys::prepare_cursor_file(&cursor_path, force)?;
-
-    CurFile::from_cursor(&cursor)?
-      .write(&mut filesys::create_new_file(cursor_path, "cursor")?)?;
+    cursor.to_windows_cur()?.write(&mut file)?;
   }
 
   Ok(())
@@ -155,19 +148,18 @@ fn build_x11_cursor(build_args: BuildCursorArgs) -> PrecursorResult {
     base_path,
     force,
   } = build_args;
+  let cursor_metadata = cursor.metadata();
+  let cursor_name = cursor_metadata.linux_name();
 
-  let cursor_name = cursor
-    .metadata
-    .get_linux_name()
-    .unwrap_or(&cursor.metadata.name);
+  let file_path = base_path.join(cursor_name);
 
-  let cursor_path = base_path.join(cursor_name);
+  let mut file = if force {
+    filesys::create_file(file_path, "cursor")
+  } else {
+    filesys::create_new_file(file_path, "cursor")
+  }?;
 
-  filesys::prepare_cursor_file(&cursor_path, force)?;
-
-  XcursorFile::from_cursor(&cursor)
-    .unwrap() // infallible
-    .write(&mut filesys::create_new_file(cursor_path, "cursor")?)?;
+  cursor.to_xcursor().write(&mut file)?;
 
   #[cfg(target_family = "unix")]
   symlink_linux_aliases(build_args)?;
@@ -178,21 +170,18 @@ fn build_x11_cursor(build_args: BuildCursorArgs) -> PrecursorResult {
 #[cfg(target_family = "unix")]
 fn symlink_linux_aliases(
   BuildCursorArgs {
-    cursor: Cursor { metadata, .. },
+    cursor,
     base_path,
     force,
   }: BuildCursorArgs,
 ) -> io::Result<()> {
-  let cursor_name = metadata.get_linux_name().unwrap_or(&metadata.name);
-  let cursor_aliases = metadata.get_linux_aliases();
+  let cursor_metadata = cursor.metadata();
+  let cursor_name = cursor_metadata.linux_name();
+  let cursor_aliases = cursor_metadata.linux_aliases();
 
-  if let Some(aliases) = cursor_aliases {
-    for alias_name in aliases {
-      let alias_path = base_path.join(alias_name);
-
-      filesys::prepare_cursor_file(&alias_path, force)?;
-
-      filesys::symlink_cursor_file(base_path, cursor_name, alias_name)?;
+  if !cursor_aliases.is_empty() {
+    for alias_name in cursor_aliases {
+      filesys::symlink_cursor(base_path, cursor_name, alias_name, force)?;
     }
   }
 

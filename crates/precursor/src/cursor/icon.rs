@@ -1,17 +1,18 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use crate_config::{AssetValue, CursorIconConfig, RotateValue};
+use crate_config::{AssetValue, RotateValue};
 use crate_pixmap::DynamicPixmap;
+use crate_pixmap_png::PNG_MAGIC;
 use crate_point::Point;
 
 use crate::error::{PrecursorError, PrecursorResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CursorIcon {
+  pub pixmap: DynamicPixmap,
   pub nominal: u32,
   pub hotspot: Point<u32>,
-  pub pixmap: DynamicPixmap,
 }
 
 impl CursorIcon {
@@ -19,39 +20,39 @@ impl CursorIcon {
   ///
   /// # Panics
   ///
-  /// Panics if the new length exceeds `isize::MAX`.
+  /// Panics if the new length of the pixmap exceeds `isize::MAX`.
   pub fn scale_up(&mut self, factor: usize) {
     self.nominal *= factor as u32;
     self.hotspot *= factor as u32;
     self.pixmap.scale_up(factor);
   }
 
-  /// Attemts to construct a new `CursorIcon` from a [`CursorIconConfig`].
+  /// Constructs a new `CursorIcon` from a [`CursorIconConfig`].
   ///
   /// # Errors
   ///
   /// Fails with a [`PrecursorError`] if any of the following are true:
   ///
   /// * The hotspot is out of bounds (i.e. > `nominal`).
-  /// * The asset is not a `PNG` file.
-  /// * The `PNG` data is malformed.
+  /// * The asset is not a supported file format.
+  /// * The image data is malformed.
   ///
   /// # Panics
   ///
   /// Panics if the image buffer exceeds `isize::MAX`.
   pub fn from_config(
-    CursorIconConfig {
+    crate_config::CursorIcon {
       asset,
       hotspot,
       nominal,
-    }: CursorIconConfig,
+    }: crate_config::CursorIcon,
   ) -> PrecursorResult<Self> {
     let mut reader = BufReader::new(File::open(asset.path())?);
     let mut pixmap;
 
     let buffer = reader.fill_buf()?;
 
-    if buffer.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
+    if buffer.starts_with(PNG_MAGIC) {
       pixmap = crate_pixmap_png::decode(&mut reader)?;
       drop(reader);
     } else {

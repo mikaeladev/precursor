@@ -1,10 +1,10 @@
-mod asset;
-mod cursor;
+mod cursors;
 mod package;
+mod values;
 
-pub use asset::*;
-pub use cursor::*;
+pub use cursors::*;
 pub use package::*;
+pub use values::*;
 
 use serde::Deserialize;
 
