@@ -112,7 +112,7 @@ mod unix {
     let cursor_path = base_path.join(cursor_name);
     let link_path = base_path.join(alias_name);
 
-    if let Err(err) = filesys::get_metadata(&cursor_path)
+    if let Err(err) = filesys::get_metadata(&cursor_path, false)
       && err.kind() == ErrorKind::NotFound
     {
       return Err(io::Error::new(
@@ -121,7 +121,7 @@ mod unix {
       ));
     }
 
-    match filesys::get_metadata(&link_path) {
+    match filesys::get_metadata(&link_path, false) {
       Ok(meta) => {
         if !force {
           return Err(io::Error::new(

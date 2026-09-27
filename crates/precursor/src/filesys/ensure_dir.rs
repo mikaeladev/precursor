@@ -54,7 +54,7 @@ pub fn ensure_dir_empty<S: ToString>(
       match entry_res {
         Ok(entry) => {
           let subpath = entry.path();
-          let metadata = super::get_metadata(&subpath)?;
+          let metadata = super::get_metadata(&subpath, false)?;
 
           if metadata.is_file() || metadata.is_symlink() {
             super::remove_file::<Infallible>(subpath, None)?;

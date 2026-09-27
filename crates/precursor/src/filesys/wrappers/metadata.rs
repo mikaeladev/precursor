@@ -7,6 +7,8 @@ use crate::path_error_msg;
 
 /// Queries the file system to get information about the `path`.
 ///
+/// This function will only traverse symlinks when `follow_symlinks` is `true`.
+///
 /// See the [`fs::metadata`] function for more information.
 ///
 /// # Errors
@@ -17,10 +19,19 @@ use crate::path_error_msg;
 /// - User lacks permissions to access `path`.
 ///
 /// [`fs::metadata`]: fs::metadata
-pub fn get_metadata(path: impl AsRef<Path>) -> io::Result<Metadata> {
+pub fn get_metadata(
+  path: impl AsRef<Path>,
+  follow_symlinks: bool,
+) -> io::Result<Metadata> {
   let path = path.as_ref();
 
-  fs::metadata(&path).map_err(|err| {
+  let metadata = if follow_symlinks {
+    fs::metadata(&path)
+  } else {
+    fs::symlink_metadata(&path)
+  };
+
+  metadata.map_err(|err| {
     let err_kind = err.kind();
 
     match err_kind {
