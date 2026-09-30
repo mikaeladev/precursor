@@ -2,10 +2,11 @@ use std::io::Cursor;
 
 use thiserror::Error;
 
-use crate::ani::header::AconHeader;
-use crate::containers::ico::ReadError;
-use crate::containers::riff::{ChunkId, ChunkValue};
 use crate::cur::CurFile;
+use crate::ico::ReadError;
+use crate::riff::{ChunkId, ChunkValue};
+
+use super::header::AconHeader;
 
 pub trait ChunkIdAconExt {
   const ACON: ChunkId = ChunkId(*b"ACON");

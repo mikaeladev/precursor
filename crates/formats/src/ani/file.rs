@@ -2,10 +2,11 @@ use std::io::{self, Read, Seek, Write};
 
 use thiserror::Error;
 
-use crate::ani::acon::{AconChunk, FromChunkError};
-use crate::ani::header::AconHeader;
-use crate::containers::riff::ChunkValue;
 use crate::cur::CurFile;
+use crate::riff::ChunkValue;
+
+use super::acon::{AconChunk, FromChunkError};
+use super::header::AconHeader;
 
 #[derive(Debug, Error)]
 pub enum ReadError {

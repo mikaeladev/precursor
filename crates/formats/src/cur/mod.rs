@@ -2,10 +2,10 @@ use std::io::{self, Read, Seek, Write};
 
 use crate_point::Point;
 
-use crate::containers::ico::{CursorDir, CursorDirEntry};
+use crate::ico::{CursorDir, CursorDirEntry};
 
-pub type ReadError = crate::containers::ico::ReadError;
-pub type ReadResult<T> = crate::containers::ico::ReadResult<T>;
+pub type ReadError = crate::ico::ReadError;
+pub type ReadResult<T> = crate::ico::ReadResult<T>;
 
 pub struct CurFile(CursorDir);
 

@@ -1,4 +1,6 @@
-pub(crate) mod containers;
-pub(crate) mod cursors;
+pub(crate) mod ico;
+pub(crate) mod riff;
 
-pub use cursors::*;
+pub mod ani;
+pub mod cur;
+pub mod xcur;

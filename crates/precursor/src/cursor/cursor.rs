@@ -2,7 +2,7 @@ use crate_config::{CursorConfig, CursorTargets, CursorVariant};
 
 use crate_formats::ani::AniFile;
 use crate_formats::cur::CurFile;
-use crate_formats::xcursor::{XcursorChunk, XcursorFile};
+use crate_formats::xcur::{XcursorChunk, XcursorFile};
 
 use crate_pixmap::{IntoPixmap, RgbAlphaPixmap};
 use crate_pixmap_png::{self, EncodeResult};
