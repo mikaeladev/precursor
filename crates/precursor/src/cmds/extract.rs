@@ -1,6 +1,7 @@
-use std::io::{Read, Seek, Write};
+use std::io::{self, Read, Seek, Write};
 use std::path::Path;
 
+use crate_formats::ani::{self, AniFile};
 use crate_formats::cur::{self, CurFile, CurIcon};
 use crate_pixmap_png::PNG_MAGIC;
 
@@ -21,12 +22,12 @@ pub fn extract(
 ) -> PrecursorResult {
   let working_dir_path = paths::get_working_dir_path()?;
 
-  let target_dir_path = working_dir_path.join(target_dir_path);
+  let base_path = working_dir_path.join(target_dir_path);
 
   if empty {
-    filesys::ensure_dir_empty(&target_dir_path, "target")?;
+    filesys::ensure_dir_empty(&base_path, "target")?;
   } else {
-    filesys::ensure_dir(&target_dir_path, "target")?;
+    filesys::ensure_dir(&base_path, "target")?;
   }
 
   let mut cursor_kind = kind_hint.and_then(|hint| Some(hint.into()));
@@ -50,7 +51,8 @@ pub fn extract(
   }
 
   let num_frames = match cursor_kind.unwrap() {
-    CursorKind::Cur => extract_cur(&mut reader, target_dir_path, force)?,
+    CursorKind::Ani => extract_ani(&mut reader, base_path, force)?,
+    CursorKind::Cur => extract_cur(&mut reader, base_path, force)?,
     _ => todo!("extract is not yet implemented for this format"),
   };
 
@@ -63,6 +65,35 @@ pub fn extract(
   Ok(())
 }
 
+fn extract_ani<R: Read>(
+  reader: &mut R,
+  base_path: impl AsRef<Path>,
+  force: bool,
+) -> ani::ReadResult<usize> {
+  let base_path = base_path.as_ref();
+
+  let ani_file = AniFile::read(reader)?;
+
+  let mut total_icons = 0;
+  let mut frame_index = 0;
+
+  for frame in ani_file.into_frames() {
+    let mut icon_index = 0;
+
+    for CurIcon { buffer, .. } in frame.into_icons() {
+      let file_name = format!("{}-{}", frame_index, icon_index);
+      write_cur_icon(base_path, file_name, buffer, force)?;
+
+      icon_index += 1;
+    }
+
+    total_icons += icon_index;
+    frame_index += 1;
+  }
+
+  Ok(total_icons)
+}
+
 fn extract_cur<R: Read + Seek>(
   reader: &mut R,
   base_path: impl AsRef<Path>,
@@ -70,30 +101,39 @@ fn extract_cur<R: Read + Seek>(
 ) -> cur::ReadResult<usize> {
   let base_path = base_path.as_ref();
 
-  let icons = CurFile::read(reader)?.into_icons();
-
   let mut icon_index = 0;
 
-  for CurIcon { buffer, .. } in icons {
-    let file_ext = if buffer.starts_with(PNG_MAGIC) {
-      "png"
-    } else {
-      "bmp"
-    };
-
-    let file_name = format!("{icon_index}.{file_ext}");
-    let file_path = base_path.join(file_name);
-
-    let mut file = if force {
-      filesys::create_file(file_path, file_ext)
-    } else {
-      filesys::create_new_file(file_path, file_ext)
-    }?;
-
-    file.write_all(&buffer)?;
+  for CurIcon { buffer, .. } in CurFile::read(reader)?.into_icons() {
+    let file_name = icon_index.to_string();
+    write_cur_icon(base_path, file_name, buffer, force)?;
 
     icon_index += 1;
   }
 
   Ok(icon_index)
+}
+
+fn write_cur_icon(
+  base_path: impl AsRef<Path>,
+  file_name: impl AsRef<Path>,
+  buffer: Box<[u8]>,
+  force: bool,
+) -> io::Result<()> {
+  let file_ext = if buffer.starts_with(PNG_MAGIC) {
+    "png"
+  } else {
+    todo!("bmp is not yet implemented")
+  };
+
+  let file_path = base_path
+    .as_ref()
+    .join(file_name.as_ref().with_extension(file_ext));
+
+  let mut file = if force {
+    filesys::create_file(file_path, file_ext)
+  } else {
+    filesys::create_new_file(file_path, file_ext)
+  }?;
+
+  file.write_all(&buffer)
 }

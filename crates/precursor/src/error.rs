@@ -1,6 +1,7 @@
 use std::fmt;
 use std::io;
 
+use crate_formats::ani;
 use crate_formats::cur;
 use crate_pixmap_png as png;
 
@@ -16,7 +17,10 @@ pub enum PrecursorError {
   FmtError(#[from] fmt::Error),
 
   #[error("{0}")]
-  CurDecodeError(#[from] cur::ReadError),
+  AniReadError(#[from] ani::ReadError),
+
+  #[error("{0}")]
+  CurReadError(#[from] cur::ReadError),
 
   #[error("{0}")]
   PngDecodeError(#[from] png::DecodeError),

@@ -1,8 +1,8 @@
-use std::io::{self, BufRead, ErrorKind, Read, Seek, SeekFrom, Write};
+use std::io::{self, ErrorKind, Read, Seek, SeekFrom, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use super::chunk_id::ChunkId;
+use super::ChunkId;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChunkValue {
@@ -11,8 +11,12 @@ pub enum ChunkValue {
 }
 
 impl ChunkValue {
-  // TODO
-  pub fn read<R: BufRead>(reader: &mut R) -> io::Result<Self> {
+  /// Reads a chunk from `reader`.
+  ///
+  /// # Errors
+  ///
+  /// This method returns the same errors as [`Read::read_exact`].
+  pub fn read<R: Read>(reader: &mut R) -> io::Result<Self> {
     let chunk_id = ChunkId::read(reader)?;
     let data_len = reader.read_u32::<LittleEndian>()? as usize;
 

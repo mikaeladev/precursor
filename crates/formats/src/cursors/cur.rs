@@ -26,7 +26,7 @@ impl CurFile {
     Self(CursorDir(images.collect()))
   }
 
-  /// Reads a CUR file from reader, returning the constructed `CurFile`.
+  /// Reads a CUR file from `reader`, returning the constructed `CurFile`.
   ///
   /// # Errors
   ///
