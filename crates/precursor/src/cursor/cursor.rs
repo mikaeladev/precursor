@@ -45,7 +45,7 @@ impl Cursor {
     let mut rates = Vec::with_capacity(num_frames);
     let mut sequence = Vec::with_capacity(num_frames);
 
-    for index in 0..=self.frames.len() {
+    for index in 0..self.frames.len() {
       let frame = self.frames.get(index).unwrap();
 
       frames.push(frame.to_cur()?);
