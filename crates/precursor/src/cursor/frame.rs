@@ -1,4 +1,4 @@
-use crate_formats::cur::{CurFile, CurIcon};
+use crate_formats::cur::{CurFile, CurImage};
 use crate_pixmap_png::EncodeResult;
 use crate_point::Point;
 
@@ -47,7 +47,7 @@ impl CursorFrame {
       let mut buffer = Vec::with_capacity(width as usize * height as usize);
       crate_pixmap_png::encode(icon.pixmap.clone(), &mut buffer)?;
 
-      icons.push(CurIcon::new(
+      icons.push(CurImage::new(
         width as u16,
         height as u16,
         hotspot,

@@ -2,7 +2,7 @@ use std::io::{self, Read, Seek, Write};
 use std::path::Path;
 
 use crate_formats::ani::{self, AniFile};
-use crate_formats::cur::{self, CurFile, CurIcon};
+use crate_formats::cur::{self, CurFile, CurImage};
 use crate_pixmap_png::PNG_MAGIC;
 
 use crate::args::{ExtractArgs, InputArg};
@@ -80,7 +80,7 @@ fn extract_ani<R: Read>(
   for frame in ani_file.into_frames() {
     let mut icon_index = 0;
 
-    for CurIcon { buffer, .. } in frame.into_icons() {
+    for CurImage { buffer, .. } in frame.into_icons() {
       let file_name = format!("{}-{}", frame_index, icon_index);
       write_cur_icon(base_path, file_name, buffer, force)?;
 
@@ -103,7 +103,7 @@ fn extract_cur<R: Read + Seek>(
 
   let mut icon_index = 0;
 
-  for CurIcon { buffer, .. } in CurFile::read(reader)?.into_icons() {
+  for CurImage { buffer, .. } in CurFile::read(reader)?.into_icons() {
     let file_name = icon_index.to_string();
     write_cur_icon(base_path, file_name, buffer, force)?;
 
