@@ -1,10 +1,35 @@
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
+use std::string::FromUtf8Error;
 
 use crate_point::Point;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use thiserror::Error;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Error)]
+pub enum ReadChunkError {
+  #[error("{0}")]
+  IoError(#[from] io::Error),
+
+  #[error("invalid header size for {0} chunk; expected {1}, received {2}")]
+  InvalidHeaderSize(&'static str, usize, usize),
+
+  #[error("invalid comment value; {0}")]
+  InvalidCommentValue(#[from] FromUtf8Error),
+
+  #[error("unrecognised chunk type: {0:#b}")]
+  UnrecognisedChunk(u32),
+
+  #[error("unrecognised comment type: {0}")]
+  UnrecognisedComment(u32),
+
+  #[error("unsupported chunk version; expected 1, received {0}")]
+  UnsupportedVersion(u32),
+}
+
+pub type ReadChunkResult<T> = Result<T, ReadChunkError>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum XcursorChunk {
   Comment {
     kind: XcursorCommentKind,
@@ -28,6 +53,79 @@ impl XcursorChunk {
 
   pub(super) const IMAGE_HEADER_SIZE: usize = 36;
   pub(super) const IMAGE_CHUNK_TYPE: u32 = 0xfffd0002;
+
+  /// Reads a chunk from `reader`.
+  ///
+  /// # Errors
+  ///
+  /// See the [`ReadChunkError`] variants for details.
+  pub fn read<R: Read>(reader: &mut R) -> ReadChunkResult<Self> {
+    let header_size = reader.read_u32::<LittleEndian>()? as usize;
+    let chunk_type = reader.read_u32::<LittleEndian>()?;
+    let kind_or_nominal = reader.read_u32::<LittleEndian>()?;
+    let chunk_version = reader.read_u32::<LittleEndian>()?;
+
+    if chunk_version != Self::CHUNK_VERSION {
+      return Err(ReadChunkError::UnsupportedVersion(chunk_version));
+    }
+
+    match chunk_type {
+      Self::COMMENT_CHUNK_TYPE if header_size != Self::COMMENT_HEADER_SIZE => {
+        Err(ReadChunkError::InvalidHeaderSize(
+          "comment",
+          Self::COMMENT_HEADER_SIZE,
+          header_size,
+        ))
+      }
+      Self::COMMENT_CHUNK_TYPE => {
+        let kind = XcursorCommentKind::try_from(kind_or_nominal)?;
+
+        let data_len = reader.read_u32::<LittleEndian>()? as usize;
+
+        let mut buffer = vec![0; data_len];
+        reader.read_exact(&mut buffer)?;
+
+        let value = String::from_utf8(buffer)?.into_boxed_str();
+
+        Ok(Self::Comment { kind, value })
+      }
+      Self::IMAGE_CHUNK_TYPE if header_size != Self::IMAGE_HEADER_SIZE => {
+        Err(ReadChunkError::InvalidHeaderSize(
+          "image",
+          Self::IMAGE_HEADER_SIZE,
+          header_size,
+        ))
+      }
+      Self::IMAGE_CHUNK_TYPE => {
+        let nominal = kind_or_nominal;
+
+        let width = reader.read_u32::<LittleEndian>()?;
+        let height = reader.read_u32::<LittleEndian>()?;
+
+        let hotspot = Point {
+          x: reader.read_u32::<LittleEndian>()?,
+          y: reader.read_u32::<LittleEndian>()?,
+        };
+
+        let duration = reader.read_u32::<LittleEndian>()?;
+
+        let mut buffer = vec![0; width as usize * height as usize * 4];
+        reader.read_exact(&mut buffer)?;
+
+        let pixels = buffer.into_boxed_slice();
+
+        Ok(Self::Image {
+          nominal,
+          width,
+          height,
+          hotspot,
+          duration,
+          pixels,
+        })
+      }
+      _ => Err(ReadChunkError::UnrecognisedChunk(chunk_type)),
+    }
+  }
 
   /// Writes this chunk to `writer`, returning how many bytes were written.
   ///
@@ -84,12 +182,25 @@ impl XcursorChunk {
   }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum XcursorCommentKind {
   Copyright = 1,
   License = 2,
   Other = 3,
+}
+
+impl TryFrom<u32> for XcursorCommentKind {
+  type Error = ReadChunkError;
+
+  fn try_from(value: u32) -> Result<Self, Self::Error> {
+    match value {
+      1 => Ok(XcursorCommentKind::Copyright),
+      2 => Ok(XcursorCommentKind::License),
+      3 => Ok(XcursorCommentKind::Other),
+      _ => Err(ReadChunkError::UnrecognisedComment(value)),
+    }
+  }
 }
 
 #[cfg(test)]
@@ -113,6 +224,16 @@ mod tests {
       kind: XcursorCommentKind::Other,
       value: Box::from("hello world"),
     }
+  }
+
+  #[test]
+  fn read_comment_chunk() {
+    let mut reader = COMMENT_BYTES;
+
+    let value = XcursorChunk::read(&mut reader).unwrap();
+    let expected = comment_chunk();
+
+    assert_eq!(value, expected)
   }
 
   #[test]
@@ -172,6 +293,16 @@ mod tests {
       duration: 0,
       pixels: Box::from(PIXELS),
     }
+  }
+
+  #[test]
+  fn read_image_chunk() {
+    let mut reader = IMAGE_BYTES;
+
+    let value = XcursorChunk::read(&mut reader).unwrap();
+    let expected = image_chunk();
+
+    assert_eq!(value, expected)
   }
 
   #[test]
