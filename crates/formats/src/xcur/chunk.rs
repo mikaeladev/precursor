@@ -68,7 +68,7 @@ impl XcursorChunk {
 
         writer.write_all(&pixels)?;
 
-        Ok(Self::IMAGE_HEADER_SIZE as usize + pixels.len())
+        Ok(Self::IMAGE_HEADER_SIZE + pixels.len())
       }
     }
   }
@@ -78,12 +78,8 @@ impl XcursorChunk {
   /// [`write`]: Self::write
   pub const fn exact_size(&self) -> usize {
     match self {
-      Self::Comment { value, .. } => {
-        Self::COMMENT_HEADER_SIZE as usize + value.len()
-      }
-      Self::Image { pixels, .. } => {
-        Self::IMAGE_HEADER_SIZE as usize + pixels.len()
-      }
+      Self::Comment { value, .. } => Self::COMMENT_HEADER_SIZE + value.len(),
+      Self::Image { pixels, .. } => Self::IMAGE_HEADER_SIZE + pixels.len(),
     }
   }
 }

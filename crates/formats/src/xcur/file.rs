@@ -26,25 +26,18 @@ impl XcursorFile {
   /// - `chunks` exceeds `u32::MAX` in length;
   /// - Any individal chunk exceeds `u32::MAX` in size.
   pub fn new(chunks: Vec<XcursorChunk>) -> Self {
+    const MAX: usize = u32::MAX as usize;
+
     assert!(!chunks.is_empty(), "chunks should not be empty");
 
     assert!(
-      chunks.len() <= u32::MAX as usize,
+      chunks.len() <= MAX,
       "chunks length should not exceed u32::MAX"
     );
 
     for chunk in &chunks {
-      let chunk_size = match chunk {
-        XcursorChunk::Comment { value, .. } => {
-          XcursorChunk::COMMENT_HEADER_SIZE + value.len()
-        }
-        XcursorChunk::Image { pixels, .. } => {
-          XcursorChunk::IMAGE_HEADER_SIZE + pixels.len()
-        }
-      };
-
       assert!(
-        chunk_size <= u32::MAX as usize,
+        chunk.exact_size() <= MAX,
         "chunk size should not exceed u32::MAX"
       )
     }
@@ -96,16 +89,7 @@ impl XcursorFile {
   /// [`write`]: Self::write
   pub fn exact_size(&self) -> usize {
     let f = |acc: usize, chunk: &XcursorChunk| {
-      let chunk_size = match chunk {
-        XcursorChunk::Comment { value, .. } => {
-          XcursorChunk::COMMENT_HEADER_SIZE + value.len()
-        }
-        XcursorChunk::Image { pixels, .. } => {
-          XcursorChunk::IMAGE_HEADER_SIZE + pixels.len()
-        }
-      };
-
-      acc + XcursorTocEntry::ENTRY_SIZE + chunk_size
+      acc + XcursorTocEntry::ENTRY_SIZE + chunk.exact_size()
     };
 
     self.chunks.iter().fold(Self::FILE_HEADER_SIZE, f)
