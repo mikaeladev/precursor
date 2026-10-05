@@ -1,33 +1,10 @@
 use std::io::{self, Read, Write};
-use std::string::FromUtf8Error;
 
 use crate_point::Point;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use thiserror::Error;
 
-#[derive(Debug, Error)]
-pub enum ReadChunkError {
-  #[error("{0}")]
-  IoError(#[from] io::Error),
-
-  #[error("invalid header size for {0} chunk; expected {1}, received {2}")]
-  InvalidHeaderSize(&'static str, usize, usize),
-
-  #[error("invalid comment value; {0}")]
-  InvalidCommentValue(#[from] FromUtf8Error),
-
-  #[error("unrecognised chunk type: {0:#b}")]
-  UnrecognisedChunk(u32),
-
-  #[error("unrecognised comment type: {0}")]
-  UnrecognisedComment(u32),
-
-  #[error("unsupported chunk version; expected 1, received {0}")]
-  UnsupportedVersion(u32),
-}
-
-pub type ReadChunkResult<T> = Result<T, ReadChunkError>;
+use super::error::{ReadError, ReadResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum XcursorChunk {
@@ -46,38 +23,34 @@ pub enum XcursorChunk {
 }
 
 impl XcursorChunk {
-  pub(super) const CHUNK_VERSION: u32 = 1;
+  pub(super) const VERSION: u32 = 1;
 
   pub(super) const COMMENT_HEADER_SIZE: usize = 20;
-  pub(super) const COMMENT_CHUNK_TYPE: u32 = 0xfffe0001;
+  pub(super) const COMMENT_TYPE: u32 = 0xfffe0001;
 
   pub(super) const IMAGE_HEADER_SIZE: usize = 36;
-  pub(super) const IMAGE_CHUNK_TYPE: u32 = 0xfffd0002;
+  pub(super) const IMAGE_TYPE: u32 = 0xfffd0002;
 
   /// Reads a chunk from `reader`.
   ///
   /// # Errors
   ///
-  /// See the [`ReadChunkError`] variants for details.
-  pub fn read<R: Read>(reader: &mut R) -> ReadChunkResult<Self> {
+  /// See the [`ReadError`] enum for details.
+  pub fn read<R: Read>(reader: &mut R) -> ReadResult<Self> {
     let header_size = reader.read_u32::<LittleEndian>()? as usize;
     let chunk_type = reader.read_u32::<LittleEndian>()?;
     let kind_or_nominal = reader.read_u32::<LittleEndian>()?;
     let chunk_version = reader.read_u32::<LittleEndian>()?;
 
-    if chunk_version != Self::CHUNK_VERSION {
-      return Err(ReadChunkError::UnsupportedVersion(chunk_version));
+    if chunk_version != Self::VERSION {
+      return Err(ReadError::UnsupportedChunkVersion(chunk_version));
     }
 
     match chunk_type {
-      Self::COMMENT_CHUNK_TYPE if header_size != Self::COMMENT_HEADER_SIZE => {
-        Err(ReadChunkError::InvalidHeaderSize(
-          "comment",
-          Self::COMMENT_HEADER_SIZE,
-          header_size,
-        ))
+      Self::COMMENT_TYPE if header_size != Self::COMMENT_HEADER_SIZE => {
+        Err(ReadError::InvalidCommentHeaderSize(header_size))
       }
-      Self::COMMENT_CHUNK_TYPE => {
+      Self::COMMENT_TYPE => {
         let kind = XcursorCommentKind::try_from(kind_or_nominal)?;
 
         let data_len = reader.read_u32::<LittleEndian>()? as usize;
@@ -89,14 +62,10 @@ impl XcursorChunk {
 
         Ok(Self::Comment { kind, value })
       }
-      Self::IMAGE_CHUNK_TYPE if header_size != Self::IMAGE_HEADER_SIZE => {
-        Err(ReadChunkError::InvalidHeaderSize(
-          "image",
-          Self::IMAGE_HEADER_SIZE,
-          header_size,
-        ))
+      Self::IMAGE_TYPE if header_size != Self::IMAGE_HEADER_SIZE => {
+        Err(ReadError::InvalidImageHeaderSize(header_size))
       }
-      Self::IMAGE_CHUNK_TYPE => {
+      Self::IMAGE_TYPE => {
         let nominal = kind_or_nominal;
 
         let width = reader.read_u32::<LittleEndian>()?;
@@ -123,7 +92,7 @@ impl XcursorChunk {
           pixels,
         })
       }
-      _ => Err(ReadChunkError::UnrecognisedChunk(chunk_type)),
+      _ => Err(ReadError::UnrecognisedChunkType(chunk_type)),
     }
   }
 
@@ -136,9 +105,9 @@ impl XcursorChunk {
     match self {
       Self::Comment { kind, value } => {
         writer.write_u32::<LittleEndian>(Self::COMMENT_HEADER_SIZE as u32)?;
-        writer.write_u32::<LittleEndian>(Self::COMMENT_CHUNK_TYPE)?;
+        writer.write_u32::<LittleEndian>(Self::COMMENT_TYPE)?;
         writer.write_u32::<LittleEndian>(kind as u32)?;
-        writer.write_u32::<LittleEndian>(Self::CHUNK_VERSION)?;
+        writer.write_u32::<LittleEndian>(Self::VERSION)?;
         writer.write_u32::<LittleEndian>(value.len() as u32)?;
 
         writer.write_all(value.as_bytes())?;
@@ -155,9 +124,9 @@ impl XcursorChunk {
         pixels,
       } => {
         writer.write_u32::<LittleEndian>(Self::IMAGE_HEADER_SIZE as u32)?;
-        writer.write_u32::<LittleEndian>(Self::IMAGE_CHUNK_TYPE)?;
+        writer.write_u32::<LittleEndian>(Self::IMAGE_TYPE)?;
         writer.write_u32::<LittleEndian>(nominal)?;
-        writer.write_u32::<LittleEndian>(Self::CHUNK_VERSION)?;
+        writer.write_u32::<LittleEndian>(Self::VERSION)?;
         writer.write_u32::<LittleEndian>(width)?;
         writer.write_u32::<LittleEndian>(height)?;
         writer.write_u32::<LittleEndian>(hotspot.x)?;
@@ -191,14 +160,14 @@ pub enum XcursorCommentKind {
 }
 
 impl TryFrom<u32> for XcursorCommentKind {
-  type Error = ReadChunkError;
+  type Error = ReadError;
 
   fn try_from(value: u32) -> Result<Self, Self::Error> {
     match value {
       1 => Ok(XcursorCommentKind::Copyright),
       2 => Ok(XcursorCommentKind::License),
       3 => Ok(XcursorCommentKind::Other),
-      _ => Err(ReadChunkError::UnrecognisedComment(value)),
+      _ => Err(ReadError::UnrecognisedCommentType(value)),
     }
   }
 }

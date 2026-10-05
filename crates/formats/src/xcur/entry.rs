@@ -1,9 +1,11 @@
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use super::chunk::{XcursorChunk, XcursorCommentKind};
+use super::error::{ReadError, ReadResult};
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum XcursorTocEntry {
   Comment {
     kind: XcursorCommentKind,
@@ -18,6 +20,29 @@ pub enum XcursorTocEntry {
 impl XcursorTocEntry {
   pub(super) const ENTRY_SIZE: usize = 12;
 
+  /// Reads a table of contents entry from `reader`.
+  ///
+  /// # Errors
+  ///
+  /// See the [`ReadError`] enum for details.
+  pub fn read<R: Read>(reader: &mut R) -> ReadResult<Self> {
+    let chunk_type = reader.read_u32::<LittleEndian>()?;
+    let chunk_subtype = reader.read_u32::<LittleEndian>()?;
+    let chunk_offset = reader.read_u32::<LittleEndian>()?;
+
+    match chunk_type {
+      XcursorChunk::COMMENT_TYPE => Ok(Self::Comment {
+        kind: XcursorCommentKind::try_from(chunk_subtype)?,
+        offset: chunk_offset,
+      }),
+      XcursorChunk::IMAGE_TYPE => Ok(Self::Image {
+        nominal: chunk_subtype,
+        offset: chunk_offset,
+      }),
+      _ => Err(ReadError::UnrecognisedChunkType(chunk_type)),
+    }
+  }
+
   /// Writes this entry to `writer`, returning how many bytes were written.
   ///
   /// # Errors
@@ -25,27 +50,35 @@ impl XcursorTocEntry {
   /// This method returns the same errors as [`Write::write_all`].
   pub fn write<W: Write>(self, writer: &mut W) -> io::Result<usize> {
     let chunk_type;
-    let chunk_kind_or_nom;
+    let chunk_subtype;
     let chunk_offset;
 
     match self {
       Self::Comment { kind, offset } => {
-        chunk_type = XcursorChunk::COMMENT_CHUNK_TYPE;
-        chunk_kind_or_nom = kind as u32;
+        chunk_type = XcursorChunk::COMMENT_TYPE;
+        chunk_subtype = kind as u32;
         chunk_offset = offset;
       }
       Self::Image { nominal, offset } => {
-        chunk_type = XcursorChunk::IMAGE_CHUNK_TYPE;
-        chunk_kind_or_nom = nominal;
+        chunk_type = XcursorChunk::IMAGE_TYPE;
+        chunk_subtype = nominal;
         chunk_offset = offset;
       }
     }
 
     writer.write_u32::<LittleEndian>(chunk_type)?;
-    writer.write_u32::<LittleEndian>(chunk_kind_or_nom)?;
+    writer.write_u32::<LittleEndian>(chunk_subtype)?;
     writer.write_u32::<LittleEndian>(chunk_offset)?;
 
     Ok(Self::ENTRY_SIZE)
+  }
+
+  /// Returns the chunk offset.
+  pub fn offset(&self) -> u32 {
+    *match self {
+      Self::Comment { offset, .. } => offset,
+      Self::Image { offset, .. } => offset,
+    }
   }
 }
 
@@ -63,6 +96,12 @@ mod tests {
     0x03, 0x00, 0x00, 0x00, // comment kind
     0x80, 0x00, 0x00, 0x00, // data offset
   ];
+
+  #[test]
+  fn read_comment_entry() {
+    let mut reader = COMMENT_BYTES;
+    assert_eq!(XcursorTocEntry::read(&mut reader).unwrap(), COMMENT_ENTRY)
+  }
 
   #[test]
   fn write_comment_entry() {
@@ -84,6 +123,12 @@ mod tests {
     0x0C, 0x00, 0x00, 0x00, // nominal size
     0x00, 0x01, 0x00, 0x00, // data offset
   ];
+
+  #[test]
+  fn read_image_entry() {
+    let mut reader = IMAGE_BYTES;
+    assert_eq!(XcursorTocEntry::read(&mut reader).unwrap(), IMAGE_ENTRY)
+  }
 
   #[test]
   fn write_image_entry() {

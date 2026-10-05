@@ -1,11 +1,10 @@
-use std::io::{self, Write};
+use std::io::{self, Read, Seek, SeekFrom, Write};
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use super::chunk::XcursorChunk;
 use super::entry::XcursorTocEntry;
-
-pub const XCUR_MAGIC: &[u8] = b"Xcur";
+use super::error::{ReadError, ReadResult};
 
 #[derive(Debug)]
 pub struct XcursorFile {
@@ -13,8 +12,10 @@ pub struct XcursorFile {
 }
 
 impl XcursorFile {
-  const FILE_HEADER_SIZE: usize = 16;
-  const FILE_VERSION: u32 = 0x10000;
+  pub const MAGIC: &[u8] = b"Xcur";
+
+  pub(super) const HEADER_SIZE: usize = 16;
+  pub(super) const VERSION: u32 = 0x10000;
 
   /// Constructs a new `XcursorFile`.
   ///
@@ -45,6 +46,45 @@ impl XcursorFile {
     Self { chunks }
   }
 
+  pub fn read<R: Read + Seek>(reader: &mut R) -> ReadResult<Self> {
+    let mut magic_buf = [0; 4];
+    reader.read_exact(&mut magic_buf)?;
+
+    if magic_buf != Self::MAGIC {
+      return Err(ReadError::MissingMagicNumber(magic_buf));
+    }
+
+    if let file_header_size = reader.read_u32::<LittleEndian>()? as usize
+      && file_header_size != Self::HEADER_SIZE
+    {
+      return Err(ReadError::InvalidFileHeaderSize(file_header_size));
+    }
+
+    if let file_version = reader.read_u32::<LittleEndian>()?
+      && file_version != Self::VERSION
+    {
+      return Err(ReadError::UnsupportedFileVersion(file_version));
+    }
+
+    let mut num_entries = reader.read_u32::<LittleEndian>()? as usize;
+    let mut entries = Vec::with_capacity(num_entries);
+
+    while num_entries > 0 {
+      entries.push(XcursorTocEntry::read(reader)?);
+      num_entries -= 1;
+    }
+
+    let mut chunks = Vec::with_capacity(entries.len());
+
+    for entry in entries {
+      let chunk_pos = entry.offset() as u64;
+      reader.seek(SeekFrom::Start(chunk_pos))?;
+      chunks.push(XcursorChunk::read(reader)?);
+    }
+
+    Ok(Self { chunks })
+  }
+
   /// Writes an Xcursor file to `writer`, returning how many bytes were written.
   ///
   /// # Errors
@@ -53,13 +93,13 @@ impl XcursorFile {
   pub fn write<W: Write>(self, writer: &mut W) -> io::Result<usize> {
     let chunks_len = self.chunks.len();
 
-    writer.write_all(XCUR_MAGIC)?;
-    writer.write_u32::<LittleEndian>(Self::FILE_HEADER_SIZE as u32)?;
-    writer.write_u32::<LittleEndian>(Self::FILE_VERSION)?;
+    writer.write_all(Self::MAGIC)?;
+    writer.write_u32::<LittleEndian>(Self::HEADER_SIZE as u32)?;
+    writer.write_u32::<LittleEndian>(Self::VERSION)?;
     writer.write_u32::<LittleEndian>(chunks_len as u32)?;
 
-    let mut data_pos = (Self::FILE_HEADER_SIZE
-      + XcursorTocEntry::ENTRY_SIZE * chunks_len) as u32;
+    let mut data_pos =
+      (Self::HEADER_SIZE + XcursorTocEntry::ENTRY_SIZE * chunks_len) as u32;
 
     for chunk in &self.chunks {
       let entry = match chunk {
@@ -92,7 +132,7 @@ impl XcursorFile {
       acc + XcursorTocEntry::ENTRY_SIZE + chunk.exact_size()
     };
 
-    self.chunks.iter().fold(Self::FILE_HEADER_SIZE, f)
+    self.chunks.iter().fold(Self::HEADER_SIZE, f)
   }
 }
 
