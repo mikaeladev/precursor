@@ -1,6 +1,5 @@
 use std::io::{BufRead, Seek};
 
-use crate_pixmap::pixels::*;
 use crate_pixmap::*;
 
 use png::{BitDepth, ColorType, Decoder, OutputInfo, Transformations};

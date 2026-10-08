@@ -144,8 +144,23 @@ dependencies = [
 name = "crate_pixmap"
 version = "0.1.0"
 dependencies = [
+ "crate_pixmap_core",
+ "crate_pixmap_derive",
  "indexmap",
  "thiserror",
+]
+
+[[package]]
+name = "crate_pixmap_core"
+version = "0.1.0"
+
+[[package]]
+name = "crate_pixmap_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -348,9 +363,9 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "syn"
-version = "3.0.3"
+version = "3.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53e9bae58849f64dfa4f5d5ae372c8341f7305f82a3868709269343628b659a3"
+checksum = "8593e8e72159ed2257d083c7a454a85cbf854f37a0966d8d483aff8c8a3ebcee"
 dependencies = [
  "proc-macro2",
  "quote",

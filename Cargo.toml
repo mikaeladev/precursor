@@ -4,6 +4,8 @@ members = [
   "crates/config",
   "crates/formats",
   "crates/pixmap",
+  "crates/pixmap-core",
+  "crates/pixmap-derive",
   "crates/pixmap-png",
   "crates/point",
   "crates/precursor",
@@ -18,6 +20,8 @@ license = "GPL-3.0-or-later"
 crate_config.path = "crates/config"
 crate_formats.path = "crates/formats"
 crate_pixmap.path = "crates/pixmap"
+crate_pixmap_core.path = "crates/pixmap-core"
+crate_pixmap_derive.path = "crates/pixmap-derive/"
 crate_pixmap_png.path = "crates/pixmap-png"
 crate_point.path = "crates/point"
 

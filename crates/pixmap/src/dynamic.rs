@@ -1,37 +1,36 @@
-use crate::{
-  IndexedPixmap, IntoPixmap, LumaAlphaPixmap, LumaPixmap, Pixmap,
-  RgbAlphaPixmap, RgbPixmap,
-};
+use crate_pixmap_core::{IntoPixmap, Pixmap};
+
+use crate::variants::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DynamicPixmap {
+  Indexed(IndexedPixmap),
   Luma(LumaPixmap),
   LumaAlpha(LumaAlphaPixmap),
   Rgb(RgbPixmap),
   RgbAlpha(RgbAlphaPixmap),
-  Indexed(IndexedPixmap),
 }
 
 impl DynamicPixmap {
   /// Returns the width of the pixmap.
   pub const fn width(&self) -> u32 {
     match self {
+      Self::Indexed(p) => p.width,
       Self::Luma(p) => p.width,
       Self::LumaAlpha(p) => p.width,
       Self::Rgb(p) => p.width,
       Self::RgbAlpha(p) => p.width,
-      Self::Indexed(p) => p.width,
     }
   }
 
   /// Returns the height of the pixmap.
   pub const fn height(&self) -> u32 {
     match self {
+      Self::Indexed(p) => p.height,
       Self::Luma(p) => p.height,
       Self::LumaAlpha(p) => p.height,
       Self::Rgb(p) => p.height,
       Self::RgbAlpha(p) => p.height,
-      Self::Indexed(p) => p.height,
     }
   }
 
@@ -47,77 +46,77 @@ impl DynamicPixmap {
   /// Panics if the new length exceeds `isize::MAX`.
   pub fn scale_up(&mut self, factor: usize) {
     match self {
+      Self::Indexed(p) => p.scale_up(factor),
       Self::Luma(p) => p.scale_up(factor),
       Self::LumaAlpha(p) => p.scale_up(factor),
       Self::Rgb(p) => p.scale_up(factor),
       Self::RgbAlpha(p) => p.scale_up(factor),
-      Self::Indexed(p) => p.scale_up(factor),
     }
   }
 
   /// Flips the pixmap horizontally.
   pub fn flip_horizontal(&mut self) {
     match self {
+      Self::Indexed(p) => p.flip_horizontal(),
       Self::Luma(p) => p.flip_horizontal(),
       Self::LumaAlpha(p) => p.flip_horizontal(),
       Self::Rgb(p) => p.flip_horizontal(),
       Self::RgbAlpha(p) => p.flip_horizontal(),
-      Self::Indexed(p) => p.flip_horizontal(),
     }
   }
 
   /// Flips the pixmap vertically.
   pub fn flip_vertical(&mut self) {
     match self {
+      Self::Indexed(p) => p.flip_vertical(),
       Self::Luma(p) => p.flip_vertical(),
       Self::LumaAlpha(p) => p.flip_vertical(),
       Self::Rgb(p) => p.flip_vertical(),
       Self::RgbAlpha(p) => p.flip_vertical(),
-      Self::Indexed(p) => p.flip_vertical(),
     }
   }
 
   /// Rotates the pixmap by 90°.
   pub fn rotate_90(&mut self) {
     match self {
+      Self::Indexed(p) => p.rotate_90(),
       Self::Luma(p) => p.rotate_90(),
       Self::LumaAlpha(p) => p.rotate_90(),
       Self::Rgb(p) => p.rotate_90(),
       Self::RgbAlpha(p) => p.rotate_90(),
-      Self::Indexed(p) => p.rotate_90(),
     }
   }
 
   /// Rotates the pixmap by 180°.
   pub fn rotate_180(&mut self) {
     match self {
+      Self::Indexed(p) => p.rotate_180(),
       Self::Luma(p) => p.rotate_180(),
       Self::LumaAlpha(p) => p.rotate_180(),
       Self::Rgb(p) => p.rotate_180(),
       Self::RgbAlpha(p) => p.rotate_180(),
-      Self::Indexed(p) => p.rotate_180(),
     }
   }
 
   /// Rotates the pixmap by 270°.
   pub fn rotate_270(&mut self) {
     match self {
+      Self::Indexed(p) => p.rotate_270(),
       Self::Luma(p) => p.rotate_270(),
       Self::LumaAlpha(p) => p.rotate_270(),
       Self::Rgb(p) => p.rotate_270(),
       Self::RgbAlpha(p) => p.rotate_270(),
-      Self::Indexed(p) => p.rotate_270(),
     }
   }
 
   /// Concatenates the pixels into a flat `Vec<u8>`.
   pub fn concat(self) -> Vec<u8> {
     match self {
+      Self::Indexed(p) => p.into_iter().collect(),
       Self::Luma(p) => p.into_iter().collect(),
       Self::LumaAlpha(p) => p.into_iter().collect(),
       Self::Rgb(p) => p.into_iter().collect(),
       Self::RgbAlpha(p) => p.into_iter().collect(),
-      Self::Indexed(p) => p.into_iter().collect(),
     }
   }
 }
@@ -126,11 +125,11 @@ impl IntoPixmap<LumaPixmap> for DynamicPixmap {
   /// Converts the value into a [`LumaPixmap`].
   fn into_pixmap(self) -> LumaPixmap {
     match self {
+      Self::Indexed(v) => v.into_pixmap(),
       Self::Luma(v) => v.into_pixmap(),
       Self::LumaAlpha(v) => v.into_pixmap(),
       Self::Rgb(v) => v.into_pixmap(),
       Self::RgbAlpha(v) => v.into_pixmap(),
-      Self::Indexed(v) => v.into_pixmap(),
     }
   }
 }
@@ -139,11 +138,11 @@ impl IntoPixmap<LumaAlphaPixmap> for DynamicPixmap {
   /// Converts the value into a [`LumaAlphaPixmap`].
   fn into_pixmap(self) -> LumaAlphaPixmap {
     match self {
+      Self::Indexed(v) => v.into_pixmap(),
       Self::Luma(v) => v.into_pixmap(),
       Self::LumaAlpha(v) => v.into_pixmap(),
       Self::Rgb(v) => v.into_pixmap(),
       Self::RgbAlpha(v) => v.into_pixmap(),
-      Self::Indexed(v) => v.into_pixmap(),
     }
   }
 }
@@ -152,11 +151,11 @@ impl IntoPixmap<RgbPixmap> for DynamicPixmap {
   /// Converts the value into a [`RgbPixmap`].
   fn into_pixmap(self) -> RgbPixmap {
     match self {
+      Self::Indexed(v) => v.into_pixmap(),
       Self::Luma(v) => v.into_pixmap(),
       Self::LumaAlpha(v) => v.into_pixmap(),
       Self::Rgb(v) => v.into_pixmap(),
       Self::RgbAlpha(v) => v.into_pixmap(),
-      Self::Indexed(v) => v.into_pixmap(),
     }
   }
 }
@@ -165,11 +164,11 @@ impl IntoPixmap<RgbAlphaPixmap> for DynamicPixmap {
   /// Converts the value into a [`RgbAlphaPixmap`].
   fn into_pixmap(self) -> RgbAlphaPixmap {
     match self {
+      Self::Indexed(v) => v.into_pixmap(),
       Self::Luma(v) => v.into_pixmap(),
       Self::LumaAlpha(v) => v.into_pixmap(),
       Self::Rgb(v) => v.into_pixmap(),
       Self::RgbAlpha(v) => v.into_pixmap(),
-      Self::Indexed(v) => v.into_pixmap(),
     }
   }
 }
@@ -178,11 +177,11 @@ impl IntoPixmap<IndexedPixmap> for DynamicPixmap {
   /// Converts the value into a [`IndexedPixmap`].
   fn into_pixmap(self) -> IndexedPixmap {
     match self {
+      Self::Indexed(v) => v.into_pixmap(),
       Self::Luma(v) => v.into_pixmap(),
       Self::LumaAlpha(v) => v.into_pixmap(),
       Self::Rgb(v) => v.into_pixmap(),
       Self::RgbAlpha(v) => v.into_pixmap(),
-      Self::Indexed(v) => v.into_pixmap(),
     }
   }
 }

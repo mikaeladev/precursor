@@ -5,5 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+crate_pixmap_core.workspace = true
+crate_pixmap_derive.workspace = true
 indexmap = "2.14.0"
 thiserror.workspace = true

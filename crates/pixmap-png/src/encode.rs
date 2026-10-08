@@ -1,5 +1,4 @@
-use crate_pixmap::DynamicPixmap;
-use crate_pixmap::pixels::IntoBytes;
+use crate_pixmap::{DynamicPixmap, Pixel};
 
 use png::{BitDepth, ColorType, Compression, Encoder};
 
