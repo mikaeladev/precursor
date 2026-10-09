@@ -1,5 +1,5 @@
 use precursor_formats::cur::{CurFile, CurImage};
-use precursor_pixmap_png::EncodeResult;
+use precursor_formats::png::{PngFile, WriteResult};
 use precursor_point::Point;
 
 use crate::cursor::CursorIcon;
@@ -36,7 +36,7 @@ impl CursorFrame {
   /// Panics if any icon [hotspot] is out of bounds.
   ///
   /// [hotspot]: Point
-  pub fn to_cur(&self) -> EncodeResult<CurFile> {
+  pub fn to_cur(&self) -> WriteResult<CurFile> {
     let mut icons = Vec::with_capacity(self.icons.len());
 
     for icon in &self.icons {
@@ -45,7 +45,7 @@ impl CursorFrame {
       let hotspot = Point::from((icon.hotspot.x as u16, icon.hotspot.y as u16));
 
       let mut buffer = Vec::with_capacity(width as usize * height as usize);
-      precursor_pixmap_png::encode(icon.pixmap.clone(), &mut buffer)?;
+      PngFile::new(icon.pixmap.clone()).write(&mut buffer)?;
 
       icons.push(CurImage::new(
         width as u16,

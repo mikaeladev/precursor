@@ -28,23 +28,15 @@ macro_rules! impl_pixmap_new {
         height: u32,
         pixels: Vec<<Self as crate::Pixmap>::Pixel>,
         $( $ident: $type, )*
-      ) -> Result<Self, crate::PixmapError> {
-        let expected_pixels = width as usize * height as usize;
-        let actual_pixels = pixels.len();
+      ) -> Self {
+        assert_eq!(width as usize * height as usize, pixels.len(), "");
 
-        if expected_pixels != actual_pixels {
-          return Err(crate::PixmapError::WrongDimensions(
-            expected_pixels,
-            actual_pixels,
-          ));
-        }
-
-        Ok(Self {
+        Self {
           width,
           height,
           pixels,
           $( $ident, )*
-        })
+        }
       }
     }
   };

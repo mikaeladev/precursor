@@ -221,7 +221,6 @@ dependencies = [
  "precursor-config",
  "precursor-formats",
  "precursor-pixmap",
- "precursor-pixmap-png",
  "precursor-point",
  "thiserror",
  "toml",
@@ -241,6 +240,8 @@ name = "precursor-formats"
 version = "0.1.0"
 dependencies = [
  "byteorder",
+ "png",
+ "precursor-pixmap",
  "precursor-point",
  "thiserror",
 ]
@@ -266,15 +267,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "precursor-pixmap-png"
-version = "0.1.0"
-dependencies = [
- "png",
- "precursor-pixmap",
- "thiserror",
 ]
 
 [[package]]

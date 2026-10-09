@@ -10,7 +10,6 @@ clap.workspace = true
 precursor-config.workspace = true
 precursor-formats.workspace = true
 precursor-pixmap.workspace = true
-precursor-pixmap-png.workspace = true
 precursor-point.workspace = true
 thiserror.workspace = true
 toml.workspace = true

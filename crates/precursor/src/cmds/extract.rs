@@ -3,7 +3,7 @@ use std::path::Path;
 
 use precursor_formats::ani::{self, AniFile};
 use precursor_formats::cur::{self, CurFile, CurImage};
-use precursor_pixmap_png::PNG_MAGIC;
+use precursor_formats::png::PngFile;
 
 use crate::args::{ExtractArgs, InputArg};
 use crate::cursor::CursorKind;
@@ -119,7 +119,7 @@ fn write_cur_icon(
   buffer: Box<[u8]>,
   force: bool,
 ) -> io::Result<()> {
-  let file_ext = if buffer.starts_with(PNG_MAGIC) {
+  let file_ext = if buffer.starts_with(PngFile::MAGIC) {
     "png"
   } else {
     todo!("bmp is not yet implemented")

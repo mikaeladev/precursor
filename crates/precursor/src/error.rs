@@ -3,7 +3,7 @@ use std::io;
 
 use precursor_formats::ani;
 use precursor_formats::cur;
-use precursor_pixmap_png as png;
+use precursor_formats::png;
 
 use thiserror::Error;
 use toml::de;
@@ -23,10 +23,10 @@ pub enum PrecursorError {
   CurReadError(#[from] cur::ReadError),
 
   #[error("{0}")]
-  PngDecodeError(#[from] png::DecodeError),
+  PngReadError(#[from] png::ReadError),
 
   #[error("{0}")]
-  PngEncodeError(#[from] png::EncodeError),
+  PngWriteError(#[from] png::WriteError),
 
   #[error("{0}")]
   TomlError(#[from] de::Error),

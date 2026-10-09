@@ -6,7 +6,6 @@ members = [
   "crates/pixmap",
   "crates/pixmap-core",
   "crates/pixmap-derive",
-  "crates/pixmap-png",
   "crates/point",
   "crates/precursor",
 ]
@@ -22,7 +21,6 @@ precursor-formats.path = "crates/formats"
 precursor-pixmap.path = "crates/pixmap"
 precursor-pixmap-core.path = "crates/pixmap-core"
 precursor-pixmap-derive.path = "crates/pixmap-derive/"
-precursor-pixmap-png.path = "crates/pixmap-png"
 precursor-point.path = "crates/point"
 
 thiserror = "2.0.20"
