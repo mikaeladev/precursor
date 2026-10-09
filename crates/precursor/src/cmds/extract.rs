@@ -1,9 +1,9 @@
 use std::io::{self, Read, Seek, Write};
 use std::path::Path;
 
-use crate_formats::ani::{self, AniFile};
-use crate_formats::cur::{self, CurFile, CurImage};
-use crate_pixmap_png::PNG_MAGIC;
+use precursor_formats::ani::{self, AniFile};
+use precursor_formats::cur::{self, CurFile, CurImage};
+use precursor_pixmap_png::PNG_MAGIC;
 
 use crate::args::{ExtractArgs, InputArg};
 use crate::cursor::CursorKind;

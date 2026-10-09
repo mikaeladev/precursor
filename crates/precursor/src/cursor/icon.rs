@@ -1,10 +1,10 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use crate_config::{AssetValue, RotateValue};
-use crate_pixmap::DynamicPixmap;
-use crate_pixmap_png::PNG_MAGIC;
-use crate_point::Point;
+use precursor_config::{AssetValue, RotateValue};
+use precursor_pixmap::DynamicPixmap;
+use precursor_pixmap_png::PNG_MAGIC;
+use precursor_point::Point;
 
 use crate::error::{PrecursorError, PrecursorResult};
 
@@ -41,11 +41,11 @@ impl CursorIcon {
   ///
   /// Panics if the image buffer exceeds `isize::MAX`.
   pub fn from_config(
-    crate_config::CursorIcon {
+    precursor_config::CursorIcon {
       asset,
       hotspot,
       nominal,
-    }: crate_config::CursorIcon,
+    }: precursor_config::CursorIcon,
   ) -> PrecursorResult<Self> {
     let mut reader = BufReader::new(File::open(asset.path())?);
     let mut pixmap;
@@ -53,7 +53,7 @@ impl CursorIcon {
     let buffer = reader.fill_buf()?;
 
     if buffer.starts_with(PNG_MAGIC) {
-      pixmap = crate_pixmap_png::decode(&mut reader)?;
+      pixmap = precursor_pixmap_png::decode(&mut reader)?;
       drop(reader);
     } else {
       return Err(PrecursorError::InvalidAssetType);

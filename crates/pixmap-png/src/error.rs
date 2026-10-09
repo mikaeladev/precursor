@@ -1,4 +1,4 @@
-use crate_pixmap::PixmapError;
+use precursor_pixmap::PixmapError;
 
 use thiserror::Error;
 

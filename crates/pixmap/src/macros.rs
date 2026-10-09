@@ -54,10 +54,10 @@ pub(crate) use impl_pixmap_new;
 
 macro_rules! impl_from_paletted_for_paletted {
   ($from:ident, $for:ident, $doc:expr) => {
-    impl crate_pixmap_core::FromPixmap<$from> for $for {
+    impl precursor_pixmap_core::FromPixmap<$from> for $for {
       #[doc = $doc]
       fn from_pixmap(pixmap: $from) -> Self {
-        use crate_pixmap_core::IntoPixel;
+        use precursor_pixmap_core::IntoPixel;
 
         Self {
           width: pixmap.width,
@@ -77,10 +77,10 @@ pub(crate) use impl_from_paletted_for_paletted;
 
 macro_rules! impl_from_paletted_for_indexed_opaque {
   ($from:ident, $for:ident<$for_pixel:ident>, $doc:expr) => {
-    impl crate_pixmap_core::FromPixmap<$from> for $for {
+    impl precursor_pixmap_core::FromPixmap<$from> for $for {
       #[doc = $doc]
       fn from_pixmap(pixmap: $from) -> Self {
-        use crate_pixmap_core::IntoPixel;
+        use precursor_pixmap_core::IntoPixel;
 
         let mut palette = indexmap::IndexSet::with_capacity(u8::MAX as usize);
 
@@ -105,10 +105,10 @@ pub(crate) use impl_from_paletted_for_indexed_opaque;
 
 macro_rules! impl_from_paletted_for_indexed_alpha {
   ($from:ident, $for:ident<$for_pixel:ident>, $doc:expr) => {
-    impl crate_pixmap_core::FromPixmap<$from> for $for {
+    impl precursor_pixmap_core::FromPixmap<$from> for $for {
       #[doc = $doc]
       fn from_pixmap(pixmap: $from) -> Self {
-        use crate_pixmap_core::{FromPixel, IntoPixel};
+        use precursor_pixmap_core::{FromPixel, IntoPixel};
 
         use crate::RgbPixel;
 
@@ -148,10 +148,10 @@ pub(crate) use impl_from_paletted_for_indexed_alpha;
 
 macro_rules! impl_from_indexed_for_paletted_opaque {
   ($from:ident, $for:ident, $doc:expr) => {
-    impl crate_pixmap_core::FromPixmap<$from> for $for {
+    impl precursor_pixmap_core::FromPixmap<$from> for $for {
       #[doc = $doc]
       fn from_pixmap(pixmap: $from) -> Self {
-        use crate_pixmap_core::IntoPixel;
+        use precursor_pixmap_core::IntoPixel;
 
         Self {
           width: pixmap.width,
@@ -171,10 +171,10 @@ pub(crate) use impl_from_indexed_for_paletted_opaque;
 
 macro_rules! impl_from_indexed_for_paletted_alpha {
   ($from:ident, $for:ident, $doc:expr) => {
-    impl crate_pixmap_core::FromPixmap<$from> for $for {
+    impl precursor_pixmap_core::FromPixmap<$from> for $for {
       #[doc = $doc]
       fn from_pixmap(pixmap: $from) -> Self {
-        use crate_pixmap_core::{IntoPixel, Pixmap};
+        use precursor_pixmap_core::{IntoPixel, Pixmap};
 
         let pixels_iter = pixmap.pixels.into_iter().map(|px| {
           let index = px.i as usize;

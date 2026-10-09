@@ -1,4 +1,4 @@
-use crate_pixmap::{DynamicPixmap, Pixel};
+use precursor_pixmap::{DynamicPixmap, Pixel};
 
 use png::{BitDepth, ColorType, Compression, Encoder};
 

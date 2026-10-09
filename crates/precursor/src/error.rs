@@ -1,9 +1,9 @@
 use std::fmt;
 use std::io;
 
-use crate_formats::ani;
-use crate_formats::cur;
-use crate_pixmap_png as png;
+use precursor_formats::ani;
+use precursor_formats::cur;
+use precursor_pixmap_png as png;
 
 use thiserror::Error;
 use toml::de;

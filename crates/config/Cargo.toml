@@ -1,5 +1,5 @@
 [package]
-name = "crate_config"
+name = "precursor-config"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

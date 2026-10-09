@@ -80,7 +80,7 @@ pub fn pixmap_derive(input: TokenStream) -> TokenStream {
       }
 
       fn scale_up(&mut self, factor: usize) {
-        crate_pixmap_core::ops::scale_up_in_place(
+        precursor_pixmap_core::ops::scale_up_in_place(
           &mut self.width,
           &mut self.height,
           &mut self.pixels,
@@ -91,7 +91,7 @@ pub fn pixmap_derive(input: TokenStream) -> TokenStream {
 
     impl IntoIterator for #name {
       type Item = u8;
-      type IntoIter = crate_pixmap_core::IntoIter<
+      type IntoIter = precursor_pixmap_core::IntoIter<
         #pixel_type,
         { size_of::<<#pixel_type as Pixel>::ByteArray>() },
       >;

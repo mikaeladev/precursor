@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use crate_config::PackageConfig;
+use precursor_config::PackageConfig;
 
 // TODO: doc
 pub fn write_icon_theme_index(
@@ -42,7 +42,7 @@ pub fn write_icon_theme_index(
 mod tests {
   use std::collections::BTreeMap;
 
-  use crate_config::{LinuxPackageConfig, PackageLocaleConfig};
+  use precursor_config::{LinuxPackageConfig, PackageLocaleConfig};
 
   use super::*;
 

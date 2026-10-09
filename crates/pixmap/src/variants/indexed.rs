@@ -1,5 +1,5 @@
-use crate_pixmap_core::{IntoIter, Pixel, Pixmap};
-use crate_pixmap_derive::{Pixel, Pixmap};
+use precursor_pixmap_core::{IntoIter, Pixel, Pixmap};
+use precursor_pixmap_derive::{Pixel, Pixmap};
 
 use crate::macros::*;
 use crate::variants::*;

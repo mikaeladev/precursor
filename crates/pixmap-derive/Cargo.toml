@@ -1,5 +1,5 @@
 [package]
-name = "crate_pixmap_derive"
+name = "precursor-pixmap-derive"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

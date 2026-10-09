@@ -1,11 +1,10 @@
-use crate_config::{CursorConfig, CursorTargets, CursorVariant};
+use precursor_config::{CursorConfig, CursorTargets, CursorVariant};
 
-use crate_formats::ani::AniFile;
-use crate_formats::cur::CurFile;
-use crate_formats::xcur::{XcursorChunk, XcursorFile};
-
-use crate_pixmap::{IntoPixmap, RgbAlphaPixmap};
-use crate_pixmap_png::{self, EncodeResult};
+use precursor_formats::ani::AniFile;
+use precursor_formats::cur::CurFile;
+use precursor_formats::xcur::{XcursorChunk, XcursorFile};
+use precursor_pixmap::{IntoPixmap, RgbAlphaPixmap};
+use precursor_pixmap_png::{self, EncodeResult};
 
 use crate::cursor::{CursorDuration, CursorFrame, CursorIcon};
 use crate::error::PrecursorResult;
@@ -31,13 +30,13 @@ impl Cursor {
   ///
   /// # Errors
   ///
-  /// Returns the same errors as [`crate_pixmap_png::encode`].
+  /// Returns the same errors as [`precursor_pixmap_png::encode`].
   ///
   /// # Panics
   ///
   /// Panics if any icon [hotspot] is out of bounds.
   ///
-  /// [hotspot]: crate_point::Point
+  /// [hotspot]: precursor_point::Point
   pub fn to_windows_ani(&self) -> EncodeResult<AniFile> {
     let num_frames = self.frames.len();
 
@@ -60,13 +59,13 @@ impl Cursor {
   ///
   /// # Errors
   ///
-  /// Returns the same errors as [`crate_pixmap_png::encode`].
+  /// Returns the same errors as [`precursor_pixmap_png::encode`].
   ///
   /// # Panics
   ///
   /// Panics if any icon [hotspot] is out of bounds.
   ///
-  /// [hotspot]: crate_point::Point
+  /// [hotspot]: precursor_point::Point
   pub fn to_windows_cur(&self) -> EncodeResult<CurFile> {
     self.frames.first().unwrap().to_cur()
   }
@@ -151,7 +150,7 @@ impl Cursor {
         let mut frames = Vec::with_capacity(sequence.len());
 
         for (asset, duration) in sequence {
-          let icon_config = crate_config::CursorIcon {
+          let icon_config = precursor_config::CursorIcon {
             asset,
             nominal,
             hotspot,

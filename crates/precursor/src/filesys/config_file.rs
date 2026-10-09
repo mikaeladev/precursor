@@ -2,7 +2,7 @@ use std::fs;
 use std::io::{self, ErrorKind};
 use std::path::Path;
 
-use crate_config::Config;
+use precursor_config::Config;
 
 use crate::args::InputArg;
 use crate::debug;
