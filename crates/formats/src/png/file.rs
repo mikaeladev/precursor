@@ -2,15 +2,7 @@ use std::io::{BufRead, Seek, Write};
 
 use precursor_pixmap::{DynamicPixmap, Pixel};
 
-use png::{
-  Compression, Decoder, DecodingError, Encoder, EncodingError, Transformations,
-};
-
-pub type ReadError = DecodingError;
-pub type ReadResult<T> = Result<T, ReadError>;
-
-pub type WriteError = EncodingError;
-pub type WriteResult<T> = Result<T, WriteError>;
+use super::error::{ReadError, ReadResult, WriteResult};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BitDepth {
@@ -63,17 +55,26 @@ impl PngFile {
   ///
   /// # Errors
   ///
-  /// See the [`ReadError`] enum for details.
+  /// Fails with a [`ReadError`] in the following situations:
+  ///
+  /// - image fails to decode;
+  /// - image is animated;
+  /// - frame buffer would exceed `isize::MAX`.
+  ///
+  /// # Panics
+  ///
+  /// Panics if the image is not 8-bit (TODO), or if the PNG crate fails to
+  /// error over malformed data.
   pub fn read<R: BufRead + Seek>(reader: &mut R) -> ReadResult<Self> {
-    let mut decoder = Decoder::new(reader);
-    decoder.set_transformations(Transformations::STRIP_16);
+    let mut decoder = png::Decoder::new(reader);
+    decoder.set_transformations(png::Transformations::STRIP_16);
     decoder.set_ignore_text_chunk(true); // for now
 
     let mut png_reader = decoder.read_info()?;
     let png_info = png_reader.info();
 
     if png_info.is_animated() {
-      panic!("APNGs are unsupported"); // TODO: error
+      return Err(ReadError::IsAnimated);
     }
 
     let width = png_info.width;
@@ -85,12 +86,12 @@ impl PngFile {
     let indexed_alpha = png_info.trns.to_owned();
 
     if color_type == ColorType::Indexed && indexed_palette.is_none() {
-      panic!("missing PLTE chunk") // TODO: error
+      unreachable!("PNG crate should've errored already")
     }
 
-    let frame_buffer_size = png_reader // TODO: error
+    let frame_buffer_size = png_reader
       .output_buffer_size()
-      .expect("frame buffer length should not exceed isize::MAX");
+      .ok_or(ReadError::FrameTooBig)?;
 
     let mut frame_buffer = vec![0; frame_buffer_size];
 
@@ -103,7 +104,7 @@ impl PngFile {
 
         let indexed_palette = indexed_palette.unwrap();
         let (chunks, []) = indexed_palette.as_chunks::<3>() else {
-          unreachable!("RgbPixel buffer should always be % 3")
+          unreachable!("RGB buffer should always be % 3 == 0")
         };
 
         let pixels = frame_buffer
@@ -136,7 +137,7 @@ impl PngFile {
         use precursor_pixmap::{LumaAlphaPixel, LumaAlphaPixmap};
 
         let (chunks, []) = frame_buffer.as_chunks::<2>() else {
-          unreachable!("LumaAlphaPixel buffer should always be % 2")
+          unreachable!("YA buffer should always be % 2 == 0")
         };
 
         let pixels = chunks
@@ -151,7 +152,7 @@ impl PngFile {
         use precursor_pixmap::{RgbPixel, RgbPixmap};
 
         let (chunks, []) = frame_buffer.as_chunks::<3>() else {
-          unreachable!("RgbPixel buffer should always be % 3")
+          unreachable!("RGB buffer should always be % 3 == 0")
         };
 
         let pixels = chunks
@@ -166,7 +167,7 @@ impl PngFile {
         use precursor_pixmap::{RgbAlphaPixel, RgbAlphaPixmap};
 
         let (chunks, []) = frame_buffer.as_chunks::<4>() else {
-          unreachable!("RgbAlphaPixel buffer should always be % 4")
+          unreachable!("RGBA buffer should always be % 4 == 0")
         };
 
         let pixels = chunks
@@ -185,14 +186,14 @@ impl PngFile {
   ///
   /// # Errors
   ///
-  /// See the [`WriteError`] enum for details.
+  /// Fails with a [`WriteError`] if the image fails to encode.
   pub fn write<W: Write>(self, writer: &mut W) -> WriteResult<()> {
     let (width, height) = self.pixmap.dimensions();
 
-    let mut encoder = Encoder::new(writer, width, height);
+    let mut encoder = png::Encoder::new(writer, width, height);
 
     encoder.set_depth(png::BitDepth::Eight);
-    encoder.set_compression(Compression::High);
+    encoder.set_compression(png::Compression::High);
 
     let color_type = match &self.pixmap {
       DynamicPixmap::Luma(_) => png::ColorType::Grayscale,
@@ -221,7 +222,7 @@ impl PngFile {
     let mut png_writer = encoder.write_header()?;
 
     png_writer.write_image_data(&self.pixmap.concat())?;
-    png_writer.finish()
+    Ok(png_writer.finish()?)
   }
 
   /// Converts this type into a [`DynamicPixmap`].
