@@ -9,7 +9,7 @@ use std::env;
 use std::process::exit;
 
 use env_logger::{Builder, Env};
-use log::{LevelFilter, debug, error};
+use log::{LevelFilter, debug, error, trace};
 
 use crate::args::{Cli, Command};
 
@@ -32,6 +32,7 @@ fn main() {
   };
 }
 
+// QUIET > VERBOSE > DEBUG > LOG_LEVEL
 fn init_logger(args: &Cli) {
   let env = Env::new()
     .filter_or("LOG_LEVEL", "WARN")
@@ -40,9 +41,15 @@ fn init_logger(args: &Cli) {
   let mut builder = Builder::from_env(env);
   builder.format_indent(Some(2));
 
-  if args.debug || env::var_os("DEBUG").is_some() {
+  if args.quiet || env::var_os("QUIET").is_some() {
+    builder.filter_level(LevelFilter::Off);
+  } else if args.verbose || env::var_os("VERBOSE").is_some() {
+    builder.filter_level(LevelFilter::Trace);
+  } else if args.debug || env::var_os("DEBUG").is_some() {
     builder.filter_level(LevelFilter::Debug);
   }
 
   builder.init();
+
+  trace!("logger initialised! yay!");
 }

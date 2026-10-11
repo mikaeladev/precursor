@@ -6,13 +6,28 @@ use crate::args::input::InputArg;
 
 #[derive(Parser)]
 #[command(version, about, long_about, propagate_version = true)]
+#[group(id = "log_level", multiple = false)]
 pub struct Cli {
   #[command(subcommand)]
   pub command: Command,
 
-  /// Enable debug logs.
-  #[arg(short = 'd', long)]
+  /// Silence all logs.
+  ///
+  /// Conflicts with '--debug' and '--verbose'.
+  #[arg(short = 'q', long, global = true, group = "log_level")]
+  pub quiet: bool,
+
+  /// Print debug logs.
+  ///
+  /// Conflicts with '--quiet' and '--verbose'.
+  #[arg(short = 'd', long, global = true, group = "log_level")]
   pub debug: bool,
+
+  /// Print verbose logs.
+  ///
+  /// Conflicts with '--quiet' and '--debug'.
+  #[arg(short = 'v', long, global = true, group = "log_level")]
+  pub verbose: bool,
 }
 
 #[derive(Subcommand)]
