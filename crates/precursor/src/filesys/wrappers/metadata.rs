@@ -2,7 +2,8 @@ use std::fs::{self, Metadata};
 use std::io::{self, ErrorKind};
 use std::path::Path;
 
-use crate::debug;
+use log::debug;
+
 use crate::path_error_msg;
 
 /// Queries the file system to get information about the `path`.

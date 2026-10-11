@@ -23,6 +23,7 @@ precursor-pixmap-core.path = "crates/pixmap-core"
 precursor-pixmap-derive.path = "crates/pixmap-derive/"
 precursor-point.path = "crates/point"
 
+log = "0.4.34"
 thiserror = "2.0.20"
 toml = "1.1.4"
 

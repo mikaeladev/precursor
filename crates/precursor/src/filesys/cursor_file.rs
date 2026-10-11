@@ -2,8 +2,9 @@ use std::fs::File;
 use std::io::{self, BufReader, ErrorKind, Read, Seek, SeekFrom};
 use std::path::Path;
 
+use log::debug;
+
 use crate::args::InputArg;
-use crate::debug;
 use crate::path_error_msg;
 
 pub enum CursorReader {

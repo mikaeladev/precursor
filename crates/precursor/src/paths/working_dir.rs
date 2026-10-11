@@ -2,7 +2,7 @@ use std::env;
 use std::io;
 use std::path::PathBuf;
 
-use crate::debug;
+use log::debug;
 
 /// Returns the path to the current working directory.
 ///

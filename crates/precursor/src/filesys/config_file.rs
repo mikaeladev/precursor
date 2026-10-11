@@ -4,8 +4,9 @@ use std::path::Path;
 
 use precursor_config::Config;
 
+use log::debug;
+
 use crate::args::InputArg;
-use crate::debug;
 use crate::error::PrecursorResult;
 use crate::path_error_msg;
 

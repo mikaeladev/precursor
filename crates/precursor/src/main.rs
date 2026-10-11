@@ -7,18 +7,16 @@ mod paths;
 
 use std::env;
 use std::process::exit;
-use std::sync::OnceLock;
 
-use crate::args::Command;
+use env_logger::{Builder, Env};
+use log::{LevelFilter, debug, error};
 
-pub static DEBUG: OnceLock<bool> = OnceLock::new();
+use crate::args::{Cli, Command};
 
 fn main() {
   let args = args::parse();
 
-  if args.debug || env::var_os("DEBUG").is_some() {
-    DEBUG.set(true).unwrap();
-  }
+  init_logger(&args);
 
   let result = match args.command {
     Command::Build(build_args) => cmds::build(build_args),
@@ -28,16 +26,23 @@ fn main() {
   };
 
   if let Err(err) = result {
-    eprintln!("an error occurred: {err}");
+    debug!("{err:?}");
+    error!("{err}");
     exit(1);
   };
 }
 
-#[macro_export]
-macro_rules! debug {
-  ($($arg:tt)*) => {
-    if crate::DEBUG.get().and_then(|v| Some(*v)).unwrap_or(false) {
-      eprintln!("[DEBUG]: {}", format_args!($($arg)*))
-    }
-  };
+fn init_logger(args: &Cli) {
+  let env = Env::new()
+    .filter_or("LOG_LEVEL", "WARN")
+    .write_style("LOG_STYLE");
+
+  let mut builder = Builder::from_env(env);
+  builder.format_indent(Some(2));
+
+  if args.debug || env::var_os("DEBUG").is_some() {
+    builder.filter_level(LevelFilter::Debug);
+  }
+
+  builder.init();
 }

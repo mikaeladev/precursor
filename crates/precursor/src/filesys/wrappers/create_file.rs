@@ -2,7 +2,8 @@ use std::fs::File;
 use std::io::{self, ErrorKind};
 use std::path::Path;
 
-use crate::debug;
+use log::debug;
+
 use crate::path_error_msg;
 
 /// Creates a file at the provided `path`.

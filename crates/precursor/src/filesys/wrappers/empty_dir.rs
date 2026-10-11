@@ -2,7 +2,8 @@ use std::convert::Infallible;
 use std::io::{self, ErrorKind};
 use std::path::Path;
 
-use crate::debug;
+use log::debug;
+
 use crate::path_error_msg;
 
 /// Removes the contents of the directory at the provided `path`.

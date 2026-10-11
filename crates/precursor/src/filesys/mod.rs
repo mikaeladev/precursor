@@ -13,7 +13,7 @@ pub use wrappers::*;
 #[macro_export]
 macro_rules! path_error_msg {
   ($msg:expr, $path:expr) => {
-    format!("{}:\n  '{}'", $msg, $path.display())
+    format!("{}:\n'{}'", $msg, $path.display())
   };
 
   (access_denied: $path:expr) => {

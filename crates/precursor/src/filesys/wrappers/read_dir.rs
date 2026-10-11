@@ -2,7 +2,8 @@ use std::fs::{self, ReadDir};
 use std::io::{self, ErrorKind};
 use std::path::Path;
 
-use crate::debug;
+use log::debug;
+
 use crate::path_error_msg;
 
 /// Returns an iterator over the entries within a directory.
