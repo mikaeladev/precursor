@@ -1,6 +1,7 @@
+use precursor_filesys as filesys;
+
 use crate::args::CheckArgs;
 use crate::error::PrecursorResult;
-use crate::filesys;
 use crate::paths;
 
 pub fn check(CheckArgs { config_file_input }: CheckArgs) -> PrecursorResult {

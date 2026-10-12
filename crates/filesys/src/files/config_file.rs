@@ -6,15 +6,15 @@ use precursor_config::Config;
 
 use log::debug;
 
-use crate::args::InputArg;
-use crate::error::PrecursorResult;
+use crate::error::ConfigError;
+use crate::input::InputArg;
 use crate::path_error_msg;
 
 // TODO: doc
 pub fn get_config(
   working_dir_path: impl AsRef<Path>,
   input_arg: InputArg,
-) -> PrecursorResult<Config> {
+) -> Result<Config, ConfigError> {
   let config_string = get_config_string(working_dir_path, input_arg)?;
   let config_value = toml::from_str(&config_string)?;
 

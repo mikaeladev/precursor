@@ -4,7 +4,7 @@ use std::path::Path;
 
 use log::debug;
 
-use crate::args::InputArg;
+use crate::input::InputArg;
 use crate::path_error_msg;
 
 pub enum CursorReader {
@@ -92,8 +92,6 @@ mod unix {
   use std::convert::Infallible;
   use std::ffi::OsStr;
 
-  use crate::filesys;
-
   use super::*;
 
   // TODO: doc
@@ -113,7 +111,7 @@ mod unix {
     let cursor_path = base_path.join(cursor_name);
     let link_path = base_path.join(alias_name);
 
-    if let Err(err) = filesys::get_metadata(&cursor_path, false)
+    if let Err(err) = crate::get_metadata(&cursor_path, false)
       && err.kind() == ErrorKind::NotFound
     {
       return Err(io::Error::new(
@@ -122,7 +120,7 @@ mod unix {
       ));
     }
 
-    match filesys::get_metadata(&link_path, false) {
+    match crate::get_metadata(&link_path, false) {
       Ok(meta) => {
         if !force {
           return Err(io::Error::new(
@@ -135,7 +133,7 @@ mod unix {
             path_error_msg!(expected_found: "optional file or symlink", "a directory", cursor_path),
           ));
         } else {
-          filesys::remove_file::<Infallible>(&link_path, None)?;
+          crate::remove_file::<Infallible>(&link_path, None)?;
         }
       }
       Err(err) if err.kind() == ErrorKind::NotFound => (),

@@ -2,7 +2,6 @@ mod args;
 mod cmds;
 mod cursor;
 mod error;
-mod filesys;
 mod paths;
 
 use std::env;

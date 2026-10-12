@@ -262,11 +262,11 @@ dependencies = [
  "env_logger",
  "log",
  "precursor-config",
+ "precursor-filesys",
  "precursor-formats",
  "precursor-pixmap",
  "precursor-point",
  "thiserror",
- "toml",
 ]
 
 [[package]]
@@ -275,6 +275,16 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_repr",
+ "toml",
+]
+
+[[package]]
+name = "precursor-filesys"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "precursor-config",
+ "thiserror",
  "toml",
 ]
 

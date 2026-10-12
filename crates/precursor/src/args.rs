@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use precursor_filesys::InputArg;
 
-use crate::args::input::InputArg;
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
 #[command(version, about, long_about, propagate_version = true)]

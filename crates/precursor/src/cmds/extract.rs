@@ -1,14 +1,15 @@
 use std::io::{self, Read, Seek, Write};
 use std::path::Path;
 
+use precursor_filesys::{self as filesys, InputArg};
+
 use precursor_formats::ani::{self, AniFile};
 use precursor_formats::cur::{self, CurFile, CurImage};
 use precursor_formats::png::PngFile;
 
-use crate::args::{ExtractArgs, InputArg};
+use crate::args::ExtractArgs;
 use crate::cursor::CursorKind;
 use crate::error::{PrecursorError, PrecursorResult};
-use crate::filesys;
 use crate::paths;
 
 pub fn extract(

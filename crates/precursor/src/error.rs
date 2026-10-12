@@ -1,12 +1,13 @@
 use std::fmt;
 use std::io;
 
+use precursor_filesys::ConfigError;
+
 use precursor_formats::ani;
 use precursor_formats::cur;
 use precursor_formats::png;
 
 use thiserror::Error;
-use toml::de;
 
 #[derive(Error, Debug)]
 pub enum PrecursorError {
@@ -29,7 +30,7 @@ pub enum PrecursorError {
   PngWriteError(#[from] png::WriteError),
 
   #[error("{0}")]
-  TomlError(#[from] de::Error),
+  ConfigError(#[from] ConfigError),
 
   #[error("invalid asset type, expected a PNG")]
   InvalidAssetType,

@@ -16,7 +16,7 @@ pub fn ensure_dir<S: ToString>(
   path: impl AsRef<Path>,
   kind: impl Into<Option<S>>,
 ) -> io::Result<bool> {
-  match super::create_new_dir(path, kind) {
+  match crate::create_new_dir(path, kind) {
     Ok(_) => Ok(true),
     Err(err) if err.kind() == ErrorKind::AlreadyExists => Ok(false),
     Err(err) => Err(err),
@@ -44,7 +44,7 @@ pub fn ensure_dir_empty<S: ToString>(
   let path = path.as_ref();
 
   if !ensure_dir(path, kind)? {
-    super::empty_dir(path, kind)?;
+    crate::empty_dir(path, kind)?;
     Ok(false)
   } else {
     Ok(true)

@@ -1,10 +1,11 @@
 use std::io;
 use std::path::Path;
 
+use precursor_filesys as filesys;
+
 use crate::args::BuildArgs;
 use crate::cursor::Cursor;
 use crate::error::PrecursorResult;
-use crate::filesys;
 use crate::paths;
 
 pub fn build(
