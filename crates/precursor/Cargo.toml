@@ -9,6 +9,7 @@ license.workspace = true
 clap.workspace = true
 log.workspace = true
 precursor-config.workspace = true
+precursor-error.workspace = true
 precursor-filesys.workspace = true
 precursor-formats.workspace = true
 precursor-pixmap.workspace = true

@@ -2,10 +2,11 @@ use std::fs::File;
 use std::io::{self, BufReader, ErrorKind, Read, Seek, SeekFrom};
 use std::path::Path;
 
-use log::debug;
+use precursor_error::{Error, Result};
 
+use crate::error::ErrorMessageWithPath;
 use crate::input::InputArg;
-use crate::path_error_msg;
+use crate::macros::{action_denied, action_failed};
 
 pub enum CursorReader {
   File(BufReader<File>),
@@ -35,38 +36,25 @@ impl Seek for CursorReader {
 pub fn get_cursor_reader(
   working_dir_path: impl AsRef<Path>,
   input_arg: InputArg,
-) -> io::Result<CursorReader> {
+) -> Result<CursorReader> {
   match input_arg {
-    InputArg::Path(path) => {
-      let file_path = match path.is_absolute() {
-        true => path,
-        false => working_dir_path.as_ref().join(path),
-      };
+    InputArg::Path(mut path) => {
+      if path.is_relative() {
+        path = working_dir_path.as_ref().join(path);
+      }
 
-      let file = File::open(&file_path).map_err(|err| {
-        let kind = "cursor file";
-        let action = format_args!("read {kind}");
+      let file = File::open(&path).map_err(|src| {
+        let action = "read cursor file";
 
-        let err_kind = err.kind();
+        let src_kind = src.kind();
 
-        match err_kind {
-          ErrorKind::NotFound => io::Error::new(
-            err_kind,
-            path_error_msg!(not_found: kind, file_path),
-          ),
-          ErrorKind::PermissionDenied => io::Error::new(
-            err_kind,
-            path_error_msg!(action_denied: action, file_path),
-          ),
-          _ => {
-            debug!("{err}");
+        let msg = match src_kind {
+          ErrorKind::PermissionDenied => action_denied!(action),
+          // ErrorKind::NotFound => action_failed!(action, src_kind),
+          _ => action_failed!(action, src_kind),
+        };
 
-            io::Error::new(
-              err_kind,
-              path_error_msg!(action_failed: action, file_path),
-            )
-          }
-        }
+        Error::new(ErrorMessageWithPath::new(msg, path), src)
       })?;
 
       Ok(CursorReader::File(BufReader::new(file)))
@@ -74,13 +62,17 @@ pub fn get_cursor_reader(
 
     #[cfg(target_family = "unix")]
     InputArg::Stdin => {
-      let mut lock = io::stdin().lock();
-      let mut buffer = Vec::new();
+      use std::io::BufRead;
 
-      lock.read_to_end(&mut buffer).map_err(|err| {
-        debug!("{err}");
-        io::Error::new(err.kind(), "failed to read stdin to end")
-      })?;
+      let map_err_op =
+        |src| Error::new(action_failed!("read stdin to end"), src);
+
+      let mut lock = io::stdin().lock();
+
+      let capacity = lock.fill_buf().map_err(map_err_op)?.len();
+      let mut buffer = Vec::with_capacity(capacity);
+
+      lock.read_to_end(&mut buffer).map_err(map_err_op)?;
 
       Ok(CursorReader::Stdin(io::Cursor::new(buffer)))
     }
@@ -100,7 +92,7 @@ mod unix {
     cursor_name: impl AsRef<OsStr>,
     alias_name: impl AsRef<OsStr>,
     force: bool,
-  ) -> io::Result<()> {
+  ) -> Result<()> {
     use io::ErrorKind;
     use std::os::unix::fs as unix_fs;
 
@@ -111,53 +103,51 @@ mod unix {
     let cursor_path = base_path.join(cursor_name);
     let link_path = base_path.join(alias_name);
 
-    if let Err(err) = crate::get_metadata(&cursor_path, false)
-      && err.kind() == ErrorKind::NotFound
-    {
-      return Err(io::Error::new(
-        ErrorKind::NotFound,
-        path_error_msg!(not_found: "cursor file or directory", cursor_path),
-      ));
-    }
+    crate::get_metadata(&cursor_path, false).map_err(|src| {
+      let msg = ErrorMessageWithPath::new(
+        action_failed!("query cursor path"),
+        cursor_path,
+      );
+
+      Error::new(msg, src)
+    })?;
 
     match crate::get_metadata(&link_path, false) {
       Ok(meta) => {
         if !force {
-          return Err(io::Error::new(
-            ErrorKind::AlreadyExists,
-            path_error_msg!(already_exists: "cursor file or directory", cursor_path),
-          ));
-        } else if meta.is_dir() {
-          return Err(io::Error::new(
-            ErrorKind::IsADirectory,
-            path_error_msg!(expected_found: "optional file or symlink", "a directory", cursor_path),
-          ));
+          Err(Error::new::<Infallible>(
+            action_failed!("symlink cursor", "entity already exists at target"),
+            None,
+          ))
         } else {
-          crate::remove_file::<Infallible>(&link_path, None)?;
+          let kind = "existing cursor target";
+
+          if meta.is_dir() {
+            crate::remove_dir_all(&link_path, kind)
+          } else {
+            crate::remove_file(&link_path, kind)
+          }
         }
       }
-      Err(err) if err.kind() == ErrorKind::NotFound => (),
-      Err(err) => return Err(err),
-    }
+      Err(err)
+        if let Some(src) = err.downcast::<io::Error>()
+          && src.kind() == ErrorKind::NotFound =>
+      {
+        Ok(())
+      }
+      Err(err) => Err(err),
+    }?;
 
-    unix_fs::symlink(cursor_name, &link_path).map_err(|err| {
+    unix_fs::symlink(cursor_name, &link_path).map_err(|src| {
       let action = "symlink cursor file or directory";
-      let err_kind = err.kind();
+      let src_kind = src.kind();
 
-      match err_kind {
-        ErrorKind::PermissionDenied => io::Error::new(
-          err_kind,
-          path_error_msg!(action_denied: action, link_path),
-        ),
-        _ => {
-          debug!("{err}");
+      let msg = match src_kind {
+        ErrorKind::PermissionDenied => action_denied!(action),
+        _ => action_failed!(action, src_kind),
+      };
 
-          io::Error::new(
-            err_kind,
-            path_error_msg!(action_failed: action, link_path),
-          )
-        }
-      }
+      Error::new(ErrorMessageWithPath::new(msg, link_path), src)
     })
   }
 }

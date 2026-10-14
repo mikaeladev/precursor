@@ -1,10 +1,11 @@
 use std::fs;
-use std::io::{self, ErrorKind};
+use std::io::ErrorKind;
 use std::path::Path;
 
-use log::debug;
+use precursor_error::{Error, Result};
 
-use crate::path_error_msg;
+use crate::error::ErrorMessageWithPath;
+use crate::macros::{action_denied, action_failed};
 
 /// Removes the file at the provided `path`.
 ///
@@ -22,36 +23,25 @@ use crate::path_error_msg;
 pub fn remove_file<S: ToString>(
   path: impl AsRef<Path>,
   kind: impl Into<Option<S>>,
-) -> io::Result<()> {
+) -> Result<()> {
   let path = path.as_ref();
 
-  fs::remove_file(path).map_err(|err| {
-    let kind = if let Some(value) = kind.into() {
-      format_args!("{} file", value.to_string())
+  fs::remove_file(path).map_err(|src| {
+    let action = if let Some(value) = kind.into() {
+      format_args!("remove {} file", value.to_string())
     } else {
-      format_args!("file")
+      format_args!("remove file")
     };
 
-    let action = format_args!("remove {kind}");
+    let src_kind = src.kind();
 
-    let err_kind = err.kind();
+    let msg = match src_kind {
+      ErrorKind::PermissionDenied => action_denied!(action),
+      // ErrorKind::NotFound => action_failed!(action, src_kind),
+      // ErrorKind::IsADirectory => action_failed!(action, src_kind),
+      _ => action_failed!(action, src_kind),
+    };
 
-    match err_kind {
-      ErrorKind::IsADirectory => io::Error::new(
-        err_kind,
-        path_error_msg!(expected_found: "a file", "a directory", path),
-      ),
-      ErrorKind::NotFound => {
-        io::Error::new(err_kind, path_error_msg!(not_found: kind, path))
-      }
-      ErrorKind::PermissionDenied => {
-        io::Error::new(err_kind, path_error_msg!(action_denied: action, path))
-      }
-      _ => {
-        debug!("{err}");
-
-        io::Error::new(err_kind, path_error_msg!(action_failed: action, path))
-      }
-    }
+    Error::new(ErrorMessageWithPath::new(msg, path), src)
   })
 }

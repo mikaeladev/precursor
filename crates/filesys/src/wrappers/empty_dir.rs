@@ -1,10 +1,11 @@
 use std::convert::Infallible;
-use std::io::{self, ErrorKind};
+use std::io::ErrorKind;
 use std::path::Path;
 
-use log::debug;
+use precursor_error::{Error, Result};
 
-use crate::path_error_msg;
+use crate::error::ErrorMessageWithPath;
+use crate::macros::{action_denied, action_failed};
 
 /// Removes the contents of the directory at the provided `path`.
 ///
@@ -22,7 +23,7 @@ use crate::path_error_msg;
 pub fn empty_dir<S: ToString>(
   path: impl AsRef<Path>,
   kind: impl Into<Option<S>>,
-) -> io::Result<()> {
+) -> Result<()> {
   let path = path.as_ref();
 
   let kind = if let Some(value) = kind.into() {
@@ -44,15 +45,20 @@ pub fn empty_dir<S: ToString>(
           super::remove_file::<Infallible>(subpath, None)?;
         }
       }
-      // prevents race conditions
-      Err(err) if err.kind() == ErrorKind::NotFound => break,
-      Err(err) => {
-        debug!("{err}");
+      Err(err) if err.kind() == ErrorKind::NotFound => {
+        break; // prevents race conditions
+      }
+      Err(src) => {
+        let action = format_args!("read {kind} entry");
 
-        return Err(io::Error::new(
-          err.kind(),
-          path_error_msg!(action_failed: "read directory entry", path),
-        ));
+        let src_kind = src.kind();
+
+        let msg = match src_kind {
+          ErrorKind::PermissionDenied => action_denied!(action),
+          _ => action_failed!(action, src_kind),
+        };
+
+        return Err(Error::new(ErrorMessageWithPath::new(msg, path), src));
       }
     }
   }

@@ -1,10 +1,11 @@
 use std::fs;
-use std::io::{self, ErrorKind};
+use std::io::ErrorKind;
 use std::path::Path;
 
-use log::debug;
+use precursor_error::{Error, Result};
 
-use crate::path_error_msg;
+use crate::error::ErrorMessageWithPath;
+use crate::macros::{action_denied, action_failed};
 
 /// Creates a new directory at the provided `path`.
 ///
@@ -22,31 +23,24 @@ use crate::path_error_msg;
 pub fn create_new_dir<S: ToString>(
   path: impl AsRef<Path>,
   kind: impl Into<Option<S>>,
-) -> io::Result<()> {
+) -> Result<()> {
   let path = path.as_ref();
 
-  fs::create_dir(path).map_err(|err| {
+  fs::create_dir(path).map_err(|src| {
     let action = if let Some(value) = kind.into() {
       format_args!("create {} directory", value.to_string())
     } else {
       format_args!("create directory")
     };
 
-    let err_kind = err.kind();
+    let src_kind = src.kind();
 
-    match err_kind {
-      ErrorKind::AlreadyExists => io::Error::new(
-        err_kind,
-        path_error_msg!(already_exists: "file or directory", path),
-      ),
-      ErrorKind::PermissionDenied => {
-        io::Error::new(err_kind, path_error_msg!(action_denied: action, path))
-      }
-      _ => {
-        debug!("{err}");
+    let msg = match src_kind {
+      ErrorKind::PermissionDenied => action_denied!(action),
+      // ErrorKind::AlreadyExists => action_failed!(action, src_kind),
+      _ => action_failed!(action, src_kind),
+    };
 
-        io::Error::new(err_kind, path_error_msg!(action_failed: action, path))
-      }
-    }
+    Error::new(ErrorMessageWithPath::new(msg, path), src)
   })
 }

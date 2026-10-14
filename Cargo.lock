@@ -262,6 +262,7 @@ dependencies = [
  "env_logger",
  "log",
  "precursor-config",
+ "precursor-error",
  "precursor-filesys",
  "precursor-formats",
  "precursor-pixmap",
@@ -279,12 +280,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "precursor-error"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "precursor-filesys"
 version = "0.1.0"
 dependencies = [
  "log",
  "precursor-config",
- "thiserror",
+ "precursor-error",
  "toml",
 ]
 

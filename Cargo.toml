@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
   "crates/config",
+  "crates/error",
   "crates/filesys",
   "crates/formats",
   "crates/pixmap",
@@ -18,6 +19,7 @@ license = "GPL-3.0-or-later"
 
 [workspace.dependencies]
 precursor-config.path = "crates/config"
+precursor-error.path = "crates/error"
 precursor-filesys.path = "crates/filesys"
 precursor-formats.path = "crates/formats"
 precursor-pixmap.path = "crates/pixmap"

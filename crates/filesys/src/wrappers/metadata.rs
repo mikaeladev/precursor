@@ -1,12 +1,13 @@
 use std::fs::{self, Metadata};
-use std::io::{self, ErrorKind};
+use std::io::ErrorKind;
 use std::path::Path;
 
-use log::debug;
+use precursor_error::{Error, Result};
 
-use crate::path_error_msg;
+use crate::error::ErrorMessageWithPath;
+use crate::macros::{action_denied, action_failed};
 
-/// Queries the file system to get information about the `path`.
+/// Queries the file system for information about the `path`.
 ///
 /// This function will only traverse symlinks when `follow_symlinks` is `true`.
 ///
@@ -23,7 +24,7 @@ use crate::path_error_msg;
 pub fn get_metadata(
   path: impl AsRef<Path>,
   follow_symlinks: bool,
-) -> io::Result<Metadata> {
+) -> Result<Metadata> {
   let path = path.as_ref();
 
   let metadata = if follow_symlinks {
@@ -32,21 +33,17 @@ pub fn get_metadata(
     fs::symlink_metadata(&path)
   };
 
-  metadata.map_err(|err| {
-    let err_kind = err.kind();
+  metadata.map_err(|src| {
+    let action = "query metadata";
 
-    match err_kind {
-      ErrorKind::NotFound => io::Error::new(
-        err_kind,
-        path_error_msg!(not_found: "file or directory", path),
-      ),
-      ErrorKind::PermissionDenied => {
-        io::Error::new(err_kind, path_error_msg!(access_denied: path))
-      }
-      _ => {
-        debug!("{err}");
-        io::Error::new(err_kind, path_error_msg!(access_failed: path))
-      }
-    }
+    let src_kind = src.kind();
+
+    let msg = match src_kind {
+      ErrorKind::PermissionDenied => action_denied!(action),
+      // ErrorKind::NotFound => action_failed!(action, src_kind),
+      _ => action_failed!(action, src_kind),
+    };
+
+    Error::new(ErrorMessageWithPath::new(msg, path), src)
   })
 }

@@ -1,10 +1,11 @@
 use std::fs::{self, ReadDir};
-use std::io::{self, ErrorKind};
+use std::io::ErrorKind;
 use std::path::Path;
 
-use log::debug;
+use precursor_error::{Error, Result};
 
-use crate::path_error_msg;
+use crate::error::ErrorMessageWithPath;
+use crate::macros::{action_denied, action_failed};
 
 /// Returns an iterator over the entries within a directory.
 ///
@@ -22,36 +23,25 @@ use crate::path_error_msg;
 pub fn read_dir<S: ToString>(
   path: impl AsRef<Path>,
   kind: impl Into<Option<S>>,
-) -> io::Result<ReadDir> {
+) -> Result<ReadDir> {
   let path = path.as_ref();
 
-  fs::read_dir(path).map_err(|err| {
-    let kind = if let Some(value) = kind.into() {
-      format_args!("{} directory", value.to_string())
+  fs::read_dir(path).map_err(|src| {
+    let action = if let Some(value) = kind.into() {
+      format_args!("read {} directory", value.to_string())
     } else {
-      format_args!("directory")
+      format_args!("read directory")
     };
 
-    let action = format_args!("read {kind}");
+    let src_kind = src.kind();
 
-    let err_kind = err.kind();
+    let msg = match src_kind {
+      ErrorKind::PermissionDenied => action_denied!(action),
+      // ErrorKind::NotFound => action_failed!(action, src_kind),
+      // ErrorKind::NotADirectory => action_failed!(action, src_kind),
+      _ => action_failed!(action, src_kind),
+    };
 
-    match err_kind {
-      ErrorKind::NotADirectory => io::Error::new(
-        err_kind,
-        path_error_msg!(expected_found: "a directory", "a file", path),
-      ),
-      ErrorKind::NotFound => {
-        io::Error::new(err_kind, path_error_msg!(not_found: kind, path))
-      }
-      ErrorKind::PermissionDenied => {
-        io::Error::new(err_kind, path_error_msg!(action_denied: action, path))
-      }
-      _ => {
-        debug!("{err}");
-
-        io::Error::new(err_kind, path_error_msg!(action_failed: action, path))
-      }
-    }
+    Error::new(ErrorMessageWithPath::new(msg, path), src)
   })
 }

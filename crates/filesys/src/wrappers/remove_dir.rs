@@ -1,10 +1,11 @@
 use std::fs;
-use std::io::{self, ErrorKind};
+use std::io::ErrorKind;
 use std::path::Path;
 
-use log::debug;
+use precursor_error::{Error, Result};
 
-use crate::path_error_msg;
+use crate::error::ErrorMessageWithPath;
+use crate::macros::{action_denied, action_failed};
 
 /// Removes the directory at the provided `path`.
 ///
@@ -21,10 +22,10 @@ use crate::path_error_msg;
 pub fn remove_dir<S: ToString>(
   path: impl AsRef<Path>,
   kind: impl Into<Option<S>>,
-) -> io::Result<()> {
+) -> Result<()> {
   let path = path.as_ref();
 
-  fs::remove_dir(path).map_err(|err| {
+  fs::remove_dir(path).map_err(|src| {
     let kind = if let Some(value) = kind.into() {
       format_args!("{} directory", value.to_string())
     } else {
@@ -33,29 +34,17 @@ pub fn remove_dir<S: ToString>(
 
     let action = format_args!("remove {kind}");
 
-    let err_kind = err.kind();
+    let src_kind = src.kind();
 
-    match err_kind {
-      ErrorKind::DirectoryNotEmpty => io::Error::new(
-        err_kind,
-        path_error_msg!("directory is not empty at path", path),
-      ),
-      ErrorKind::NotADirectory => io::Error::new(
-        err_kind,
-        path_error_msg!(expected_found: "a directory", "a file", path),
-      ),
-      ErrorKind::NotFound => {
-        io::Error::new(err_kind, path_error_msg!(not_found: kind, path))
-      }
-      ErrorKind::PermissionDenied => {
-        io::Error::new(err_kind, path_error_msg!(action_denied: action, path))
-      }
-      _ => {
-        debug!("{err}");
+    let msg = match src_kind {
+      ErrorKind::PermissionDenied => action_denied!(action),
+      // ErrorKind::NotFound => action_failed!(action, src_kind),
+      // ErrorKind::NotADirectory => action_failed!(action, src_kind),
+      // ErrorKind::DirectoryNotEmpty => action_failed!(action, src_kind),
+      _ => action_failed!(action, src_kind),
+    };
 
-        io::Error::new(err_kind, path_error_msg!(action_failed: action, path))
-      }
-    }
+    Error::new(ErrorMessageWithPath::new(msg, path), src)
   })
 }
 
@@ -77,7 +66,7 @@ pub fn remove_dir<S: ToString>(
 pub fn remove_dir_all<S: ToString>(
   path: impl AsRef<Path>,
   kind: impl Into<Option<S>> + Clone,
-) -> io::Result<()> {
+) -> Result<()> {
   let path = path.as_ref();
   let path_meta = super::get_metadata(path, true)?;
 

@@ -1,4 +1,3 @@
-use std::io;
 use std::path::Path;
 
 use precursor_filesys as filesys;
@@ -175,7 +174,7 @@ fn symlink_linux_aliases(
     base_path,
     force,
   }: BuildCursorArgs,
-) -> io::Result<()> {
+) -> PrecursorResult<()> {
   let cursor_metadata = cursor.metadata();
   let cursor_name = cursor_metadata.linux_name();
   let cursor_aliases = cursor_metadata.linux_aliases();

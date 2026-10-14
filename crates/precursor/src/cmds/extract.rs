@@ -1,10 +1,10 @@
-use std::io::{self, Read, Seek, Write};
+use std::io::{Read, Seek, Write};
 use std::path::Path;
 
 use precursor_filesys::{self as filesys, InputArg};
 
-use precursor_formats::ani::{self, AniFile};
-use precursor_formats::cur::{self, CurFile, CurImage};
+use precursor_formats::ani::AniFile;
+use precursor_formats::cur::{CurFile, CurImage};
 use precursor_formats::png::PngFile;
 
 use crate::args::ExtractArgs;
@@ -70,7 +70,7 @@ fn extract_ani<R: Read>(
   reader: &mut R,
   base_path: impl AsRef<Path>,
   force: bool,
-) -> ani::ReadResult<usize> {
+) -> PrecursorResult<usize> {
   let base_path = base_path.as_ref();
 
   let ani_file = AniFile::read(reader)?;
@@ -99,7 +99,7 @@ fn extract_cur<R: Read + Seek>(
   reader: &mut R,
   base_path: impl AsRef<Path>,
   force: bool,
-) -> cur::ReadResult<usize> {
+) -> PrecursorResult<usize> {
   let base_path = base_path.as_ref();
 
   let mut icon_index = 0;
@@ -119,7 +119,7 @@ fn write_cur_icon(
   file_name: impl AsRef<Path>,
   buffer: Box<[u8]>,
   force: bool,
-) -> io::Result<()> {
+) -> PrecursorResult<()> {
   let file_ext = if buffer.starts_with(PngFile::MAGIC) {
     "png"
   } else {
@@ -136,5 +136,6 @@ fn write_cur_icon(
     filesys::create_new_file(file_path, file_ext)
   }?;
 
-  file.write_all(&buffer)
+  file.write_all(&buffer)?;
+  Ok(())
 }
