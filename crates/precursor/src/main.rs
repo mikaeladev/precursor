@@ -25,7 +25,7 @@ fn main() {
   };
 
   if let Err(err) = result {
-    debug!("{err:?}");
+    debug!("{err:#?}");
     error!("{err}");
     exit(1);
   };
