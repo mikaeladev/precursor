@@ -37,7 +37,6 @@ pub fn create_new_dir<S: ToString>(
 
     let msg = match src_kind {
       ErrorKind::PermissionDenied => action_denied!(action),
-      // ErrorKind::AlreadyExists => action_failed!(action, src_kind),
       _ => action_failed!(action, src_kind),
     };
 

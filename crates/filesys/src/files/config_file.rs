@@ -43,7 +43,6 @@ pub fn get_config_string(
         let msg = match src_kind {
           ErrorKind::PermissionDenied => action_denied!(action),
           ErrorKind::InvalidData => expected_utf8!(kind),
-          // ErrorKind::NotFound => action_failed!(action, src_kind),
           _ => action_failed!(action, src_kind),
         };
 

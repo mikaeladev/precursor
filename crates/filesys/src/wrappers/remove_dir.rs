@@ -38,9 +38,6 @@ pub fn remove_dir<S: ToString>(
 
     let msg = match src_kind {
       ErrorKind::PermissionDenied => action_denied!(action),
-      // ErrorKind::NotFound => action_failed!(action, src_kind),
-      // ErrorKind::NotADirectory => action_failed!(action, src_kind),
-      // ErrorKind::DirectoryNotEmpty => action_failed!(action, src_kind),
       _ => action_failed!(action, src_kind),
     };
 
