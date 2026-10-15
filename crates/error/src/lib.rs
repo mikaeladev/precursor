@@ -1,41 +1,46 @@
-use std::{error, result};
+use std::error::Error as StdError;
+use std::fmt::{self, Debug, Display, Formatter};
 
-use thiserror::Error;
+pub trait ErrorMessage: Display + Debug + 'static {}
+impl<T: Display + Debug + 'static> ErrorMessage for T {}
 
-#[derive(Debug, Error)]
-#[error("{message}")]
+#[derive(Debug)]
 pub struct Error {
-  message: String,
-  source: Option<Box<dyn error::Error + 'static>>,
+  message: Box<dyn ErrorMessage>,
+  source: Option<Box<dyn StdError + 'static>>,
 }
 
 impl Error {
   /// Constructs a new `Error`.
-  pub fn new<S: Into<Box<dyn error::Error>>>(
-    message: impl Into<String>,
-    source: impl Into<Option<S>>,
+  pub fn new<E: StdError + 'static>(
+    message: impl ErrorMessage,
+    source: impl Into<Option<E>>,
   ) -> Self {
     Self {
-      message: message.into(),
-      source: source.into().and_then(|err| Some(err.into())),
+      message: Box::new(message) as Box<dyn ErrorMessage>,
+      source: source
+        .into()
+        .and_then(|err| Some(Box::new(err) as Box<dyn StdError>)),
     }
   }
 
-  /// Returns a reference to the source error wrapped by this error (if any).
-  pub fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-    self.source.as_deref()
-  }
-
   /// Returns `Some` reference to the source error if it is of type `T`, or
-  /// `None` if it isn’t (if any).
-  pub fn downcast<T: error::Error + 'static>(&self) -> Option<&T> {
-    self.source.as_ref().and_then(|src| src.downcast_ref())
-  }
-
-  /// Consumes the `Error`, returning its source error (if any).
-  pub fn into_source(self) -> Option<Box<dyn error::Error + 'static>> {
-    self.source
+  /// `None` if it isn't (if any).
+  pub fn downcast<T: StdError + 'static>(&self) -> Option<&T> {
+    self.source().and_then(|src| src.downcast_ref())
   }
 }
 
-pub type Result<T> = result::Result<T, Error>;
+impl Display for Error {
+  fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", self.message)
+  }
+}
+
+impl StdError for Error {
+  fn source(&self) -> Option<&(dyn StdError + 'static)> {
+    self.source.as_deref()
+  }
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
