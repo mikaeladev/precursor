@@ -1,5 +1,5 @@
 [package]
-name = "precursor-pixmap-derive"
+name = "pixmap-derive"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

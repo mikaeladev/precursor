@@ -242,6 +242,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
+name = "pixmap"
+version = "0.1.0"
+dependencies = [
+ "indexmap",
+ "pixmap-core",
+ "pixmap-derive",
+ "thiserror",
+]
+
+[[package]]
+name = "pixmap-core"
+version = "0.1.0"
+
+[[package]]
+name = "pixmap-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "png"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -255,18 +278,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "point"
+version = "0.1.0"
+
+[[package]]
 name = "precursor"
 version = "0.1.0"
 dependencies = [
  "clap",
  "env_logger",
  "log",
+ "pixmap",
+ "point",
  "precursor-config",
  "precursor-error",
  "precursor-filesys",
  "precursor-formats",
- "precursor-pixmap",
- "precursor-point",
  "thiserror",
 ]
 
@@ -298,38 +325,11 @@ name = "precursor-formats"
 version = "0.1.0"
 dependencies = [
  "byteorder",
+ "pixmap",
  "png",
- "precursor-pixmap",
- "precursor-point",
+ "point",
  "thiserror",
 ]
-
-[[package]]
-name = "precursor-pixmap"
-version = "0.1.0"
-dependencies = [
- "indexmap",
- "precursor-pixmap-core",
- "precursor-pixmap-derive",
- "thiserror",
-]
-
-[[package]]
-name = "precursor-pixmap-core"
-version = "0.1.0"
-
-[[package]]
-name = "precursor-pixmap-derive"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "precursor-point"
-version = "0.1.0"
 
 [[package]]
 name = "proc-macro2"

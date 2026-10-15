@@ -1,6 +1,6 @@
 use std::io::{self, Read, Write};
 
-use precursor_point::Point;
+use point::Point;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 

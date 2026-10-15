@@ -6,7 +6,7 @@ license.workspace = true
 
 [dependencies]
 byteorder = "1.5.0"
+pixmap.workspace = true
 png = "0.18.1"
-precursor-pixmap.workspace = true
-precursor-point.workspace = true
+point.workspace = true
 thiserror.workspace = true

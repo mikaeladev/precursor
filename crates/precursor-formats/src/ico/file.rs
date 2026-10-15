@@ -2,9 +2,7 @@ use std::io::{self, Read, Seek, Write};
 
 use thiserror::Error;
 
-use crate::ico::dir::IconDirEntry;
-
-use super::dir::IconDir;
+use super::dir::{IconDir, IconDirEntry};
 use super::macros::wrap_u8;
 use super::traits::IcoDir;
 

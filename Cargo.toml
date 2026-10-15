@@ -1,15 +1,15 @@
 [workspace]
 resolver = "3"
 members = [
-  "crates/config",
-  "crates/error",
-  "crates/filesys",
-  "crates/formats",
   "crates/pixmap",
   "crates/pixmap-core",
   "crates/pixmap-derive",
   "crates/point",
   "crates/precursor",
+  "crates/precursor-config",
+  "crates/precursor-error",
+  "crates/precursor-filesys",
+  "crates/precursor-formats",
 ]
 
 [workspace.package]
@@ -18,16 +18,15 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 
 [workspace.dependencies]
-precursor-config.path = "crates/config"
-precursor-error.path = "crates/error"
-precursor-filesys.path = "crates/filesys"
-precursor-formats.path = "crates/formats"
-precursor-pixmap.path = "crates/pixmap"
-precursor-pixmap-core.path = "crates/pixmap-core"
-precursor-pixmap-derive.path = "crates/pixmap-derive/"
-precursor-point.path = "crates/point"
-
 log = "0.4.34"
+pixmap.path = "crates/pixmap"
+pixmap-core.path = "crates/pixmap-core"
+pixmap-derive.path = "crates/pixmap-derive"
+point.path = "crates/point"
+precursor-config.path = "crates/precursor-config"
+precursor-error.path = "crates/precursor-error"
+precursor-filesys.path = "crates/precursor-filesys"
+precursor-formats.path = "crates/precursor-formats"
 thiserror = "2.0.20"
 toml = "1.1.4"
 

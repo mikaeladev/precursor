@@ -3,8 +3,9 @@ use std::io::{BufRead, BufReader};
 
 use precursor_config::{AssetValue, RotateValue};
 use precursor_formats::png::PngFile;
-use precursor_pixmap::DynamicPixmap;
-use precursor_point::Point;
+
+use pixmap::DynamicPixmap;
+use point::Point;
 
 use crate::error::{PrecursorError, PrecursorResult};
 

@@ -1,4 +1,4 @@
-use precursor_point::Point;
+use point::Point;
 
 use crate::ico::traits::{IcoDir, IcoDirEntry};
 

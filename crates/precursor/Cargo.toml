@@ -8,12 +8,12 @@ license.workspace = true
 [dependencies]
 clap.workspace = true
 log.workspace = true
+pixmap.workspace = true
+point.workspace = true
 precursor-config.workspace = true
 precursor-error.workspace = true
 precursor-filesys.workspace = true
 precursor-formats.workspace = true
-precursor-pixmap.workspace = true
-precursor-point.workspace = true
 thiserror.workspace = true
 
 [dependencies.env_logger]

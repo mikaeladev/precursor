@@ -1,11 +1,11 @@
 [package]
-name = "precursor-pixmap"
+name = "pixmap"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
 indexmap = "2.14.0"
-precursor-pixmap-core.workspace = true
-precursor-pixmap-derive.workspace = true
+pixmap-core.workspace = true
+pixmap-derive.workspace = true
 thiserror.workspace = true

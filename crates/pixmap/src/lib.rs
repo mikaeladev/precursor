@@ -3,7 +3,7 @@ mod error;
 mod macros;
 mod variants;
 
-pub use precursor_pixmap_core::*;
+pub use pixmap_core::*;
 
 pub use dynamic::*;
 pub use error::*;

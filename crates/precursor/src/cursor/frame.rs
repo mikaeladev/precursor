@@ -1,6 +1,7 @@
 use precursor_formats::cur::{CurFile, CurImage};
 use precursor_formats::png::{PngFile, WriteResult};
-use precursor_point::Point;
+
+use point::Point;
 
 use crate::cursor::CursorIcon;
 
@@ -29,7 +30,7 @@ impl CursorFrame {
   ///
   /// # Errors
   ///
-  /// Returns the same errors as [`precursor_pixmap_png::encode`].
+  /// Returns the same errors as [`pixmap_png::encode`].
   ///
   /// # Panics
   ///

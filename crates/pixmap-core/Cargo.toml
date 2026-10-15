@@ -1,5 +1,5 @@
 [package]
-name = "precursor-pixmap-core"
+name = "pixmap-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

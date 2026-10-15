@@ -1,6 +1,6 @@
 use std::io::{BufRead, Seek, Write};
 
-use precursor_pixmap::{DynamicPixmap, Pixel};
+use pixmap::{DynamicPixmap, Pixel};
 
 use super::error::{ReadError, ReadResult, WriteResult};
 
@@ -100,7 +100,7 @@ impl PngFile {
 
     let pixmap = match color_type {
       ColorType::Indexed => {
-        use precursor_pixmap::{IndexedPixel, IndexedPixmap, RgbPixel};
+        use pixmap::{IndexedPixel, IndexedPixmap, RgbPixel};
 
         let indexed_palette = indexed_palette.unwrap();
         let (chunks, []) = indexed_palette.as_chunks::<3>() else {
@@ -125,7 +125,7 @@ impl PngFile {
       }
 
       ColorType::Luma => {
-        use precursor_pixmap::{LumaPixel, LumaPixmap};
+        use pixmap::{LumaPixel, LumaPixmap};
 
         let pixels =
           frame_buffer.into_iter().map(|y| LumaPixel { y }).collect();
@@ -134,7 +134,7 @@ impl PngFile {
       }
 
       ColorType::LumaAlpha => {
-        use precursor_pixmap::{LumaAlphaPixel, LumaAlphaPixmap};
+        use pixmap::{LumaAlphaPixel, LumaAlphaPixmap};
 
         let (chunks, []) = frame_buffer.as_chunks::<2>() else {
           unreachable!("YA buffer should always be % 2 == 0")
@@ -149,7 +149,7 @@ impl PngFile {
       }
 
       ColorType::Rgb => {
-        use precursor_pixmap::{RgbPixel, RgbPixmap};
+        use pixmap::{RgbPixel, RgbPixmap};
 
         let (chunks, []) = frame_buffer.as_chunks::<3>() else {
           unreachable!("RGB buffer should always be % 3 == 0")
@@ -164,7 +164,7 @@ impl PngFile {
       }
 
       ColorType::RgbAlpha => {
-        use precursor_pixmap::{RgbAlphaPixel, RgbAlphaPixmap};
+        use pixmap::{RgbAlphaPixel, RgbAlphaPixmap};
 
         let (chunks, []) = frame_buffer.as_chunks::<4>() else {
           unreachable!("RGBA buffer should always be % 4 == 0")

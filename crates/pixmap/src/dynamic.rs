@@ -1,4 +1,4 @@
-use precursor_pixmap_core::{IntoPixmap, Pixmap};
+use pixmap_core::{IntoPixmap, Pixmap};
 
 use crate::variants::*;
 

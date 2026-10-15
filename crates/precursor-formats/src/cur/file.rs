@@ -1,6 +1,6 @@
 use std::io::{self, Read, Seek, Write};
 
-use precursor_point::Point;
+use point::Point;
 
 use crate::ico::macros::wrap_u8;
 use crate::ico::traits::IcoDir;
