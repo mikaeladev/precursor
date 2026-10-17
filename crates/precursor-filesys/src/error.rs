@@ -1,25 +1,27 @@
 use std::fmt::{self, Debug, Display, Formatter};
 use std::path::PathBuf;
 
+use precursor_error::ErrorMessageWithAttrs;
+
 #[derive(Debug)]
-pub struct ErrorMessageWithPath {
-  message: String,
-  path: PathBuf,
-}
+pub struct ErrorMessageWithPath(ErrorMessageWithAttrs);
 
 impl ErrorMessageWithPath {
   /// Constructs a new `ErrorMessageWithPath`.
   pub fn new(message: impl Into<String>, path: impl Into<PathBuf>) -> Self {
-    Self {
-      message: message.into(),
-      path: path.into(),
-    }
+    Self(ErrorMessageWithAttrs {
+      message: Box::new(message.into()),
+      attrs: vec![(
+        "path".to_string(),
+        Box::new(path.into().display().to_string()),
+      )],
+    })
   }
 }
 
 impl Display for ErrorMessageWithPath {
   fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-    write!(f, "{}\n↳ path: {}", self.message, self.path.display())
+    Display::fmt(&self.0, f)
   }
 }
 
@@ -39,8 +41,8 @@ mod tests {
       ErrorMessageWithPath::new("hello world", PathBuf::from("foo/bar.txt"));
 
     let expected = r#"
-hello world;
-↳ path: foo/bar.txt
+hello world
+└▸ path: foo/bar.txt
 "#;
 
     assert_eq!(message.to_string(), expected.trim())
