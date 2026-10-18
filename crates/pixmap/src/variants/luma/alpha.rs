@@ -45,72 +45,78 @@ pub struct LumaAlphaPixel {
 
 impl FromPixel<LumaPixel> for LumaAlphaPixel {
   /// Converts a `LumaPixel` into a `LumaAlphaPixel`.
-  fn from_pixel(pixel: LumaPixel) -> Self {
-    Self {
-      y: pixel.y,
-      a: u8::MAX,
-    }
+  fn from_pixel(LumaPixel { y }: LumaPixel) -> Self {
+    let a = u8::MAX;
+    Self { y, a }
   }
 }
 
 impl FromPixel<RgbPixel> for LumaAlphaPixel {
   /// Converts an `RgbPixel` into a `LumaAlphaPixel`.
-  fn from_pixel(pixel: RgbPixel) -> Self {
-    Self {
-      y: LumaPixel::from_pixel(pixel).y,
-      a: u8::MAX,
-    }
+  fn from_pixel(RgbPixel { r, g, b }: RgbPixel) -> Self {
+    let y = rgb_to_y(r, g, b);
+    let a = u8::MAX;
+    Self { y, a }
   }
 }
 
 impl FromPixel<RgbAlphaPixel> for LumaAlphaPixel {
   /// Converts an `RgbAlphaPixel` into a  `LumaAlphaPixel`.
-  fn from_pixel(pixel: RgbAlphaPixel) -> Self {
-    Self {
-      y: LumaPixel::from_pixel(pixel).y,
-      a: pixel.a,
-    }
+  fn from_pixel(RgbAlphaPixel { r, g, b, a }: RgbAlphaPixel) -> Self {
+    let y = rgb_to_y(r, g, b);
+    Self { y, a }
   }
 }
 
 #[cfg(test)]
-mod pixel_tests {
-  use crate::variants::rgb::INDIAN_RED;
-
+mod tests {
   use super::*;
 
   #[test]
-  fn from_luma() {
-    // alpha defaults to 255
+  fn pixel_from_luma_opaque() {
     assert_eq!(
-      LumaAlphaPixel::from_pixel(LumaPixel { y: u8::MAX }),
-      LumaAlphaPixel {
-        y: u8::MAX,
-        a: u8::MAX
-      }
+      LumaAlphaPixel::from_pixel(luma::GREY_OPAQUE),
+      luma::GREY_ALPHA_SOLID
     );
   }
 
   #[test]
-  fn from_rgb() {
-    // rgb -> greyscale, alpha defaults to 255
+  fn pixel_from_luma_alpha_solid() {
     assert_eq!(
-      LumaAlphaPixel::from_pixel(INDIAN_RED),
-      LumaAlphaPixel { y: 116, a: u8::MAX }
+      LumaAlphaPixel::from_pixel(luma::GREY_ALPHA_SOLID),
+      luma::GREY_ALPHA_SOLID
     );
   }
 
   #[test]
-  fn from_rgb_alpha() {
-    // rgb -> greyscale, alpha gets inherited
+  fn pixel_from_luma_alpha_trans() {
     assert_eq!(
-      LumaAlphaPixel::from_pixel(RgbAlphaPixel {
-        r: INDIAN_RED.r,
-        g: INDIAN_RED.g,
-        b: INDIAN_RED.b,
-        a: 123,
-      }),
-      LumaAlphaPixel { y: 116, a: 123 }
+      LumaAlphaPixel::from_pixel(luma::GREY_ALPHA_TRANS),
+      luma::GREY_ALPHA_TRANS
+    );
+  }
+
+  #[test]
+  fn pixel_from_rgb_opaque() {
+    assert_eq!(
+      LumaAlphaPixel::from_pixel(rgb::RED_OPAQUE),
+      luma::GREY_ALPHA_SOLID
+    );
+  }
+
+  #[test]
+  fn pixel_from_rgb_alpha_solid() {
+    assert_eq!(
+      LumaAlphaPixel::from_pixel(rgb::RED_ALPHA_SOLID),
+      luma::GREY_ALPHA_SOLID
+    );
+  }
+
+  #[test]
+  fn pixel_from_rgb_alpha_trans() {
+    assert_eq!(
+      LumaAlphaPixel::from_pixel(rgb::RED_ALPHA_TRANS),
+      luma::GREY_ALPHA_TRANS
     );
   }
 }

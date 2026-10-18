@@ -47,80 +47,85 @@ pub struct RgbAlphaPixel {
 
 impl FromPixel<LumaPixel> for RgbAlphaPixel {
   /// Converts a `LumaPixel` into an `RgbAlphaPixel`.
-  fn from_pixel(pixel: LumaPixel) -> Self {
-    Self::from_pixel(RgbPixel::from_pixel(pixel))
+  fn from_pixel(LumaPixel { y }: LumaPixel) -> Self {
+    Self {
+      r: y,
+      g: y,
+      b: y,
+      a: u8::MAX,
+    }
   }
 }
 
 impl FromPixel<LumaAlphaPixel> for RgbAlphaPixel {
   /// Converts a `LumaAlphaPixel` into an `RgbAlphaPixel`.
-  fn from_pixel(pixel: LumaAlphaPixel) -> Self {
+  fn from_pixel(LumaAlphaPixel { y, a }: LumaAlphaPixel) -> Self {
     Self {
-      r: pixel.y,
-      g: pixel.y,
-      b: pixel.y,
-      a: pixel.a,
+      r: y,
+      g: y,
+      b: y,
+      a,
     }
   }
 }
 
 impl FromPixel<RgbPixel> for RgbAlphaPixel {
   /// Converts an `RgbPixel` into an `RgbAlphaPixel`.
-  fn from_pixel(pixel: RgbPixel) -> Self {
-    Self {
-      r: pixel.r,
-      g: pixel.g,
-      b: pixel.b,
-      a: u8::MAX,
-    }
+  fn from_pixel(RgbPixel { r, g, b }: RgbPixel) -> Self {
+    let a = u8::MAX;
+    Self { r, g, b, a }
   }
 }
 
 #[cfg(test)]
-mod pixel_tests {
-  use crate::variants::rgb::INDIAN_RED;
-
+mod tests {
   use super::*;
 
   #[test]
-  fn from_luma() {
-    // y gets propagated, alpha defaults to 255
+  fn pixel_from_luma_opaque() {
     assert_eq!(
-      RgbAlphaPixel::from_pixel(LumaPixel { y: 123 }),
-      RgbAlphaPixel {
-        r: 123,
-        g: 123,
-        b: 123,
-        a: 255,
-      }
-    );
+      RgbAlphaPixel::from_pixel(luma::GREY_OPAQUE),
+      rgb::GREY_ALPHA_SOLID
+    )
   }
 
   #[test]
-  fn from_luma_alpha() {
-    // y gets propagated, alpha gets inherited
+  fn pixel_from_luma_alpha_solid() {
     assert_eq!(
-      RgbAlphaPixel::from_pixel(LumaAlphaPixel { y: 123, a: 123 }),
-      RgbAlphaPixel {
-        r: 123,
-        g: 123,
-        b: 123,
-        a: 123,
-      }
-    );
+      RgbAlphaPixel::from_pixel(luma::GREY_ALPHA_SOLID),
+      rgb::GREY_ALPHA_SOLID
+    )
   }
 
   #[test]
-  fn from_rgb() {
-    // rgb gets inherited, alpha defaults to 255
+  fn pixel_from_luma_alpha_trans() {
     assert_eq!(
-      RgbAlphaPixel::from_pixel(INDIAN_RED),
-      RgbAlphaPixel {
-        r: INDIAN_RED.r,
-        g: INDIAN_RED.g,
-        b: INDIAN_RED.b,
-        a: 255,
-      }
-    );
+      RgbAlphaPixel::from_pixel(luma::GREY_ALPHA_TRANS),
+      rgb::GREY_ALPHA_TRANS
+    )
+  }
+
+  #[test]
+  fn pixel_from_rgb_opaque() {
+    assert_eq!(
+      RgbAlphaPixel::from_pixel(rgb::RED_OPAQUE),
+      rgb::RED_ALPHA_SOLID
+    )
+  }
+
+  #[test]
+  fn pixel_from_rgb_alpha_solid() {
+    assert_eq!(
+      RgbAlphaPixel::from_pixel(rgb::RED_ALPHA_SOLID),
+      rgb::RED_ALPHA_SOLID
+    )
+  }
+
+  #[test]
+  fn pixel_from_rgb_alpha_trans() {
+    assert_eq!(
+      RgbAlphaPixel::from_pixel(rgb::RED_ALPHA_TRANS),
+      rgb::RED_ALPHA_TRANS
+    )
   }
 }

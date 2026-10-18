@@ -44,63 +44,70 @@ pub struct LumaPixel {
 
 impl FromPixel<LumaAlphaPixel> for LumaPixel {
   /// Converts a `LumaAlphaPixel` into a `LumaPixel`.
-  fn from_pixel(pixel: LumaAlphaPixel) -> Self {
-    Self { y: pixel.y }
+  fn from_pixel(LumaAlphaPixel { y, a: _ }: LumaAlphaPixel) -> Self {
+    Self { y }
   }
 }
 
 impl FromPixel<RgbPixel> for LumaPixel {
   /// Converts an `RgbPixel` into a `LumaPixel`.
-  fn from_pixel(pixel: RgbPixel) -> Self {
-    Self {
-      y: (pixel.r as f32 * 0.2126
-        + pixel.g as f32 * 0.7152
-        + pixel.b as f32 * 0.0722) as u8,
-    }
+  fn from_pixel(RgbPixel { r, g, b }: RgbPixel) -> Self {
+    let y = rgb_to_y(r, g, b);
+    Self { y }
   }
 }
 
 impl FromPixel<RgbAlphaPixel> for LumaPixel {
   /// Converts an `RgbAlphaPixel` into a `LumaPixel`.
-  fn from_pixel(pixel: RgbAlphaPixel) -> Self {
-    Self::from_pixel(RgbPixel::from_pixel(pixel))
+  fn from_pixel(RgbAlphaPixel { r, g, b, a: _ }: RgbAlphaPixel) -> Self {
+    let y = rgb_to_y(r, g, b);
+    Self { y }
   }
 }
 
 #[cfg(test)]
-mod pixel_tests {
+mod tests {
   use super::*;
 
   #[test]
-  fn from_luma_alpha() {
-    // alpha gets droppped
+  fn pixel_from_luma_opaque() {
+    assert_eq!(LumaPixel::from_pixel(luma::GREY_OPAQUE), luma::GREY_OPAQUE);
+  }
+
+  #[test]
+  fn pixel_from_luma_alpha_solid() {
     assert_eq!(
-      LumaPixel::from_pixel(LumaAlphaPixel {
-        y: u8::MAX,
-        a: u8::MAX
-      }),
-      LumaPixel { y: u8::MAX }
+      LumaPixel::from_pixel(luma::GREY_ALPHA_SOLID),
+      luma::GREY_OPAQUE
     );
   }
 
   #[test]
-  fn from_rgb() {
-    // rgb -> greyscale
-    assert_eq!(LumaPixel::from_pixel(INDIAN_RED), LumaPixel { y: 116 });
-    assert_eq!(LumaPixel::from_pixel(WHITE), LumaPixel { y: u8::MAX });
+  fn pixel_from_luma_alpha_trans() {
+    assert_eq!(
+      LumaPixel::from_pixel(luma::GREY_ALPHA_TRANS),
+      luma::GREY_OPAQUE
+    );
   }
 
   #[test]
-  fn from_rgb_alpha() {
-    // rgb -> greyscale, alpha gets dropped
+  fn pixel_from_rgb_opaque() {
+    assert_eq!(LumaPixel::from_pixel(rgb::RED_OPAQUE), luma::GREY_OPAQUE);
+  }
+
+  #[test]
+  fn pixel_from_rgb_alpha_solid() {
     assert_eq!(
-      LumaPixel::from_pixel(RgbAlphaPixel {
-        r: INDIAN_RED.r,
-        g: INDIAN_RED.g,
-        b: INDIAN_RED.b,
-        a: u8::MAX,
-      }),
-      LumaPixel { y: 116 }
+      LumaPixel::from_pixel(rgb::RED_ALPHA_SOLID),
+      luma::GREY_OPAQUE
+    );
+  }
+
+  #[test]
+  fn pixel_from_rgb_alpha_trans() {
+    assert_eq!(
+      LumaPixel::from_pixel(rgb::RED_ALPHA_TRANS),
+      luma::GREY_OPAQUE
     );
   }
 }

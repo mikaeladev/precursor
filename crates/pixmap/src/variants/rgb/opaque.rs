@@ -44,83 +44,64 @@ pub struct RgbPixel {
   pub b: u8,
 }
 
+impl FromPixel<RgbAlphaPixel> for RgbPixel {
+  /// Converts an `RgbAlphaPixel` into an `RgbPixel`.
+  fn from_pixel(RgbAlphaPixel { r, g, b, a: _ }: RgbAlphaPixel) -> Self {
+    Self { r, g, b }
+  }
+}
+
 impl FromPixel<LumaPixel> for RgbPixel {
   /// Converts a `LumaPixel` into an `RgbPixel`.
-  fn from_pixel(pixel: LumaPixel) -> Self {
-    Self {
-      r: pixel.y,
-      g: pixel.y,
-      b: pixel.y,
-    }
+  fn from_pixel(LumaPixel { y }: LumaPixel) -> Self {
+    Self { r: y, g: y, b: y }
   }
 }
 
 impl FromPixel<LumaAlphaPixel> for RgbPixel {
   /// Converts a `LumaAlphaPixel` into an `RgbPixel`.
-  fn from_pixel(pixel: LumaAlphaPixel) -> Self {
-    Self::from_pixel(LumaPixel::from_pixel(pixel))
-  }
-}
-
-impl FromPixel<RgbAlphaPixel> for RgbPixel {
-  /// Converts an `RgbAlphaPixel` into an `RgbPixel`.
-  fn from_pixel(pixel: RgbAlphaPixel) -> Self {
-    Self {
-      r: pixel.r,
-      g: pixel.g,
-      b: pixel.b,
-    }
+  fn from_pixel(LumaAlphaPixel { y, a: _ }: LumaAlphaPixel) -> Self {
+    Self { r: y, g: y, b: y }
   }
 }
 
 #[cfg(test)]
-mod pixel_tests {
+mod tests {
   use super::*;
 
-  pub const WHITE: RgbPixel = RgbPixel {
-    r: u8::MAX,
-    g: u8::MAX,
-    b: u8::MAX,
-  };
-
-  pub const INDIAN_RED: RgbPixel = RgbPixel {
-    r: 205,
-    g: 92,
-    b: 92,
-  };
-
   #[test]
-  fn from_luma() {
-    // y gets propagated
-    assert_eq!(RgbPixel::from_pixel(LumaPixel { y: u8::MAX }), WHITE);
+  fn pixel_from_luma_opaque() {
+    assert_eq!(RgbPixel::from_pixel(luma::GREY_OPAQUE), rgb::GREY_OPAQUE)
   }
 
   #[test]
-  fn from_luma_alpha() {
-    // alpha gets dropped
+  fn pixel_from_luma_alpha_solid() {
     assert_eq!(
-      RgbPixel::from_pixel(LumaAlphaPixel {
-        y: u8::MAX,
-        a: u8::MAX
-      }),
-      WHITE
-    );
+      RgbPixel::from_pixel(luma::GREY_ALPHA_SOLID),
+      rgb::GREY_OPAQUE
+    )
   }
 
   #[test]
-  fn from_rgb_alpha() {
-    // alpha gets dropped
+  fn pixel_from_luma_alpha_trans() {
     assert_eq!(
-      RgbPixel::from_pixel(RgbAlphaPixel {
-        r: INDIAN_RED.r,
-        g: INDIAN_RED.g,
-        b: INDIAN_RED.b,
-        a: u8::MAX,
-      }),
-      INDIAN_RED
-    );
+      RgbPixel::from_pixel(luma::GREY_ALPHA_TRANS),
+      rgb::GREY_OPAQUE
+    )
+  }
+
+  #[test]
+  fn pixel_from_rgb_opaque() {
+    assert_eq!(RgbPixel::from_pixel(rgb::RED_OPAQUE), rgb::RED_OPAQUE)
+  }
+
+  #[test]
+  fn pixel_from_rgb_alpha_solid() {
+    assert_eq!(RgbPixel::from_pixel(rgb::RED_ALPHA_SOLID), rgb::RED_OPAQUE)
+  }
+
+  #[test]
+  fn pixel_from_rgb_alpha_trans() {
+    assert_eq!(RgbPixel::from_pixel(rgb::RED_ALPHA_TRANS), rgb::RED_OPAQUE)
   }
 }
-
-#[cfg(test)]
-pub(crate) use pixel_tests::{INDIAN_RED, WHITE};
