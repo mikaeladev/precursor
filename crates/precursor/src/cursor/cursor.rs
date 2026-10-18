@@ -4,7 +4,7 @@ use precursor_formats::cur::CurFile;
 use precursor_formats::png::WriteResult;
 use precursor_formats::xcur::{XcursorChunk, XcursorFile};
 
-use pixmap::{IntoPixmap, RgbAlphaPixmap};
+use pixmap::{IntoPixmap, Pixmap, RgbAlphaPixel, RgbAlphaPixmap};
 
 use crate::cursor::{CursorDuration, CursorFrame, CursorIcon};
 use crate::error::PrecursorResult;
@@ -89,11 +89,13 @@ impl Cursor {
 
       for icon in &frame.icons {
         let rgba: RgbAlphaPixmap = icon.pixmap.clone().into_pixmap();
-        let mut pixels: Box<[u8]> = rgba.into_iter().collect();
 
-        for chunk in pixels.as_chunks_mut::<4>().0 {
-          chunk.swap(0, 2); // rgba -> bgra
-        }
+        let bgra_iter = rgba.into_pixels().into_iter().flat_map(|pixel| {
+          let RgbAlphaPixel { r, g, b, a } = pixel;
+          [b, g, r, a]
+        });
+
+        let pixels: Vec<u8> = bgra_iter.collect();
 
         chunks.push(XcursorChunk::Image {
           nominal: icon.nominal,

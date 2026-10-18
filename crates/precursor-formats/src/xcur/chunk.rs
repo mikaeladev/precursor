@@ -10,7 +10,7 @@ use super::error::{ReadError, ReadResult};
 pub enum XcursorChunk {
   Comment {
     kind: XcursorCommentKind,
-    value: Box<str>,
+    value: String,
   },
   Image {
     nominal: u32,
@@ -18,7 +18,7 @@ pub enum XcursorChunk {
     height: u32,
     hotspot: Point<u32>,
     duration: u32,
-    pixels: Box<[u8]>,
+    pixels: Vec<u8>,
   },
 }
 
@@ -58,7 +58,7 @@ impl XcursorChunk {
         let mut buffer = vec![0; data_len];
         reader.read_exact(&mut buffer)?;
 
-        let value = String::from_utf8(buffer)?.into_boxed_str();
+        let value = String::from_utf8(buffer)?;
 
         Ok(Self::Comment { kind, value })
       }
@@ -78,10 +78,8 @@ impl XcursorChunk {
 
         let duration = reader.read_u32::<LittleEndian>()?;
 
-        let mut buffer = vec![0; width as usize * height as usize * 4];
-        reader.read_exact(&mut buffer)?;
-
-        let pixels = buffer.into_boxed_slice();
+        let mut pixels = vec![0; width as usize * height as usize * 4];
+        reader.read_exact(&mut pixels)?;
 
         Ok(Self::Image {
           nominal,
@@ -104,15 +102,19 @@ impl XcursorChunk {
   pub fn write<W: Write>(self, writer: &mut W) -> io::Result<usize> {
     match self {
       Self::Comment { kind, value } => {
+        let data_len = value.len();
+
         writer.write_u32::<LittleEndian>(Self::COMMENT_HEADER_SIZE as u32)?;
         writer.write_u32::<LittleEndian>(Self::COMMENT_TYPE)?;
         writer.write_u32::<LittleEndian>(kind as u32)?;
         writer.write_u32::<LittleEndian>(Self::VERSION)?;
-        writer.write_u32::<LittleEndian>(value.len() as u32)?;
+        writer.write_u32::<LittleEndian>(data_len as u32)?;
 
-        writer.write_all(value.as_bytes())?;
+        for byte in value.into_bytes() {
+          writer.write_u8(byte)?;
+        }
 
-        Ok(Self::COMMENT_HEADER_SIZE as usize + value.len())
+        Ok(Self::COMMENT_HEADER_SIZE as usize + data_len)
       }
 
       Self::Image {
@@ -123,6 +125,8 @@ impl XcursorChunk {
         duration,
         pixels,
       } => {
+        let data_len = pixels.len();
+
         writer.write_u32::<LittleEndian>(Self::IMAGE_HEADER_SIZE as u32)?;
         writer.write_u32::<LittleEndian>(Self::IMAGE_TYPE)?;
         writer.write_u32::<LittleEndian>(nominal)?;
@@ -133,9 +137,11 @@ impl XcursorChunk {
         writer.write_u32::<LittleEndian>(hotspot.y)?;
         writer.write_u32::<LittleEndian>(duration)?;
 
-        writer.write_all(&pixels)?;
+        for byte in pixels {
+          writer.write_u8(byte)?;
+        }
 
-        Ok(Self::IMAGE_HEADER_SIZE + pixels.len())
+        Ok(Self::IMAGE_HEADER_SIZE + data_len)
       }
     }
   }
@@ -143,7 +149,7 @@ impl XcursorChunk {
   /// Returns how many bytes will be written by [`write`].
   ///
   /// [`write`]: Self::write
-  pub const fn exact_size(&self) -> usize {
+  pub fn exact_size(&self) -> usize {
     match self {
       Self::Comment { value, .. } => Self::COMMENT_HEADER_SIZE + value.len(),
       Self::Image { pixels, .. } => Self::IMAGE_HEADER_SIZE + pixels.len(),
@@ -191,7 +197,7 @@ mod tests {
   fn comment_chunk() -> XcursorChunk {
     XcursorChunk::Comment {
       kind: XcursorCommentKind::Other,
-      value: Box::from("hello world"),
+      value: "hello world".to_string(),
     }
   }
 
@@ -242,25 +248,23 @@ mod tests {
   ];
 
   fn image_chunk() -> XcursorChunk {
-    const PIXELS: &[u8] = &[
-      0x00, 0x00, 0x00, 0xFF, // 0,0 - black
-      0x00, 0x00, 0x00, 0xFF, // 1,0 - black
-      0x00, 0x00, 0x00, 0xFF, // 2,0 - black
-      0x00, 0x00, 0x00, 0xFF, // 0,1 - black
-      0xFF, 0xFF, 0xFF, 0xFF, // 1,1 - white
-      0x00, 0x00, 0x00, 0xFF, // 2,1 - black
-      0x00, 0x00, 0x00, 0xFF, // 0,2 - black
-      0x00, 0x00, 0x00, 0xFF, // 1,2 - black
-      0x00, 0x00, 0x00, 0x00, // 2,2 - trans
-    ];
-
     XcursorChunk::Image {
       nominal: 3,
       width: 3,
       height: 3,
       hotspot: Point { x: 0, y: 0 },
       duration: 0,
-      pixels: Box::from(PIXELS),
+      pixels: vec![
+        0x00, 0x00, 0x00, 0xFF, // 0,0 - black
+        0x00, 0x00, 0x00, 0xFF, // 1,0 - black
+        0x00, 0x00, 0x00, 0xFF, // 2,0 - black
+        0x00, 0x00, 0x00, 0xFF, // 0,1 - black
+        0xFF, 0xFF, 0xFF, 0xFF, // 1,1 - white
+        0x00, 0x00, 0x00, 0xFF, // 2,1 - black
+        0x00, 0x00, 0x00, 0xFF, // 0,2 - black
+        0x00, 0x00, 0x00, 0xFF, // 1,2 - black
+        0x00, 0x00, 0x00, 0x00, // 2,2 - trans
+      ],
     }
   }
 
