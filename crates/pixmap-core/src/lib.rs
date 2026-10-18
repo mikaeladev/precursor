@@ -56,6 +56,10 @@ mod tests {
       &mut self.pixels
     }
 
+    fn into_pixels(self) -> Vec<TestPixel> {
+      self.pixels
+    }
+
     fn scale_up(&mut self, factor: usize) {
       ops::scale_up_in_place(
         &mut self.width,

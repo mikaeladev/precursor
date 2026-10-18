@@ -79,6 +79,10 @@ pub fn pixmap_derive(input: TokenStream) -> TokenStream {
         &mut self.pixels
       }
 
+      fn into_pixels(self) -> Vec<#pixel_type> {
+        self.pixels
+      }
+
       fn scale_up(&mut self, factor: usize) {
         pixmap_core::ops::scale_up_in_place(
           &mut self.width,

@@ -9,19 +9,19 @@ pub trait Pixmap: Clone + PartialEq + Eq {
   /// Returns the height of the pixmap.
   fn height(&self) -> u32;
 
-  /// Returns a slice of the underlying pixel `Vec`.
-  fn pixels(&self) -> &[Self::Pixel];
-
-  /// Returns a mutable slice of the underlying pixel `Vec`.
-  fn pixels_mut(&mut self) -> &mut [Self::Pixel];
-
-  /// Scales the pixmap up by `factor`.
-  fn scale_up(&mut self, factor: usize);
-
   /// Returns the width and height of the pixmap as a tuple.
   fn dimensions(&self) -> (u32, u32) {
     (self.width(), self.height())
   }
+
+  /// Returns a slice of the underlying vector of pixels.
+  fn pixels(&self) -> &[Self::Pixel];
+
+  /// Returns a mutable slice of the underlying vector of pixels.
+  fn pixels_mut(&mut self) -> &mut [Self::Pixel];
+
+  /// Converts the pixmap into a vector of pixels.
+  fn into_pixels(self) -> Vec<Self::Pixel>;
 
   /// Returns `Some` reference to the pixel at `(x,y)`.
   ///
@@ -87,6 +87,9 @@ pub trait Pixmap: Clone + PartialEq + Eq {
   fn set_pixel(&mut self, x: u32, y: u32, p: Self::Pixel) {
     *self.get_pixel_mut(x, y).unwrap() = p.into();
   }
+
+  /// Scales the pixmap up by `factor`.
+  fn scale_up(&mut self, factor: usize);
 
   /// Flips the pixmap horizontally.
   fn flip_horizontal(&mut self) {
