@@ -10,19 +10,19 @@ pub struct IndexedPixmap {
   pub(crate) height: u32,
   pub(crate) pixels: Vec<IndexedPixel>,
   pub(crate) palette: Vec<RgbPixel>,
-  pub(crate) trns: Option<Vec<u8>>,
+  pub(crate) alpha: Option<Vec<u8>>,
 }
 
 impl IndexedPixmap {
-  /// Returns a slice of the underlying palette `Vec`.
+  /// Returns a slice of the underlying palette vector.
   pub const fn palette(&self) -> &[RgbPixel] {
     self.palette.as_slice()
   }
 
-  /// Returns `Some` slice of the underlying trns `Vec`.
-  pub const fn trns(&self) -> Option<&[u8]> {
-    if let Some(trns) = &self.trns {
-      Some(trns.as_slice())
+  /// Returns `Some` slice of the underlying alpha vector`.
+  pub const fn alpha(&self) -> Option<&[u8]> {
+    if let Some(alpha) = &self.alpha {
+      Some(alpha.as_slice())
     } else {
       None
     }
@@ -31,7 +31,7 @@ impl IndexedPixmap {
 
 impl_pixmap_new!(IndexedPixmap, {
   palette; Vec::<RgbPixel>,
-  trns; Option::<Vec<u8>>
+  alpha; Option::<Vec<u8>>
 });
 
 impl_from_paletted_for_indexed_opaque!(

@@ -117,10 +117,10 @@ impl PngFile {
           .map(|chunk| RgbPixel::from_bytes(*chunk))
           .collect();
 
-        let trns = indexed_alpha.and_then(|bytes| Some(bytes.into_owned()));
+        let alpha = indexed_alpha.and_then(|bytes| Some(bytes.into_owned()));
 
         DynamicPixmap::Indexed(IndexedPixmap::new(
-          width, height, pixels, palette, trns,
+          width, height, pixels, palette, alpha,
         ))
       }
 
@@ -221,8 +221,8 @@ impl PngFile {
 
         encoder.set_palette(palette);
 
-        if let Some(vec) = pixmap.trns() {
-          encoder.set_trns(vec);
+        if let Some(alpha) = pixmap.alpha() {
+          encoder.set_trns(alpha);
         }
 
         png::ColorType::Indexed

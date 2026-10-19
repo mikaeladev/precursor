@@ -86,7 +86,7 @@ macro_rules! impl_from_paletted_for_indexed_opaque {
           height: pixmap.height,
           pixels: pixels.collect(),
           palette: palette.into_iter().collect(),
-          trns: None,
+          alpha: None,
         }
       }
     }
@@ -105,17 +105,17 @@ macro_rules! impl_from_paletted_for_indexed_alpha {
         use crate::RgbPixel;
 
         let mut palette = indexmap::IndexSet::with_capacity(u8::MAX as usize);
-        let mut trns = Vec::with_capacity(u8::MAX as usize);
+        let mut alpha = Vec::with_capacity(u8::MAX as usize);
 
         let mut sorted = pixmap.pixels.to_vec();
         sorted.sort_by(|a, b| a.a.cmp(&b.a));
 
         for pixel in sorted {
-          let alpha = pixel.a;
+          let a = pixel.a;
           let (_, exists) = palette.insert_full(pixel.into_pixel());
 
-          if alpha != u8::MAX && !exists {
-            trns.push(alpha);
+          if a != u8::MAX && !exists {
+            alpha.push(a);
           }
         }
 
@@ -129,7 +129,7 @@ macro_rules! impl_from_paletted_for_indexed_alpha {
           height: pixmap.height,
           pixels: pixels.collect(),
           palette: palette.into_iter().collect(),
-          trns: Some(trns),
+          alpha: Some(alpha),
         }
       }
     }
@@ -174,10 +174,10 @@ macro_rules! impl_from_indexed_for_paletted_alpha {
           let mut pixel: <Self as Pixmap>::Pixel =
             pixmap.palette[index].into_pixel();
 
-          if let Some(trns) = &pixmap.trns
-            && let Some(alpha) = trns.get(index)
+          if let Some(alpha) = &pixmap.alpha
+            && let Some(a) = alpha.get(index)
           {
-            pixel.a = *alpha;
+            pixel.a = *a;
           };
 
           pixel
