@@ -14,6 +14,18 @@ pub struct LumaAlphaPixmap {
 impl_pixmap_new!(LumaAlphaPixmap);
 
 impl_from_paletted_for_paletted!(
+  BgrPixmap,
+  LumaAlphaPixmap,
+  "Converts a [`BgrPixmap`] into a [`LumaAlphaPixmap`]."
+);
+
+impl_from_paletted_for_paletted!(
+  BgrAlphaPixmap,
+  LumaAlphaPixmap,
+  "Converts a [`BgrAlphaPixmap`] into a [`LumaAlphaPixmap`]."
+);
+
+impl_from_paletted_for_paletted!(
   LumaPixmap,
   LumaAlphaPixmap,
   "Converts a [`LumaPixmap`] into a [`LumaAlphaPixmap`]."
@@ -43,6 +55,23 @@ pub struct LumaAlphaPixel {
   pub a: u8,
 }
 
+impl FromPixel<BgrPixel> for LumaAlphaPixel {
+  /// Converts a `BgrPixel` into a `LumaAlphaPixel`.
+  fn from_pixel(BgrPixel { b, g, r }: BgrPixel) -> Self {
+    let y = rgb_to_y(r, g, b);
+    let a = u8::MAX;
+    Self { y, a }
+  }
+}
+
+impl FromPixel<BgrAlphaPixel> for LumaAlphaPixel {
+  /// Converts a `BgrAlphaPixel` into a `LumaAlphaPixel`.
+  fn from_pixel(BgrAlphaPixel { b, g, r, a }: BgrAlphaPixel) -> Self {
+    let y = rgb_to_y(r, g, b);
+    Self { y, a }
+  }
+}
+
 impl FromPixel<LumaPixel> for LumaAlphaPixel {
   /// Converts a `LumaPixel` into a `LumaAlphaPixel`.
   fn from_pixel(LumaPixel { y }: LumaPixel) -> Self {
@@ -61,7 +90,7 @@ impl FromPixel<RgbPixel> for LumaAlphaPixel {
 }
 
 impl FromPixel<RgbAlphaPixel> for LumaAlphaPixel {
-  /// Converts an `RgbAlphaPixel` into a  `LumaAlphaPixel`.
+  /// Converts an `RgbAlphaPixel` into a `LumaAlphaPixel`.
   fn from_pixel(RgbAlphaPixel { r, g, b, a }: RgbAlphaPixel) -> Self {
     let y = rgb_to_y(r, g, b);
     Self { y, a }
@@ -71,6 +100,30 @@ impl FromPixel<RgbAlphaPixel> for LumaAlphaPixel {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn pixel_from_bgr_opaque() {
+    assert_eq!(
+      LumaAlphaPixel::from_pixel(bgr::RED_OPAQUE),
+      luma::GREY_ALPHA_SOLID
+    );
+  }
+
+  #[test]
+  fn pixel_from_bgr_alpha_solid() {
+    assert_eq!(
+      LumaAlphaPixel::from_pixel(bgr::RED_ALPHA_SOLID),
+      luma::GREY_ALPHA_SOLID
+    );
+  }
+
+  #[test]
+  fn pixel_from_bgr_alpha_trans() {
+    assert_eq!(
+      LumaAlphaPixel::from_pixel(bgr::RED_ALPHA_TRANS),
+      luma::GREY_ALPHA_TRANS
+    );
+  }
 
   #[test]
   fn pixel_from_luma_opaque() {

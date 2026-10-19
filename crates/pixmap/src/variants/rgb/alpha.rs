@@ -14,6 +14,18 @@ pub struct RgbAlphaPixmap {
 impl_pixmap_new!(RgbAlphaPixmap);
 
 impl_from_paletted_for_paletted!(
+  BgrPixmap,
+  RgbAlphaPixmap,
+  "Converts a [`BgrPixmap`] into an [`RgbAlphaPixmap`]."
+);
+
+impl_from_paletted_for_paletted!(
+  BgrAlphaPixmap,
+  RgbAlphaPixmap,
+  "Converts a [`BgrAlphaPixmap`] into an [`RgbAlphaPixmap`]."
+);
+
+impl_from_paletted_for_paletted!(
   LumaPixmap,
   RgbAlphaPixmap,
   "Converts a [`LumaPixmap`] into an [`RgbAlphaPixmap`]."
@@ -43,6 +55,21 @@ pub struct RgbAlphaPixel {
   pub g: u8,
   pub b: u8,
   pub a: u8,
+}
+
+impl FromPixel<BgrPixel> for RgbAlphaPixel {
+  /// Converts a `BgrPixel` into an `RgbAlphaPixel`.
+  fn from_pixel(BgrPixel { b, g, r }: BgrPixel) -> Self {
+    let a = u8::MAX;
+    Self { r, g, b, a }
+  }
+}
+
+impl FromPixel<BgrAlphaPixel> for RgbAlphaPixel {
+  /// Converts a `BgrAlphaPixel` into an `RgbAlphaPixel`.
+  fn from_pixel(BgrAlphaPixel { b, g, r, a }: BgrAlphaPixel) -> Self {
+    Self { r, g, b, a }
+  }
 }
 
 impl FromPixel<LumaPixel> for RgbAlphaPixel {
@@ -80,6 +107,30 @@ impl FromPixel<RgbPixel> for RgbAlphaPixel {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn pixel_from_bgr_opaque() {
+    assert_eq!(
+      RgbAlphaPixel::from_pixel(bgr::RED_OPAQUE),
+      rgb::RED_ALPHA_SOLID
+    )
+  }
+
+  #[test]
+  fn pixel_from_bgr_alpha_solid() {
+    assert_eq!(
+      RgbAlphaPixel::from_pixel(bgr::RED_ALPHA_SOLID),
+      rgb::RED_ALPHA_SOLID
+    )
+  }
+
+  #[test]
+  fn pixel_from_bgr_alpha_trans() {
+    assert_eq!(
+      RgbAlphaPixel::from_pixel(bgr::RED_ALPHA_TRANS),
+      rgb::RED_ALPHA_TRANS
+    )
+  }
 
   #[test]
   fn pixel_from_luma_opaque() {

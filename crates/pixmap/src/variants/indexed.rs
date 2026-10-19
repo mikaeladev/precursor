@@ -35,6 +35,18 @@ impl_pixmap_new!(IndexedPixmap, {
 });
 
 impl_from_paletted_for_indexed_opaque!(
+  BgrPixmap,
+  IndexedPixmap<IndexedPixel>,
+  "Converts a [`BgrPixmap`] into an [`IndexedPixmap`]."
+);
+
+impl_from_paletted_for_indexed_opaque!(
+  BgrAlphaPixmap,
+  IndexedPixmap<IndexedPixel>,
+  "Converts a [`BgrAlphaPixmap`] into an [`IndexedPixmap`]."
+);
+
+impl_from_paletted_for_indexed_opaque!(
   LumaPixmap,
   IndexedPixmap<IndexedPixel>,
   "Converts a [`LumaPixmap`] into an [`IndexedPixmap`]."

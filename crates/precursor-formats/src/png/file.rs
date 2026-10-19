@@ -1,6 +1,6 @@
 use std::io::{BufRead, Seek, Write};
 
-use pixmap::{DynamicPixmap, Pixel};
+use pixmap::{DynamicPixmap, IntoPixmap, Pixel, RgbAlphaPixmap, RgbPixmap};
 
 use super::error::{ReadError, ReadResult, WriteResult};
 
@@ -195,7 +195,19 @@ impl PngFile {
     encoder.set_depth(png::BitDepth::Eight);
     encoder.set_compression(png::Compression::High);
 
-    let color_type = match &self.pixmap {
+    let pixmap = match self.pixmap {
+      DynamicPixmap::Bgr(bgr) => {
+        let rgb: RgbPixmap = bgr.into_pixmap();
+        DynamicPixmap::Rgb(rgb)
+      }
+      DynamicPixmap::BgrAlpha(bgra) => {
+        let rgb: RgbAlphaPixmap = bgra.into_pixmap();
+        DynamicPixmap::RgbAlpha(rgb)
+      }
+      _ => self.pixmap,
+    };
+
+    let color_type = match &pixmap {
       DynamicPixmap::Luma(_) => png::ColorType::Grayscale,
       DynamicPixmap::LumaAlpha(_) => png::ColorType::GrayscaleAlpha,
       DynamicPixmap::Rgb(_) => png::ColorType::Rgb,
@@ -215,13 +227,14 @@ impl PngFile {
 
         png::ColorType::Indexed
       }
+      _ => unreachable!(),
     };
 
     encoder.set_color(color_type);
 
     let mut png_writer = encoder.write_header()?;
 
-    png_writer.write_image_data(&self.pixmap.concat())?;
+    png_writer.write_image_data(&pixmap.concat())?;
     Ok(png_writer.finish()?)
   }
 
