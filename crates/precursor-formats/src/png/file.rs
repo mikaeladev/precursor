@@ -1,6 +1,6 @@
 use std::io::{BufRead, Seek, Write};
 
-use pixmap::{DynamicPixmap, IntoPixmap, Pixel, RgbAlphaPixmap, RgbPixmap};
+use pixmap::{DynamicPixmap, IntoPixmap, Pixel, Pixmap};
 
 use super::error::{ReadError, ReadResult, WriteResult};
 
@@ -197,11 +197,11 @@ impl PngFile {
 
     let pixmap = match self.pixmap {
       DynamicPixmap::Bgr(bgr) => {
-        let rgb: RgbPixmap = bgr.into_pixmap();
+        let rgb: pixmap::RgbPixmap = bgr.into_pixmap();
         DynamicPixmap::Rgb(rgb)
       }
       DynamicPixmap::BgrAlpha(bgra) => {
-        let rgb: RgbAlphaPixmap = bgra.into_pixmap();
+        let rgb: pixmap::RgbAlphaPixmap = bgra.into_pixmap();
         DynamicPixmap::RgbAlpha(rgb)
       }
       _ => self.pixmap,
@@ -234,7 +234,7 @@ impl PngFile {
 
     let mut png_writer = encoder.write_header()?;
 
-    png_writer.write_image_data(&pixmap.concat())?;
+    png_writer.write_image_data(&pixmap.flatten())?;
     Ok(png_writer.finish()?)
   }
 

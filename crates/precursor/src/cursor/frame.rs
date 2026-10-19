@@ -1,6 +1,7 @@
 use precursor_formats::cur::{CurFile, CurImage};
 use precursor_formats::png::{PngFile, WriteResult};
 
+use pixmap::Pixmap;
 use point::Point;
 
 use crate::cursor::CursorIcon;
