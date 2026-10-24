@@ -4,7 +4,7 @@ use precursor_formats::png::{PngFile, WriteResult};
 use pixmap::Pixmap;
 use point::Point;
 
-use crate::cursor::CursorIcon;
+use crate::CursorIcon;
 
 #[derive(Debug, Clone)]
 pub struct CursorFrame {

@@ -1,4 +1,5 @@
 use precursor_config::{CursorConfig, CursorTargets, CursorVariant};
+use precursor_error::Result;
 use precursor_formats::ani::AniFile;
 use precursor_formats::cur::CurFile;
 use precursor_formats::png::WriteResult;
@@ -6,8 +7,7 @@ use precursor_formats::xcur::{XcursorChunk, XcursorFile};
 
 use pixmap::{IntoPixmap, Pixmap, RgbAlphaPixel, RgbAlphaPixmap};
 
-use crate::cursor::{CursorDuration, CursorFrame, CursorIcon};
-use crate::error::PrecursorResult;
+use crate::{CursorDuration, CursorFrame, CursorIcon};
 
 #[derive(Debug, Clone)]
 pub struct Cursor {
@@ -122,7 +122,7 @@ impl Cursor {
       targets,
       variant,
     }: CursorConfig,
-  ) -> PrecursorResult<Self> {
+  ) -> Result<Self> {
     use CursorVariant::*;
 
     let frames = match variant {

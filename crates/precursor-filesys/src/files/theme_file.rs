@@ -1,9 +1,20 @@
 use std::io::{self, Write};
 
 use precursor_config::PackageConfig;
+use precursor_error::{Error, Result};
 
 // TODO: doc
-pub fn write_icon_theme_index(
+pub fn write_theme_index(
+  writer: &mut impl Write,
+  config: PackageConfig,
+) -> Result<()> {
+  write_theme_index_logic(writer, config).map_err(|src| {
+    Error::new(format!("failed to write theme index; {}", src.kind()), src)
+  })
+}
+
+// TODO: doc
+fn write_theme_index_logic(
   writer: &mut impl Write,
   config: PackageConfig,
 ) -> io::Result<()> {
@@ -60,7 +71,7 @@ mod tests {
 
     let mut raw_value = Vec::new();
 
-    write_icon_theme_index(&mut raw_value, config).unwrap();
+    write_theme_index(&mut raw_value, config).unwrap();
 
     let raw_expected = r#"[Icon Theme]
 Name=name
@@ -102,7 +113,7 @@ Comment=comment
 
     let mut raw_value = Vec::new();
 
-    write_icon_theme_index(&mut raw_value, config).unwrap();
+    write_theme_index(&mut raw_value, config).unwrap();
 
     let raw_expected = r#"[Icon Theme]
 Name=name

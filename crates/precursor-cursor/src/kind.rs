@@ -1,12 +1,15 @@
 use std::ffi::OsStr;
 use std::io::{self, Read, Seek};
 
-use crate::args::CursorKindHint;
+use clap::ValueEnum;
 
+#[derive(Debug, Clone, ValueEnum)]
 pub enum CursorKind {
   Ani,
   Cur,
+  #[clap(aliases = ["scalable"])]
   Svg,
+  #[clap(aliases = ["x11", "xcursor"])]
   Xcur,
 }
 
@@ -49,17 +52,6 @@ impl CursorKind {
     reader.read_exact(&mut buf)?;
     reader.rewind()?;
     Ok(Self::from_bytes(&buf))
-  }
-}
-
-impl From<CursorKindHint> for CursorKind {
-  fn from(value: CursorKindHint) -> Self {
-    match value {
-      CursorKindHint::Ani => Self::Ani,
-      CursorKindHint::Cur => Self::Cur,
-      CursorKindHint::Svg => Self::Svg,
-      CursorKindHint::Xcur => Self::Xcur,
-    }
   }
 }
 

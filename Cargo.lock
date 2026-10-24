@@ -291,9 +291,11 @@ dependencies = [
  "pixmap",
  "point",
  "precursor-config",
+ "precursor-cursor",
  "precursor-error",
  "precursor-filesys",
  "precursor-formats",
+ "precursor-paths",
  "thiserror",
 ]
 
@@ -307,6 +309,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "precursor-cursor"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "pixmap",
+ "point",
+ "precursor-config",
+ "precursor-error",
+ "precursor-filesys",
+ "precursor-formats",
+]
+
+[[package]]
 name = "precursor-error"
 version = "0.1.0"
 
@@ -317,6 +332,7 @@ dependencies = [
  "log",
  "precursor-config",
  "precursor-error",
+ "precursor-paths",
  "toml",
 ]
 
@@ -330,6 +346,10 @@ dependencies = [
  "point",
  "thiserror",
 ]
+
+[[package]]
+name = "precursor-paths"
+version = "0.1.0"
 
 [[package]]
 name = "proc-macro2"

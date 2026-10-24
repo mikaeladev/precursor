@@ -1,8 +1,5 @@
 mod args;
 mod cmds;
-mod cursor;
-mod error;
-mod paths;
 
 use std::env;
 use std::process::exit;
@@ -21,7 +18,7 @@ fn main() {
     Command::Build(build_args) => cmds::build(build_args),
     Command::Check(check_args) => cmds::check(check_args),
     Command::Extract(extract_args) => cmds::extract(extract_args),
-    Command::Inspect(_) => todo!(),
+    Command::Inspect => todo!(),
   };
 
   if let Err(err) = result {

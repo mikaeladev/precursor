@@ -2,12 +2,12 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 use precursor_config::{AssetValue, RotateValue};
+use precursor_error::{Error, ErrorMessageWithAttrs, Result};
+use precursor_filesys::ErrorMessageWithPath;
 use precursor_formats::png::PngFile;
 
 use pixmap::{DynamicPixmap, Pixmap};
 use point::Point;
-
-use crate::error::{PrecursorError, PrecursorResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CursorIcon {
@@ -28,11 +28,11 @@ impl CursorIcon {
     self.pixmap.scale_up(factor);
   }
 
-  /// Constructs a new `CursorIcon` from a [`CursorIconConfig`].
+  /// Constructs a new `CursorIcon` from a [`precursor_config::CursorIcon`].
   ///
   /// # Errors
   ///
-  /// Fails with a [`PrecursorError`] if any of the following are true:
+  /// Fails if any of the following are true:
   ///
   /// * The hotspot is out of bounds (i.e. > `nominal`).
   /// * The asset is not a supported file format.
@@ -47,18 +47,55 @@ impl CursorIcon {
       hotspot,
       nominal,
     }: precursor_config::CursorIcon,
-  ) -> PrecursorResult<Self> {
-    let mut reader = BufReader::new(File::open(asset.path())?);
-    let mut pixmap;
+  ) -> Result<Self> {
+    let asset_path = asset.path();
 
-    let buffer = reader.fill_buf()?;
+    let asset_file = File::open(asset_path).map_err(|src| {
+      Error::new(
+        ErrorMessageWithPath::new(
+          format!("failed to open asset; {}", src.kind()),
+          asset_path,
+        ),
+        src,
+      )
+    })?;
 
-    if buffer.starts_with(PngFile::MAGIC) {
-      pixmap = PngFile::read(&mut reader)?.into_pixmap();
-      drop(reader);
+    let mut reader = BufReader::new(asset_file);
+
+    let buffer = reader.fill_buf().map_err(|src| {
+      Error::new(
+        ErrorMessageWithPath::new(
+          format!("failed to fill icon buffer; {}", src.kind()),
+          asset_path,
+        ),
+        src,
+      )
+    })?;
+
+    let mut pixmap = if buffer.starts_with(PngFile::MAGIC) {
+      let png = PngFile::read(&mut reader).map_err(|src| {
+        // TODO: make this use some kind of builder
+        Error::new(
+          ErrorMessageWithAttrs {
+            message: Box::new("failed to read asset as PNG"),
+            attrs: vec![
+              ("reason".to_string(), Box::new(src.to_string())),
+              (
+                "asset".to_string(),
+                Box::new(asset_path.display().to_string()),
+              ),
+            ],
+          },
+          src,
+        )
+      })?;
+
+      png.into_pixmap()
     } else {
-      return Err(PrecursorError::InvalidAssetType);
-    }
+      todo!()
+    };
+
+    drop(reader);
 
     if let AssetValue::Verbose {
       flip, flop, rotate, ..

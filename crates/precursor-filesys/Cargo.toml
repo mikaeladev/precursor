@@ -8,4 +8,5 @@ license.workspace = true
 log.workspace = true
 precursor-config.workspace = true
 precursor-error.workspace = true
+precursor-paths.workspace = true
 toml.workspace = true

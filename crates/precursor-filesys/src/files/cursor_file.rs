@@ -3,6 +3,7 @@ use std::io::{self, BufReader, ErrorKind, Read, Seek, SeekFrom};
 use std::path::Path;
 
 use precursor_error::{Error, Result};
+use precursor_paths as paths;
 
 use crate::error::ErrorMessageWithPath;
 use crate::input::InputArg;
@@ -33,14 +34,11 @@ impl Seek for CursorReader {
 }
 
 // TODO: doc
-pub fn get_cursor_reader(
-  working_dir_path: impl AsRef<Path>,
-  input_arg: InputArg,
-) -> Result<CursorReader> {
+pub fn get_cursor_reader(input_arg: InputArg) -> Result<CursorReader> {
   match input_arg {
     InputArg::Path(mut path) => {
       if path.is_relative() {
-        path = working_dir_path.as_ref().join(path);
+        path = paths::working_dir().join(path);
       }
 
       let file = File::open(&path).map_err(|src| {

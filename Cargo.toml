@@ -7,9 +7,11 @@ members = [
   "crates/point",
   "crates/precursor",
   "crates/precursor-config",
+  "crates/precursor-cursor",
   "crates/precursor-error",
   "crates/precursor-filesys",
   "crates/precursor-formats",
+  "crates/precursor-paths",
 ]
 
 [workspace.package]
@@ -24,9 +26,11 @@ pixmap-core.path = "crates/pixmap-core"
 pixmap-derive.path = "crates/pixmap-derive"
 point.path = "crates/point"
 precursor-config.path = "crates/precursor-config"
+precursor-cursor.path = "crates/precursor-cursor"
 precursor-error.path = "crates/precursor-error"
 precursor-filesys.path = "crates/precursor-filesys"
 precursor-formats.path = "crates/precursor-formats"
+precursor-paths.path = "crates/precursor-paths"
 thiserror = "2.0.20"
 toml = "1.1.4"
 

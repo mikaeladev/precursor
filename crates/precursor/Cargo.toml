@@ -11,9 +11,11 @@ log.workspace = true
 pixmap.workspace = true
 point.workspace = true
 precursor-config.workspace = true
+precursor-cursor.workspace = true
 precursor-error.workspace = true
 precursor-filesys.workspace = true
 precursor-formats.workspace = true
+precursor-paths.workspace = true
 thiserror.workspace = true
 
 [dependencies.env_logger]
