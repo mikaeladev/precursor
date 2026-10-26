@@ -2,9 +2,8 @@ use std::fs::File;
 use std::io::ErrorKind;
 use std::path::Path;
 
-use precursor_error::{Error, Result};
+use precursor_error::{ErrorMessage, Result};
 
-use crate::error::ErrorMessageWithPath;
 use crate::macros::{action_denied, action_failed};
 
 /// Creates a file at the provided `path`.
@@ -33,12 +32,13 @@ pub fn create_file<S: ToString>(
 
     let src_kind = src.kind();
 
-    let msg = match src_kind {
+    match src_kind {
       ErrorKind::PermissionDenied => action_denied!(action),
       _ => action_failed!(action, src_kind),
-    };
-
-    Error::new(ErrorMessageWithPath::new(msg, path), src)
+    }
+    .with_context([("path", path.display())])
+    .into_error()
+    .with_source(src)
   })
 }
 
@@ -68,11 +68,12 @@ pub fn create_new_file<S: ToString>(
 
     let src_kind = src.kind();
 
-    let msg = match src_kind {
+    match src_kind {
       ErrorKind::PermissionDenied => action_denied!(action),
       _ => action_failed!(action, src_kind),
-    };
-
-    Error::new(ErrorMessageWithPath::new(msg, path), src)
+    }
+    .with_context([("path", path.display())])
+    .into_error()
+    .with_source(src)
   })
 }

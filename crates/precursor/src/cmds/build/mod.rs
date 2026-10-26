@@ -1,14 +1,16 @@
 mod args;
 
-#[cfg(target_family = "unix")]
 use std::path::Path;
 
 use precursor_cursor::Cursor;
-use precursor_error::{Error, ErrorMessageWithAttrs, Result};
-use precursor_filesys::{self as filesys, ErrorMessageWithPath};
+use precursor_error::{ErrorMessage, Result};
+use precursor_filesys as filesys;
 use precursor_paths as paths;
 
 pub use args::*;
+
+const CONSIDER_DEBUG_FLAG: &str =
+  "consider passing the '--debug' flag to see the underlying error";
 
 pub fn build(
   BuildArgs {
@@ -75,6 +77,24 @@ pub fn build(
   Ok(())
 }
 
+fn make_help() -> Option<&'static str> {
+  if log::max_level() < log::LevelFilter::Debug {
+    Some(CONSIDER_DEBUG_FLAG)
+  } else {
+    None
+  }
+}
+
+fn make_context(
+  cursor: &Cursor,
+  file_path: impl AsRef<Path>,
+) -> [(&str, String); 2] {
+  [
+    ("name", cursor.metadata().name.to_string()),
+    ("path", file_path.as_ref().display().to_string()),
+  ]
+}
+
 fn build_windows_cursor(cursor: &Cursor, force: bool) -> Result<()> {
   let cursor_metadata = cursor.metadata();
   let cursor_name = cursor_metadata.windows_name();
@@ -88,51 +108,43 @@ fn build_windows_cursor(cursor: &Cursor, force: bool) -> Result<()> {
     filesys::create_new_file(&file_path, "cursor")
   }?;
 
+  let make_context = || make_context(cursor, &file_path);
+
   if cursor.is_animated() {
     let ani = cursor.to_windows_cur().map_err(|src| {
-      let msg = ErrorMessageWithAttrs {
-        message: Box::new("failed to construct ANI cursor"),
-        attrs: vec![
-          ("name".to_string(), Box::new(cursor.metadata().name.clone())),
-          ("reason".to_string(), Box::new(src.to_string())),
-          (
-            "path".to_string(),
-            Box::new(file_path.display().to_string()),
-          ),
-        ],
-      };
-      Error::new(msg, src)
+      ErrorMessage::new("failed to construct ANI cursor")
+        .with_subheading(src.to_string())
+        .with_help::<&str>(make_help())
+        .with_context(make_context())
+        .into_error()
+        .with_source(src)
     })?;
 
     ani.write(&mut file).map_err(|src| {
-      let msg = ErrorMessageWithPath::new(
-        format!("failed to write ANI cursor; {}", src.kind()),
-        file_path,
-      );
-      Error::new(msg, src)
+      ErrorMessage::new("failed to write ANI cursor")
+        .with_subheading(src.kind())
+        .with_help::<&str>(make_help())
+        .with_context(make_context())
+        .into_error()
+        .with_source(src)
     })?;
   } else {
     let cur = cursor.to_windows_cur().map_err(|src| {
-      let msg = ErrorMessageWithAttrs {
-        message: Box::new("failed to construct CUR cursor"),
-        attrs: vec![
-          ("name".to_string(), Box::new(cursor.metadata().name.clone())),
-          ("reason".to_string(), Box::new(src.to_string())),
-          (
-            "path".to_string(),
-            Box::new(file_path.display().to_string()),
-          ),
-        ],
-      };
-      Error::new(msg, src)
+      ErrorMessage::new("failed to construct CUR cursor")
+        .with_subheading(src.to_string())
+        .with_help::<&str>(make_help())
+        .with_context(make_context())
+        .into_error()
+        .with_source(src)
     })?;
 
     cur.write(&mut file).map_err(|src| {
-      let msg = ErrorMessageWithPath::new(
-        format!("failed to write CUR cursor; {}", src.kind()),
-        file_path,
-      );
-      Error::new(msg, src)
+      ErrorMessage::new("failed to write CUR cursor")
+        .with_subheading(src.kind())
+        .with_help::<&str>(make_help())
+        .with_context(make_context())
+        .into_error()
+        .with_source(src)
     })?;
   }
 
@@ -152,11 +164,12 @@ fn build_x11_cursor(cursor: &Cursor, force: bool) -> Result<()> {
   }?;
 
   cursor.to_xcursor().write(&mut file).map_err(|src| {
-    let msg = ErrorMessageWithPath::new(
-      format!("failed to write X11 cursor; {}", src.kind()),
-      &file_path,
-    );
-    Error::new(msg, src)
+    ErrorMessage::new("failed to write X11 cursor")
+      .with_subheading(src.kind())
+      .with_help::<&str>(make_help())
+      .with_context(make_context(cursor, &file_path))
+      .into_error()
+      .with_source(src)
   })?;
 
   #[cfg(target_family = "unix")]

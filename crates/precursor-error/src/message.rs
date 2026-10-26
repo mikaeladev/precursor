@@ -1,81 +1,197 @@
 use std::fmt::{self, Debug, Display, Formatter};
 
-/// Any static type that implements [`Display`] and [`Debug`].
-pub trait ErrorMessage: Display + Debug + 'static {}
-impl<T: Display + Debug + 'static> ErrorMessage for T {}
+use crate::Error;
 
-#[derive(Debug)]
-pub struct ErrorMessageWithAttrs {
-  pub message: Box<dyn ErrorMessage>,
-  pub attrs: Vec<(String, Box<dyn ErrorMessage>)>,
+#[derive(Debug, Default, Clone)]
+pub struct ErrorMessage {
+  heading: String,
+  subheading: Option<String>,
+  help: Option<String>,
+  context: Vec<(String, String)>,
 }
 
-impl Display for ErrorMessageWithAttrs {
+impl ErrorMessage {
+  /// Constructs a new `ErrorMessage` from `heading`.
+  ///
+  /// All other attributes are set to their defaults and must be configured with
+  /// their respective setters.
+  pub fn new(heading: impl ToString) -> Self {
+    Self {
+      heading: heading.to_string(),
+      ..Default::default()
+    }
+  }
+
+  /// Returns itself with the subheading set to the post-conversion value.
+  ///
+  /// # Examples
+  ///
+  /// This method can be chained together, like so:
+  ///
+  /// ```
+  /// # use precursor_error::ErrorMessage;
+  /// #
+  /// ErrorMessage::new("io error")
+  ///   .with_subheading("file not found") // this method !!
+  ///   .with_help("make sure it exists first")
+  ///   .with_context([("path", "./foo/bar")]);
+  /// ```
+  pub fn with_subheading<T: ToString>(
+    mut self,
+    value: impl Into<Option<T>>,
+  ) -> Self {
+    let subheading = value.into().and_then(|v| Some(v.to_string()));
+    self.subheading = subheading;
+    self
+  }
+
+  /// Returns itself with the help message set to the post-conversion value.
+  ///
+  /// # Examples
+  ///
+  /// This method can be chained together, like so:
+  ///
+  /// ```
+  /// # use precursor_error::ErrorMessage;
+  /// #
+  /// ErrorMessage::new("io error")
+  ///   .with_subheading("file not found")
+  ///   .with_help("make sure it exists first") // this method !!
+  ///   .with_context([("path", "./foo/bar")]);
+  /// ```
+  pub fn with_help<T: ToString>(mut self, value: impl Into<Option<T>>) -> Self {
+    let help = value.into().and_then(|v| Some(v.to_string()));
+    self.help = help;
+    self
+  }
+
+  /// Returns itself with the context set to the post-conversion value.
+  ///
+  /// # Examples
+  ///
+  /// This method can be chained together, like so:
+  ///
+  /// ```
+  /// # use precursor_error::ErrorMessage;
+  /// #
+  /// ErrorMessage::new("io error")
+  ///   .with_subheading("file not found")
+  ///   .with_help("make sure it exists first")
+  ///   .with_context([("path", "./foo/bar")]); // this method !!
+  /// ```
+  pub fn with_context<const N: usize, K: ToString, V: ToString>(
+    mut self,
+    value: [(K, V); N],
+  ) -> Self {
+    let context = value
+      .into_iter()
+      .map(|(k, v)| (k.to_string(), v.to_string()))
+      .collect();
+    self.context = context;
+    self
+  }
+
+  /// Converts this type into an [`Error`].
+  pub const fn into_error(self) -> Error {
+    Error {
+      message: self,
+      source: None,
+    }
+  }
+
+  /// Returns a reference to the heading string.
+  pub const fn heading(&self) -> &str {
+    self.heading.as_str()
+  }
+
+  /// Returns some reference to the subheading.
+  pub const fn subheading(&self) -> Option<&str> {
+    match &self.subheading {
+      Some(subheading) => Some(subheading.as_str()),
+      None => None,
+    }
+  }
+
+  /// Returns some reference to the help message.
+  pub const fn help(&self) -> Option<&str> {
+    match &self.help {
+      Some(help) => Some(help.as_str()),
+      None => None,
+    }
+  }
+
+  /// Returns a slice containing the entire vector of context entries.
+  pub const fn context(&self) -> &[(String, String)] {
+    self.context.as_slice()
+  }
+}
+
+impl Display for ErrorMessage {
   fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-    writeln!(f, "{}", self.message)?;
+    write!(f, "{}", self.heading)?;
 
-    let attrs_len = self.attrs.len();
+    if let Some(subheading) = &self.subheading {
+      write!(f, "; {subheading}")?;
+    }
 
-    let longest_key_len = self.attrs.iter().fold(0, |acc, (key, _)| {
-      let len = key.len();
-      if len > acc { len } else { acc }
-    });
+    if !self.context.is_empty() {
+      let context_len = self.context.len();
 
-    for (i, (key, value)) in self.attrs.iter().enumerate() {
-      let is_last = i != (attrs_len - 1);
+      let longest_key_len = self.context.iter().fold(0, |acc, (key, _)| {
+        let len = key.len();
+        if len > acc { len } else { acc }
+      });
 
-      let line = if is_last { '├' } else { '└' };
-      let term = if is_last { "\n" } else { "" };
+      for (i, (key, value)) in self.context.iter().enumerate() {
+        write!(f, "\n")?;
 
-      let space = str::repeat(" ", (longest_key_len - key.len()) + 1);
+        let line = if i != (context_len - 1) { '├' } else { '└' };
+        let spacing = str::repeat(" ", (longest_key_len - key.len()) + 1);
 
-      write!(f, "{line}▸ {key}:{space}{value}{term}")?;
+        write!(f, "{line}▸ {key}:{spacing}{value}")?;
+      }
+    }
+
+    if let Some(help) = &self.help {
+      write!(f, "\n\nhelp: {help}")?;
     }
 
     Ok(())
   }
 }
 
+impl From<ErrorMessage> for Error {
+  fn from(value: ErrorMessage) -> Self {
+    value.into_error()
+  }
+}
+
 #[cfg(test)]
 mod tests {
-  use std::path::PathBuf;
-
   use super::*;
 
   #[test]
-  fn display_single() {
-    let value = ErrorMessageWithAttrs {
-      message: Box::new("hello world"),
-      attrs: vec![("foo".to_string(), Box::new("bar"))],
-    };
+  fn display_min() {
+    let msg = ErrorMessage::new("teeny tiiny error");
 
-    let expected = r#"
-hello world
-└▸ foo: bar
-"#;
-
-    assert_eq!(value.to_string(), expected.trim())
+    assert_eq!(msg.to_string(), msg.heading())
   }
 
   #[test]
-  fn display_multiple() {
-    let value = ErrorMessageWithAttrs {
-      message: Box::new("hello world"),
-      attrs: vec![
-        ("foo".to_string(), Box::new("bar")),
-        (
-          "path".to_string(),
-          Box::new(PathBuf::from("./foo/bar.txt").display().to_string()),
-        ),
-      ],
-    };
+  fn display_max() {
+    let msg = ErrorMessage::new("extra extra")
+      .with_subheading("read all about it")
+      .with_help("try again?")
+      .with_context([("foo", "bar"), ("lorem", "ipsum")]);
 
     let expected = r#"
-hello world
-├▸ foo:  bar
-└▸ path: ./foo/bar.txt
+extra extra; read all about it
+├▸ foo:   bar
+└▸ lorem: ipsum
+
+help: try again?
 "#;
 
-    assert_eq!(value.to_string(), expected.trim())
+    assert_eq!(msg.to_string(), expected.trim())
   }
 }

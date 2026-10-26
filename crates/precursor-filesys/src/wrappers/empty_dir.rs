@@ -2,9 +2,8 @@ use std::convert::Infallible;
 use std::io::ErrorKind;
 use std::path::Path;
 
-use precursor_error::{Error, Result};
+use precursor_error::{ErrorMessage, Result};
 
-use crate::error::ErrorMessageWithPath;
 use crate::macros::{action_denied, action_failed};
 
 /// Removes the contents of the directory at the provided `path`.
@@ -53,12 +52,15 @@ pub fn empty_dir<S: ToString>(
 
         let src_kind = src.kind();
 
-        let msg = match src_kind {
-          ErrorKind::PermissionDenied => action_denied!(action),
-          _ => action_failed!(action, src_kind),
-        };
-
-        return Err(Error::new(ErrorMessageWithPath::new(msg, path), src));
+        return Err(
+          match src_kind {
+            ErrorKind::PermissionDenied => action_denied!(action),
+            _ => action_failed!(action, src_kind),
+          }
+          .with_context([("path", path.display())])
+          .into_error()
+          .with_source(src),
+        );
       }
     }
   }

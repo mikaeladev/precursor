@@ -1,18 +1,22 @@
 mod args;
 
-use std::convert::Infallible;
 use std::io::{Read, Seek, Write};
 use std::path::Path;
 
 use precursor_cursor::CursorKind;
-use precursor_error::{Error, ErrorMessageWithAttrs, Result};
-use precursor_filesys::{self as filesys, ErrorMessageWithPath, InputArg};
-use precursor_formats::ani::AniFile;
-use precursor_formats::cur::{CurFile, CurImage};
+use precursor_error::{ErrorMessage, Result};
+use precursor_filesys::{self as filesys, InputArg};
+use precursor_formats::ani::{self, AniFile};
+use precursor_formats::cur::{self, CurFile, CurImage};
 use precursor_formats::png::PngFile;
 use precursor_paths as paths;
 
 pub use args::*;
+
+const CONSIDER_KIND_ARG: &str = "consider passing the '--kind' argument";
+
+const CONSIDER_DEBUG_FLAG: &str =
+  "consider passing the '--debug' flag to see the underlying error";
 
 pub fn extract(
   ExtractArgs {
@@ -43,18 +47,18 @@ pub fn extract(
 
   if cursor_kind.is_none() {
     let kind = CursorKind::from_reader(&mut reader).map_err(|src| {
-      Error::new(format!("failed to read cursor data; {}", src.kind()), src)
+      ErrorMessage::new("failed to read cursor data")
+        .with_subheading(src.kind())
+        .into_error()
+        .with_source(src)
     })?;
 
     if kind.is_none() {
-      let msg = ErrorMessageWithAttrs {
-        message: Box::new("unrecognised cursor format"),
-        attrs: vec![(
-          "tip".to_string(),
-          Box::new("consider passing the '--kind' argument and trying again"),
-        )],
-      };
-      return Err(Error::new::<Infallible>(msg, None));
+      return Err(
+        ErrorMessage::new("unrecognised cursor format")
+          .with_help(CONSIDER_KIND_ARG)
+          .into_error(),
+      );
     }
 
     cursor_kind = kind
@@ -81,11 +85,16 @@ fn extract_ani<R: Read>(reader: &mut R, force: bool) -> Result<usize> {
   let mut frame_index = 0;
 
   let ani_file = AniFile::read(reader).map_err(|src| {
-    let msg = ErrorMessageWithAttrs {
-      message: Box::new("failed to read ANI file"),
-      attrs: vec![("reason".to_string(), Box::new(src.to_string()))],
-    };
-    Error::new(msg, src)
+    let message = ErrorMessage::new("failed to read ANI file");
+
+    match &src {
+      ani::ReadError::IoError(inner) => message.with_subheading(inner.kind()),
+      ani::ReadError::FromChunkError(_) => message
+        .with_subheading("malformed or invalid chunk(s)")
+        .with_help(CONSIDER_DEBUG_FLAG),
+    }
+    .into_error()
+    .with_source(src)
   })?;
 
   for frame in ani_file.into_frames() {
@@ -109,11 +118,14 @@ fn extract_cur<R: Read + Seek>(reader: &mut R, force: bool) -> Result<usize> {
   let mut icon_index = 0;
 
   let cur_file = CurFile::read(reader).map_err(|src| {
-    let msg = ErrorMessageWithAttrs {
-      message: Box::new("failed to read CUR file"),
-      attrs: vec![("reason".to_string(), Box::new(src.to_string()))],
-    };
-    Error::new(msg, src)
+    let message = ErrorMessage::new("failed to read CUR file");
+
+    match &src {
+      cur::ReadError::IoError(inner) => message.with_subheading(inner.kind()),
+      _ => message.with_subheading(src.to_string()),
+    }
+    .into_error()
+    .with_source(src)
   })?;
 
   for CurImage { buffer, .. } in cur_file.into_icons() {
@@ -146,11 +158,11 @@ fn write_cur_icon(
   }?;
 
   file.write_all(&buffer).map_err(|src| {
-    let msg = ErrorMessageWithPath::new(
-      format!("failed to write cursor file; {}", src.kind()),
-      file_path,
-    );
-    Error::new(msg, src)
+    ErrorMessage::new("failed to write CUR icon")
+      .with_subheading(src.kind())
+      .with_context([("path", file_path.display())])
+      .into_error()
+      .with_source(src)
   })?;
 
   Ok(())

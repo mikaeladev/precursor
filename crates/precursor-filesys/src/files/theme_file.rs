@@ -1,7 +1,9 @@
 use std::io::{self, Write};
 
 use precursor_config::PackageConfig;
-use precursor_error::{Error, Result};
+use precursor_error::{ErrorMessage, Result};
+
+use crate::macros::action_failed;
 
 // TODO: doc
 pub fn write_theme_index(
@@ -9,7 +11,10 @@ pub fn write_theme_index(
   config: PackageConfig,
 ) -> Result<()> {
   write_theme_index_logic(writer, config).map_err(|src| {
-    Error::new(format!("failed to write theme index; {}", src.kind()), src)
+    action_failed!("write the theme index")
+      .with_subheading(src.kind())
+      .into_error()
+      .with_source(src)
   })
 }
 

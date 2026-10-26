@@ -2,8 +2,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 use precursor_config::{AssetValue, RotateValue};
-use precursor_error::{Error, ErrorMessageWithAttrs, Result};
-use precursor_filesys::ErrorMessageWithPath;
+use precursor_error::{ErrorMessage, Result};
 use precursor_formats::png::PngFile;
 
 use pixmap::{DynamicPixmap, Pixmap};
@@ -50,44 +49,33 @@ impl CursorIcon {
   ) -> Result<Self> {
     let asset_path = asset.path();
 
+    let make_context = || [("path", asset_path.display())];
+
     let asset_file = File::open(asset_path).map_err(|src| {
-      Error::new(
-        ErrorMessageWithPath::new(
-          format!("failed to open asset; {}", src.kind()),
-          asset_path,
-        ),
-        src,
-      )
+      ErrorMessage::new("failed to open asset")
+        .with_subheading(src.kind())
+        .with_context(make_context())
+        .into_error()
+        .with_source(src)
     })?;
 
     let mut reader = BufReader::new(asset_file);
 
     let buffer = reader.fill_buf().map_err(|src| {
-      Error::new(
-        ErrorMessageWithPath::new(
-          format!("failed to fill icon buffer; {}", src.kind()),
-          asset_path,
-        ),
-        src,
-      )
+      ErrorMessage::new("failed to fill icon buffer for asset")
+        .with_subheading(src.kind())
+        .with_context(make_context())
+        .into_error()
+        .with_source(src)
     })?;
 
     let mut pixmap = if buffer.starts_with(PngFile::MAGIC) {
       let png = PngFile::read(&mut reader).map_err(|src| {
-        // TODO: make this use some kind of builder
-        Error::new(
-          ErrorMessageWithAttrs {
-            message: Box::new("failed to read asset as PNG"),
-            attrs: vec![
-              ("reason".to_string(), Box::new(src.to_string())),
-              (
-                "asset".to_string(),
-                Box::new(asset_path.display().to_string()),
-              ),
-            ],
-          },
-          src,
-        )
+        ErrorMessage::new("failed to decode asset")
+          .with_subheading(src.to_string())
+          .with_context(make_context())
+          .into_error()
+          .with_source(src)
       })?;
 
       png.into_pixmap()

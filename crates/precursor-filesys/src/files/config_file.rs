@@ -2,10 +2,9 @@ use std::fs;
 use std::io::{self, ErrorKind};
 
 use precursor_config::Config;
-use precursor_error::{Error, Result};
+use precursor_error::{ErrorMessage, Result};
 use precursor_paths as paths;
 
-use crate::error::ErrorMessageWithPath;
 use crate::input::InputArg;
 use crate::macros::{action_denied, action_failed, expected_utf8};
 
@@ -15,7 +14,11 @@ pub fn get_config(input_arg: InputArg) -> Result<Config> {
 
   match toml::from_str(&config_string) {
     Ok(config) => Ok(config),
-    Err(src) => Err(Error::new(action_failed!("parse config from TOML"), src)),
+    Err(src) => Err(
+      action_failed!("parse config from TOML")
+        .into_error()
+        .with_source(src),
+    ),
   }
 }
 
@@ -34,13 +37,14 @@ pub fn get_config_string(input_arg: InputArg) -> Result<String> {
 
         let src_kind = src.kind();
 
-        let msg = match src_kind {
+        match src_kind {
           ErrorKind::PermissionDenied => action_denied!(action),
           ErrorKind::InvalidData => expected_utf8!(kind),
           _ => action_failed!(action, src_kind),
-        };
-
-        Error::new(ErrorMessageWithPath::new(msg, file_path), src)
+        }
+        .with_context([("path", file_path.display())])
+        .into_error()
+        .with_source(src)
       })
     }
 
@@ -49,12 +53,12 @@ pub fn get_config_string(input_arg: InputArg) -> Result<String> {
       let lock = io::stdin().lock();
 
       io::read_to_string(lock).map_err(|src| {
-        let msg = match src.kind() {
+        match src.kind() {
           ErrorKind::InvalidData => expected_utf8!("stdin"),
           _ => action_failed!("read config from stdin"),
-        };
-
-        Error::new(msg, src)
+        }
+        .into_error()
+        .with_source(src)
       })
     }
   }

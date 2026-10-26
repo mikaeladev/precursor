@@ -5,26 +5,36 @@ use crate::ErrorMessage;
 
 #[derive(Debug)]
 pub struct Error {
-  message: Box<dyn ErrorMessage>,
-  source: Option<Box<dyn StdError + 'static>>,
+  pub(crate) message: ErrorMessage,
+  pub(crate) source: Option<Box<dyn StdError + 'static>>,
 }
 
 impl Error {
-  /// Constructs a new `Error`.
-  pub fn new<E: StdError + 'static>(
-    message: impl ErrorMessage,
-    source: impl Into<Option<E>>,
-  ) -> Self {
+  /// Constructs a new `Error` from `message`.
+  ///
+  /// All other attributes are set to their defaults and must be configured with
+  /// their respective setters.
+  pub const fn new(message: ErrorMessage) -> Self {
     Self {
-      message: Box::new(message) as Box<dyn ErrorMessage>,
-      source: source
-        .into()
-        .and_then(|err| Some(Box::new(err) as Box<dyn StdError>)),
+      message,
+      source: None,
     }
   }
 
-  /// Returns `Some` reference to the source error if it is of type `T`, or
-  /// `None` if it isn't (if any).
+  /// Returns itself with the source set to the post-conversion value.
+  pub fn with_source<E: StdError + 'static>(
+    mut self,
+    value: impl Into<Option<E>>,
+  ) -> Self {
+    let source = value
+      .into()
+      .and_then(|err| Some(Box::new(err) as Box<dyn StdError>));
+    self.source = source;
+    self
+  }
+
+  /// Returns [`Some`] reference to the source error if it exists and is of type
+  /// `T`, or [`None`] otherwise.
   pub fn downcast<T: StdError + 'static>(&self) -> Option<&T> {
     self.source().and_then(|src| src.downcast_ref())
   }

@@ -2,10 +2,9 @@ use std::fs::File;
 use std::io::{self, BufReader, ErrorKind, Read, Seek, SeekFrom};
 use std::path::Path;
 
-use precursor_error::{Error, Result};
+use precursor_error::{ErrorMessage, Result};
 use precursor_paths as paths;
 
-use crate::error::ErrorMessageWithPath;
 use crate::input::InputArg;
 use crate::macros::{action_denied, action_failed};
 
@@ -46,12 +45,12 @@ pub fn get_cursor_reader(input_arg: InputArg) -> Result<CursorReader> {
 
         let src_kind = src.kind();
 
-        let msg = match src_kind {
+        match src_kind {
           ErrorKind::PermissionDenied => action_denied!(action),
           _ => action_failed!(action, src_kind),
-        };
-
-        Error::new(ErrorMessageWithPath::new(msg, path), src)
+        }
+        .into_error()
+        .with_source(src)
       })?;
 
       Ok(CursorReader::File(BufReader::new(file)))
@@ -61,8 +60,11 @@ pub fn get_cursor_reader(input_arg: InputArg) -> Result<CursorReader> {
     InputArg::Stdin => {
       use std::io::BufRead;
 
-      let map_err_op =
-        |src| Error::new(action_failed!("read stdin to end"), src);
+      let map_err_op = |src| {
+        action_failed!("read stdin to end")
+          .into_error()
+          .with_source(src)
+      };
 
       let mut lock = io::stdin().lock();
 
@@ -78,8 +80,9 @@ pub fn get_cursor_reader(input_arg: InputArg) -> Result<CursorReader> {
 
 #[cfg(target_family = "unix")]
 mod unix {
-  use std::convert::Infallible;
+  use io::ErrorKind;
   use std::ffi::OsStr;
+  use std::os::unix::fs as unix_fs;
 
   use super::*;
 
@@ -90,8 +93,7 @@ mod unix {
     alias_name: impl AsRef<OsStr>,
     force: bool,
   ) -> Result<()> {
-    use io::ErrorKind;
-    use std::os::unix::fs as unix_fs;
+    const ACTION: &str = "symlink cursor at path";
 
     let base_path = base_path.as_ref();
     let cursor_name = cursor_name.as_ref();
@@ -100,51 +102,58 @@ mod unix {
     let cursor_path = base_path.join(cursor_name);
     let link_path = base_path.join(alias_name);
 
-    crate::get_metadata(&cursor_path, false).map_err(|src| {
-      let msg = ErrorMessageWithPath::new(
-        action_failed!("query cursor path"),
-        cursor_path,
-      );
+    let make_context = || {
+      [
+        ("source path", cursor_path.display()),
+        ("alias path", link_path.display()),
+      ]
+    };
 
-      Error::new(msg, src)
+    crate::get_metadata(&cursor_path, false).map_err(|src| {
+      action_failed!(ACTION, src.to_string())
+        .with_context(make_context())
+        .into_error()
+        .with_source(src)
     })?;
 
     match crate::get_metadata(&link_path, false) {
       Ok(meta) => {
         if !force {
-          Err(Error::new::<Infallible>(
-            action_failed!("symlink cursor", "entity already exists at target"),
-            None,
-          ))
-        } else {
-          let kind = "existing cursor target";
+          return Err(
+            action_failed!(ACTION, "something already exists at alias path")
+              .with_context(make_context())
+              .with_help("consider passing the '--force' flag and trying again")
+              .into_error(),
+          );
+        }
 
-          if meta.is_dir() {
-            crate::remove_dir_all(&link_path, kind)
-          } else {
-            crate::remove_file(&link_path, kind)
-          }
+        let kind = "obstruction at alias path";
+
+        if meta.is_dir() {
+          crate::remove_dir_all(&link_path, kind)?;
+        } else {
+          crate::remove_file(&link_path, kind)?;
         }
       }
       Err(err)
         if let Some(src) = err.downcast::<io::Error>()
           && src.kind() == ErrorKind::NotFound =>
       {
-        Ok(())
+        ()
       }
-      Err(err) => Err(err),
-    }?;
+      Err(err) => return Err(err),
+    };
 
     unix_fs::symlink(cursor_name, &link_path).map_err(|src| {
-      let action = "symlink cursor file or directory";
       let src_kind = src.kind();
 
-      let msg = match src_kind {
-        ErrorKind::PermissionDenied => action_denied!(action),
-        _ => action_failed!(action, src_kind),
-      };
-
-      Error::new(ErrorMessageWithPath::new(msg, link_path), src)
+      match src_kind {
+        ErrorKind::PermissionDenied => action_denied!(ACTION),
+        _ => action_failed!(ACTION, src_kind),
+      }
+      .with_context(make_context())
+      .into_error()
+      .with_source(src)
     })
   }
 }
