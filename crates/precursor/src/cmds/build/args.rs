@@ -5,7 +5,7 @@ use precursor_filesys::InputArg;
 use clap::Args;
 
 const CONFIG_INPUT_HELP: &str = cfg_select! {
-  unix => "Specify the config file (or '-' for standard input)",
+  unix => "Specify the config file ('-' for standard input)",
   _ => "Specify the config file"
 };
 
@@ -46,7 +46,7 @@ pub struct BuildArgs {
 #[group(id = "target_types", multiple = true, required = true)]
 pub struct BuildTargetTypeArgs {
   /// Build all targets (-swx).
-  #[arg(short = 'A', long, group = "target_types")]
+  #[arg(short = 'a', long, group = "target_types")]
   pub all: bool,
 
   /// Build SVG cursors.
