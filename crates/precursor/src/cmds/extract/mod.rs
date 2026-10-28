@@ -5,7 +5,9 @@ use std::path::Path;
 
 use precursor_cursor::CursorKind;
 use precursor_error::{ErrorMessage, Result};
-use precursor_filesys::{self as filesys, InputArg};
+use precursor_filesys as filesys;
+use precursor_filesys::input::InputArg;
+use precursor_filesys::metapath::AsMetaPath;
 use precursor_formats::ani::{self, AniFile};
 use precursor_formats::cur::{self, CurFile, CurImage};
 use precursor_formats::png::PngFile;
@@ -29,10 +31,11 @@ pub fn extract(
 ) -> Result<()> {
   paths::set_target_dir(target_dir_path);
 
-  let target_dir_path = paths::target_dir();
+  let target_dir_meta_path =
+    paths::target_dir().as_meta_path("target directory");
 
-  if !filesys::ensure_dir(&target_dir_path, "target")? && empty {
-    filesys::empty_dir(&target_dir_path, "target")?;
+  if !filesys::ensure_dir(target_dir_meta_path)? && empty {
+    filesys::empty_dir(target_dir_meta_path)?;
   }
 
   if cursor_kind.is_none()
@@ -101,8 +104,8 @@ fn extract_ani<R: Read>(reader: &mut R, force: bool) -> Result<usize> {
     let mut icon_index = 0;
 
     for CurImage { buffer, .. } in frame.into_icons() {
-      let file_name = format!("{}-{}", frame_index, icon_index);
-      write_cur_icon(file_name, buffer, force)?;
+      let name = format!("{}-{}", frame_index, icon_index);
+      write_cur_icon(name, buffer, force)?;
 
       icon_index += 1;
     }
@@ -129,8 +132,8 @@ fn extract_cur<R: Read + Seek>(reader: &mut R, force: bool) -> Result<usize> {
   })?;
 
   for CurImage { buffer, .. } in cur_file.into_icons() {
-    let file_name = icon_index.to_string();
-    write_cur_icon(file_name, buffer, force)?;
+    let name = icon_index.to_string();
+    write_cur_icon(name, buffer, force)?;
 
     icon_index += 1;
   }
@@ -139,28 +142,31 @@ fn extract_cur<R: Read + Seek>(reader: &mut R, force: bool) -> Result<usize> {
 }
 
 fn write_cur_icon(
-  file_name: impl AsRef<Path>,
+  name: impl AsRef<Path>,
   buffer: Box<[u8]>,
   force: bool,
 ) -> Result<()> {
-  let file_ext = if buffer.starts_with(PngFile::MAGIC) {
+  let extension = if buffer.starts_with(PngFile::MAGIC) {
     "png"
   } else {
     todo!("bmp is not yet implemented")
   };
 
-  let file_path = paths::target_dir().join(file_name).with_extension(file_ext);
+  let path = paths::target_dir().join(name).with_extension(extension);
+
+  let meta_kind = &format!("{} file", extension.to_uppercase());
+  let meta_path = path.as_meta_path(meta_kind);
 
   let mut file = if force {
-    filesys::create_file(&file_path, file_ext)
+    filesys::create_file(meta_path)
   } else {
-    filesys::create_new_file(&file_path, file_ext)
+    filesys::create_new_file(meta_path)
   }?;
 
   file.write_all(&buffer).map_err(|src| {
     ErrorMessage::new("failed to write CUR icon")
       .with_subheading(src.kind())
-      .with_context([("path", file_path.display())])
+      .with_context([("path", path.display())])
       .into_error()
       .with_source(src)
   })?;

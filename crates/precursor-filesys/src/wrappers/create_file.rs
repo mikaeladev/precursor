@@ -1,12 +1,12 @@
 use std::fs::File;
 use std::io::ErrorKind;
-use std::path::Path;
 
 use precursor_error::{ErrorMessage, Result};
 
 use crate::macros::{action_denied, action_failed};
+use crate::metapath::MetaPath;
 
-/// Creates a file at the provided `path`.
+/// Creates or overwrites the file at the provided path.
 ///
 /// See the [`File::create`] method for more information.
 ///
@@ -14,21 +14,12 @@ use crate::macros::{action_denied, action_failed};
 ///
 /// Fails with an error in the following (non-exhaustive) situations:
 ///
-/// - A parent directory in `path` does not exist;
-/// - A directory already exists at `path`;
-/// - User lacks permissions to create file at `path`.
-pub fn create_file<S: ToString>(
-  path: impl AsRef<Path>,
-  kind: impl Into<Option<S>>,
-) -> Result<File> {
-  let path = path.as_ref();
-
+/// - A parent directory in path does not exist;
+/// - A directory already exists at path;
+/// - User lacks permissions to create file at path.
+pub fn create_file(MetaPath { path, kind }: MetaPath) -> Result<File> {
   File::create(path).map_err(|src| {
-    let action = if let Some(value) = kind.into() {
-      format_args!("create {} file", value.to_string())
-    } else {
-      format_args!("create file")
-    };
+    let action = format_args!("create {kind}");
 
     let src_kind = src.kind();
 
@@ -42,7 +33,7 @@ pub fn create_file<S: ToString>(
   })
 }
 
-/// Creates a new file at the provided `path`.
+/// Creates a new file at the provided path.
 ///
 /// See the [`File::create_new`] method for more information.
 ///
@@ -50,21 +41,12 @@ pub fn create_file<S: ToString>(
 ///
 /// Fails with an error in the following (non-exhaustive) situations:
 ///
-/// - A parent directory in `path` does not exist;
-/// - A file or directory already exists at `path`;
-/// - User lacks permissions to create file at `path`.
-pub fn create_new_file<S: ToString>(
-  path: impl AsRef<Path>,
-  kind: impl Into<Option<S>>,
-) -> Result<File> {
-  let path = path.as_ref();
-
+/// - A parent directory in path does not exist;
+/// - A file or directory already exists at path;
+/// - User lacks permissions to create file at path.
+pub fn create_new_file(MetaPath { path, kind }: MetaPath) -> Result<File> {
   File::create_new(path).map_err(|src| {
-    let action = if let Some(value) = kind.into() {
-      format_args!("create new {} file", value.to_string())
-    } else {
-      format_args!("create new file")
-    };
+    let action = format_args!("create new {kind}");
 
     let src_kind = src.kind();
 

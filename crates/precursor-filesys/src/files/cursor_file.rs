@@ -84,6 +84,8 @@ mod unix {
   use std::ffi::OsStr;
   use std::os::unix::fs as unix_fs;
 
+  use crate::metapath::AsMetaPath;
+
   use super::*;
 
   // TODO: doc
@@ -127,12 +129,13 @@ mod unix {
           );
         }
 
-        let kind = "obstruction at alias path";
+        let meta_link_path =
+          link_path.as_meta_path("obstruction at alias path");
 
         if meta.is_dir() {
-          crate::remove_dir_all(&link_path, kind)?;
+          crate::remove_dir_all(meta_link_path)?;
         } else {
-          crate::remove_file(&link_path, kind)?;
+          crate::remove_file(meta_link_path)?;
         }
       }
       Err(err)

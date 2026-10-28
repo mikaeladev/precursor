@@ -1,10 +1,10 @@
 use std::fs::{self, ReadDir};
 use std::io::ErrorKind;
-use std::path::Path;
 
 use precursor_error::{ErrorMessage, Result};
 
 use crate::macros::{action_denied, action_failed};
+use crate::metapath::MetaPath;
 
 /// Returns an iterator over the entries within a directory.
 ///
@@ -14,23 +14,14 @@ use crate::macros::{action_denied, action_failed};
 ///
 /// Fails with an error in the following (non-exhaustive) situations:
 ///
-/// - `path` does not exist;
-/// - `path` is not a directory;
-/// - User lacks permissions to access `path`.
+/// - Path does not exist;
+/// - Path is not a directory;
+/// - User lacks permissions to access path.
 ///
 /// [`fs::read_dir`]: fs::read_dir
-pub fn read_dir<S: ToString>(
-  path: impl AsRef<Path>,
-  kind: impl Into<Option<S>>,
-) -> Result<ReadDir> {
-  let path = path.as_ref();
-
+pub fn read_dir(MetaPath { path, kind }: MetaPath) -> Result<ReadDir> {
   fs::read_dir(path).map_err(|src| {
-    let action = if let Some(value) = kind.into() {
-      format_args!("read {} directory", value.to_string())
-    } else {
-      format_args!("read directory")
-    };
+    let action = format_args!("read {kind}");
 
     let src_kind = src.kind();
 

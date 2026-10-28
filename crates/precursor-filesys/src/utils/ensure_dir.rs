@@ -1,9 +1,10 @@
 use std::io::{self, ErrorKind};
-use std::path::Path;
 
 use precursor_error::Result;
 
-/// Ensures a directory exists at the provided `path`, creating it if necessary.
+use crate::metapath::MetaPath;
+
+/// Ensures a directory exists at the provided path, creating it if necessary.
 ///
 /// Returns `true` if a new directory was created, and `false` otherwise.
 ///
@@ -11,14 +12,11 @@ use precursor_error::Result;
 ///
 /// Fails with an error in the following (non-exhaustive) situations:
 ///
-/// - A parent directory in `path` does not exist;
-/// - `path` exists and is not a directory;
-/// - User lacks permissions to create directory at `path`.
-pub fn ensure_dir<S: ToString>(
-  path: impl AsRef<Path>,
-  kind: impl Into<Option<S>>,
-) -> Result<bool> {
-  match crate::create_new_dir(path, kind) {
+/// - A parent directory in path does not exist;
+/// - Path exists and is not a directory;
+/// - User lacks permissions to create directory at path.
+pub fn ensure_dir(meta_path: MetaPath) -> Result<bool> {
+  match crate::create_new_dir(meta_path) {
     Ok(_) => Ok(true),
     Err(err)
       if let Some(src) = err.downcast::<io::Error>()
@@ -30,8 +28,8 @@ pub fn ensure_dir<S: ToString>(
   }
 }
 
-/// Ensures a directory exists and is empty at the provided `path`, creating it
-/// or removing its contents if necessary.
+/// Ensures a directory exists and is empty at the provided path, creating it or
+/// removing its contents if necessary.
 ///
 /// Returns `true` if a new directory was created, and `false` otherwise.
 ///
@@ -39,19 +37,14 @@ pub fn ensure_dir<S: ToString>(
 ///
 /// Fails with an error in the following (non-exhaustive) situations:
 ///
-/// - A parent directory in `path` does not exist;
-/// - `path` exists and is not a directory;
-/// - `path` is being concurrently written to;
-/// - User lacks permissions to create directory at `path`;
-/// - User lacks permissions to access and remove contents of `path`.
-pub fn ensure_dir_empty<S: ToString>(
-  path: impl AsRef<Path>,
-  kind: impl Into<Option<S>> + Copy,
-) -> Result<bool> {
-  let path = path.as_ref();
-
-  if !ensure_dir(path, kind)? {
-    crate::empty_dir(path, kind)?;
+/// - A parent directory in path does not exist;
+/// - Path exists and is not a directory;
+/// - Path is being concurrently written to;
+/// - User lacks permissions to remove contents of path.
+/// - User lacks permissions to create directory at path;
+pub fn ensure_dir_empty(meta_path: MetaPath) -> Result<bool> {
+  if !ensure_dir(meta_path)? {
+    crate::empty_dir(meta_path)?;
     Ok(false)
   } else {
     Ok(true)
