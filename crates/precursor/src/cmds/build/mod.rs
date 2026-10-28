@@ -187,7 +187,7 @@ fn build_x11_cursor(cursor: &Cursor, force: bool) -> Result<()> {
   })?;
 
   #[cfg(target_family = "unix")]
-  symlink_linux_aliases(path, cursor, force)?;
+  symlink_linux_aliases(paths::x11_cursor_dir(), cursor, force)?;
 
   Ok(())
 }

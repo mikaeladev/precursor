@@ -112,7 +112,7 @@ mod unix {
     };
 
     crate::get_metadata(&cursor_path, false).map_err(|src| {
-      action_failed!(ACTION, src.to_string())
+      action_failed!(ACTION, src.to_string()) // FIXME: only show header
         .with_context(make_context())
         .into_error()
         .with_source(src)
