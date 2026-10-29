@@ -13,6 +13,8 @@ use precursor_formats::cur::{self, CurFile, CurImage};
 use precursor_formats::png::PngFile;
 use precursor_paths as paths;
 
+use log::info;
+
 pub use args::*;
 
 const CONSIDER_KIND_ARG: &str = "consider passing the '--kind' argument";
@@ -73,11 +75,12 @@ pub fn extract(
     _ => todo!("extract is not yet implemented for this format"),
   };
 
-  // TODO: use log macros
-  if num_frames == 0 {
-    println!("failed to extract any frames")
-  } else {
-    println!("extracted {num_frames} frame(s)");
+  if log::max_level() >= log::LevelFilter::Info {
+    if num_frames == 0 {
+      info!("failed to extract any frames");
+    } else {
+      info!("extracted {num_frames} frame(s)");
+    }
   }
 
   Ok(())
@@ -94,7 +97,11 @@ fn extract_ani<R: Read>(reader: &mut R, force: bool) -> Result<usize> {
       ani::ReadError::IoError(inner) => message.with_subheading(inner.kind()),
       ani::ReadError::FromChunkError(_) => message
         .with_subheading("malformed or invalid chunk(s)")
-        .with_help(CONSIDER_DEBUG_FLAG),
+        .with_help::<&str>(if log::max_level() < log::LevelFilter::Debug {
+          Some(CONSIDER_DEBUG_FLAG)
+        } else {
+          None
+        }),
     }
     .into_error()
     .with_source(src)
