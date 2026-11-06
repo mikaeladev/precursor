@@ -3,6 +3,7 @@ mod create_file;
 mod empty_dir;
 mod metadata;
 mod read_dir;
+mod read_file;
 mod remove_dir;
 mod remove_file;
 
@@ -11,5 +12,6 @@ pub use create_file::*;
 pub use empty_dir::*;
 pub use metadata::*;
 pub use read_dir::*;
+pub use read_file::*;
 pub use remove_dir::*;
 pub use remove_file::*;

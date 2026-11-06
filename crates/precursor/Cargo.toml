@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 clap.workspace = true
+indexmap.workspace = true
 log.workspace = true
 pixmap.workspace = true
 point.workspace = true

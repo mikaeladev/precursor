@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+point.workspace = true
 serde.workspace = true
 serde_repr = "0.1.21"
 

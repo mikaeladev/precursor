@@ -20,6 +20,7 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 
 [workspace.dependencies]
+indexmap = "2.14.2"
 log = "0.4.34"
 pixmap.path = "crates/pixmap"
 pixmap-core.path = "crates/pixmap-core"

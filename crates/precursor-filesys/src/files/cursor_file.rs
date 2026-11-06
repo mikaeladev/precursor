@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::{self, BufReader, ErrorKind, Read, Seek, SeekFrom};
-use std::path::Path;
 
 use precursor_error::{ErrorMessage, Result};
 use precursor_paths as paths;
@@ -88,16 +87,15 @@ mod unix {
 
   use super::*;
 
-  // TODO: doc
+  // TODO: move this into a generic symlink fn
   pub fn symlink_cursor(
-    base_path: impl AsRef<Path>,
     cursor_name: impl AsRef<OsStr>,
     alias_name: impl AsRef<OsStr>,
     force: bool,
   ) -> Result<()> {
     const ACTION: &str = "symlink cursor at path";
 
-    let base_path = base_path.as_ref();
+    let base_path = paths::x11_cursor_dir();
     let cursor_name = cursor_name.as_ref();
     let alias_name = alias_name.as_ref();
 

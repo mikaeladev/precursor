@@ -3,7 +3,6 @@ mod args;
 use std::io::{Read, Seek, Write};
 use std::path::Path;
 
-use precursor_cursor::CursorKind;
 use precursor_error::{ErrorMessage, Result};
 use precursor_filesys as filesys;
 use precursor_filesys::input::InputArg;
@@ -21,6 +20,8 @@ const CONSIDER_KIND_ARG: &str = "consider passing the '--kind' argument";
 
 const CONSIDER_DEBUG_FLAG: &str =
   "consider passing the '--debug' flag to see the underlying error";
+
+// TODO: create symlinks for frames that reuse earlier images
 
 pub fn extract(
   ExtractArgs {
@@ -70,8 +71,8 @@ pub fn extract(
   }
 
   let num_frames = match cursor_kind.unwrap() {
-    CursorKind::Ani => extract_ani(&mut reader, force)?,
-    CursorKind::Cur => extract_cur(&mut reader, force)?,
+    CursorKind::ANI => extract_ani(&mut reader, force)?,
+    CursorKind::CUR => extract_cur(&mut reader, force)?,
     _ => todo!("extract is not yet implemented for this format"),
   };
 

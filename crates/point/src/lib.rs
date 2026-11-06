@@ -2,10 +2,22 @@ use std::ops::{
   Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+// TODO: put this behind a feature flag
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Point<T> {
   pub x: T,
   pub y: T,
+}
+
+impl<T: Default> Default for Point<T> {
+  fn default() -> Self {
+    Self {
+      x: T::default(),
+      y: T::default(),
+    }
+  }
 }
 
 impl<T> From<(T, T)> for Point<T> {

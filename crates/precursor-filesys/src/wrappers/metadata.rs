@@ -21,7 +21,7 @@ use crate::macros::{action_denied, action_failed};
 ///
 /// [`fs::metadata`]: fs::metadata
 pub fn get_metadata(
-  path: impl AsRef<Path>,
+  path: impl AsRef<Path>, // TODO: use MetaPath here
   follow_symlinks: bool,
 ) -> Result<Metadata> {
   let path = path.as_ref();

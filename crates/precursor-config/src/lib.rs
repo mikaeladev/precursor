@@ -1,15 +1,13 @@
-mod cursors;
-mod package;
-mod values;
-
-pub use cursors::*;
-pub use package::*;
-pub use values::*;
+pub mod cursors;
+pub mod theme;
 
 use serde::Deserialize;
 
+pub use cursors::*;
+pub use theme::*;
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
-  pub package: PackageConfig,
-  pub cursors: Vec<CursorConfig>,
+  pub theme: Theme,
+  pub cursors: Cursors,
 }

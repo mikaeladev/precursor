@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-indexmap = "2.14.0"
+indexmap.workspace = true
 pixmap-core.workspace = true
 pixmap-derive.workspace = true
 thiserror.workspace = true
