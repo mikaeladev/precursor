@@ -8,6 +8,6 @@ pub use theme::*;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-  pub theme: Theme,
+  pub theme: Option<Theme>,
   pub cursors: Cursors,
 }

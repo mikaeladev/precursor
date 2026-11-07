@@ -112,8 +112,10 @@ pub fn build(
       filesys::create_new_file(meta_path)
     }?;
 
-    // TODO: move this out of filesys
-    filesys::write_theme_file(&mut file, config.theme)?;
+    if let Some(theme) = config.theme {
+      // TODO: move this out of filesys
+      filesys::write_theme_file(&mut file, theme)?;
+    }
   }
 
   Ok(())
