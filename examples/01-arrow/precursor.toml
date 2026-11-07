@@ -1,0 +1,25 @@
+#:schema ../../schema.json
+
+[[cursors]]
+name = "arrow"
+aliases = [
+  "default",
+  "left_ptr",
+  "center_ptr",
+  "top_left_arrow",
+]
+
+[[cursors.assets]]
+path = "assets/arrow-12.png"
+nominal = 12
+hotspot = [2, 2]
+
+[[cursors.assets]]
+path = "assets/arrow-18.png"
+nominal = 18
+hotspot = [2, 2]
+
+[[cursors.assets]]
+path = "assets/arrow-24.png"
+nominal = 24
+hotspot = [2, 2]

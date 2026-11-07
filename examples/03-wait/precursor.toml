@@ -1,0 +1,32 @@
+#:schema ../../schema.json
+
+[[cursors]]
+name = "wait"
+aliases = ["watch"]
+
+[[cursors.assets]]
+path = "assets/wait.png"
+nominal = 12
+hotspot = [4, 5]
+
+[[cursors.assets]]
+path = "assets/wait.png"
+nominal = 12
+hotspot = [5, 4]
+transforms.rotate = 90
+
+[[cursors.frames]]
+duration = 200
+assets = [
+  { index = 0, scale = 1 },  # 12
+  { index = 0, scale = 2 },  # 24
+  { index = 0, scale = 3 },  # 36
+]
+
+[[cursors.frames]]
+duration = 200
+assets = [
+  { index = 1, scale = 1 },  # 12
+  { index = 1, scale = 2 },  # 24
+  { index = 1, scale = 3 },  # 36
+]
