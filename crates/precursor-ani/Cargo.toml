@@ -1,0 +1,11 @@
+[package]
+name = "precursor-ani"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+precursor-cur.workspace = true
+precursor-ico.workspace = true
+precursor-riff.workspace = true
+thiserror.workspace = true

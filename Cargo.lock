@@ -294,12 +294,25 @@ dependencies = [
  "log",
  "pixmap",
  "point",
+ "precursor-ani",
  "precursor-config",
+ "precursor-cur",
  "precursor-cursor",
  "precursor-error",
  "precursor-filesys",
- "precursor-formats",
  "precursor-paths",
+ "precursor-png",
+ "precursor-xcur",
+ "thiserror",
+]
+
+[[package]]
+name = "precursor-ani"
+version = "0.1.0"
+dependencies = [
+ "precursor-cur",
+ "precursor-ico",
+ "precursor-riff",
  "thiserror",
 ]
 
@@ -314,12 +327,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "precursor-cur"
+version = "0.1.0"
+dependencies = [
+ "point",
+ "precursor-ico",
+]
+
+[[package]]
 name = "precursor-cursor"
 version = "0.1.0"
 dependencies = [
  "pixmap",
  "point",
- "precursor-formats",
+ "precursor-ani",
+ "precursor-cur",
+ "precursor-png",
+ "precursor-xcur",
 ]
 
 [[package]]
@@ -338,19 +362,41 @@ dependencies = [
 ]
 
 [[package]]
-name = "precursor-formats"
+name = "precursor-ico"
 version = "0.1.0"
 dependencies = [
  "byteorder",
- "pixmap",
- "png",
- "point",
  "thiserror",
 ]
 
 [[package]]
 name = "precursor-paths"
 version = "0.1.0"
+
+[[package]]
+name = "precursor-png"
+version = "0.1.0"
+dependencies = [
+ "pixmap",
+ "png",
+ "thiserror",
+]
+
+[[package]]
+name = "precursor-riff"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+]
+
+[[package]]
+name = "precursor-xcur"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "point",
+ "thiserror",
+]
 
 [[package]]
 name = "proc-macro2"

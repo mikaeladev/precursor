@@ -1,0 +1,10 @@
+[package]
+name = "precursor-xcur"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+byteorder.workspace = true
+point.workspace = true
+thiserror.workspace = true

@@ -2,9 +2,9 @@ use std::io::{self, Read, Seek, Write};
 
 use thiserror::Error;
 
-use super::dir::{IconDir, IconDirEntry};
-use super::macros::wrap_u8;
-use super::traits::IcoDir;
+use crate::dir::{IconDir, IconDirEntry};
+use crate::into_u8;
+use crate::traits::IcoDir;
 
 /// The error type for ICO reads.
 #[derive(Debug, Error)]
@@ -71,9 +71,9 @@ pub struct IcoImage {
 impl From<IcoImage> for (IconDirEntry, Box<[u8]>) {
   fn from(image: IcoImage) -> Self {
     let entry = IconDirEntry {
-      width: wrap_u8!(image.width),
-      height: wrap_u8!(image.height),
-      color_count: wrap_u8!(image.color_count),
+      width: into_u8!(image.width),
+      height: into_u8!(image.height),
+      color_count: into_u8!(image.color_count),
       color_planes: image.color_planes,
       bit_depth: image.bit_depth,
     };

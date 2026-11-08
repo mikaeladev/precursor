@@ -1,6 +1,6 @@
 use point::Point;
 
-use crate::ico::traits::{IcoDir, IcoDirEntry};
+use precursor_ico::{IcoDir, IcoDirEntry};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CursorDir(pub Vec<(CursorDirEntry, Box<[u8]>)>);

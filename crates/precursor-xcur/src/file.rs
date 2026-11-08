@@ -2,9 +2,9 @@ use std::io::{self, Read, Seek, SeekFrom, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use super::chunk::XcursorChunk;
-use super::entry::XcursorTocEntry;
-use super::error::{ReadError, ReadResult};
+use crate::chunk::XcursorChunk;
+use crate::entry::XcursorTocEntry;
+use crate::error::{ReadError, ReadResult};
 
 #[derive(Debug)]
 pub struct XcursorFile {

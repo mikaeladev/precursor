@@ -3,14 +3,16 @@ mod args;
 use std::io::{Read, Seek, Write};
 use std::path::Path;
 
+use precursor_ani as ani;
+use precursor_ani::AniFile;
+use precursor_cur as cur;
+use precursor_cur::{CurFile, CurImage};
 use precursor_error::{ErrorMessage, Result};
 use precursor_filesys as filesys;
 use precursor_filesys::input::InputArg;
 use precursor_filesys::metapath::AsMetaPath;
-use precursor_formats::ani::{self, AniFile};
-use precursor_formats::cur::{self, CurFile, CurImage};
-use precursor_formats::png::PngFile;
 use precursor_paths as paths;
+use precursor_png::PngFile;
 
 use log::info;
 

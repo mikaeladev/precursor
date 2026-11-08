@@ -2,8 +2,8 @@ use std::io::{self, Read, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use super::chunk::{XcursorChunk, XcursorCommentKind};
-use super::error::{ReadError, ReadResult};
+use crate::chunk::{XcursorChunk, XcursorCommentKind};
+use crate::error::{ReadError, ReadResult};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum XcursorTocEntry {

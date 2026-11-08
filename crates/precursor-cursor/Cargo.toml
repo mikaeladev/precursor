@@ -7,4 +7,7 @@ license.workspace = true
 [dependencies]
 pixmap.workspace = true
 point.workspace = true
-precursor-formats.workspace = true
+precursor-ani.workspace = true
+precursor-cur.workspace = true
+precursor-png.workspace = true
+precursor-xcur.workspace = true

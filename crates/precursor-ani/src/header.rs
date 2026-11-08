@@ -1,6 +1,6 @@
-use crate::riff::{ChunkId, ChunkValue};
+use precursor_riff::{ChunkId, ChunkValue};
 
-use super::acon::{ChunkIdAconExt, FromChunkError, FromChunkResult};
+use crate::acon::{ChunkIdAconExt, FromChunkError, FromChunkResult};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct AconHeader {

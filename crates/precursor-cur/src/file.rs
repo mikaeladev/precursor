@@ -1,14 +1,14 @@
 use std::io::{self, Read, Seek, Write};
 
+use precursor_ico::IcoDir;
+use precursor_ico::into_u8;
+
 use point::Point;
 
-use crate::ico::macros::wrap_u8;
-use crate::ico::traits::IcoDir;
+use crate::dir::{CursorDir, CursorDirEntry};
 
-use super::dir::{CursorDir, CursorDirEntry};
-
-pub type ReadError = crate::ico::ReadError;
-pub type ReadResult<T> = crate::ico::ReadResult<T>;
+pub type ReadError = precursor_ico::ReadError;
+pub type ReadResult<T> = precursor_ico::ReadResult<T>;
 
 pub struct CurFile(CursorDir);
 
@@ -99,8 +99,8 @@ impl CurImage {
 impl From<CurImage> for (CursorDirEntry, Box<[u8]>) {
   fn from(image: CurImage) -> Self {
     let entry = CursorDirEntry {
-      width: wrap_u8!(image.width),
-      height: wrap_u8!(image.height),
+      width: into_u8!(image.width),
+      height: into_u8!(image.height),
       hotspot: image.hotspot,
     };
     (entry, image.buffer)

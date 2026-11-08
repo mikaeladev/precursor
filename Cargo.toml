@@ -6,12 +6,17 @@ members = [
   "crates/pixmap-derive",
   "crates/point",
   "crates/precursor",
+  "crates/precursor-ani",
   "crates/precursor-config",
+  "crates/precursor-cur",
   "crates/precursor-cursor",
   "crates/precursor-error",
   "crates/precursor-filesys",
-  "crates/precursor-formats",
+  "crates/precursor-ico",
   "crates/precursor-paths",
+  "crates/precursor-png",
+  "crates/precursor-riff",
+  "crates/precursor-xcur",
 ]
 
 [workspace.package]
@@ -20,18 +25,24 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 
 [workspace.dependencies]
+byteorder = "1.5.0"
 indexmap = "2.14.2"
 log = "0.4.34"
 pixmap.path = "crates/pixmap"
 pixmap-core.path = "crates/pixmap-core"
 pixmap-derive.path = "crates/pixmap-derive"
 point.path = "crates/point"
+precursor-ani.path = "crates/precursor-ani"
 precursor-config.path = "crates/precursor-config"
+precursor-cur.path = "crates/precursor-cur"
 precursor-cursor.path = "crates/precursor-cursor"
 precursor-error.path = "crates/precursor-error"
 precursor-filesys.path = "crates/precursor-filesys"
-precursor-formats.path = "crates/precursor-formats"
+precursor-ico.path = "crates/precursor-ico"
 precursor-paths.path = "crates/precursor-paths"
+precursor-png.path = "crates/precursor-png"
+precursor-riff.path = "crates/precursor-riff"
+precursor-xcur.path = "crates/precursor-xcur"
 thiserror = "2.0.20"
 toml = "1.1.4"
 

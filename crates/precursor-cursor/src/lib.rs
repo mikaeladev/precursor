@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::num::NonZero;
 
-use precursor_formats::ani::AniFile;
-use precursor_formats::cur::{CurFile, CurImage};
-use precursor_formats::png::{PngFile, WriteResult};
-use precursor_formats::xcur::{XcursorChunk, XcursorFile};
+use precursor_ani::AniFile;
+use precursor_cur::{CurFile, CurImage};
+use precursor_png::{PngFile, WriteResult};
+use precursor_xcur::{XcursorChunk, XcursorFile};
 
 use pixmap::{BgrAlphaPixmap, DynamicPixmap, IntoPixmap, Pixmap};
 use point::Point;

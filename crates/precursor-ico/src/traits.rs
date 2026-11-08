@@ -2,7 +2,7 @@ use std::io::{self, Read, Seek, SeekFrom, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use super::file::{ReadError, ReadResult};
+use crate::file::{ReadError, ReadResult};
 
 pub trait IcoDirEntry {
   const RESOURCE_TYPE: u16;

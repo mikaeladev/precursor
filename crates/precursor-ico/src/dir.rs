@@ -1,4 +1,4 @@
-use super::traits::{IcoDir, IcoDirEntry};
+use crate::traits::{IcoDir, IcoDirEntry};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IconDir(Vec<(IconDirEntry, Box<[u8]>)>);

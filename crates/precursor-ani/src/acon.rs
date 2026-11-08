@@ -1,12 +1,12 @@
 use std::io::Cursor;
 
+use precursor_cur::CurFile;
+use precursor_ico::ReadError;
+use precursor_riff::{ChunkId, ChunkValue};
+
 use thiserror::Error;
 
-use crate::cur::CurFile;
-use crate::ico::ReadError;
-use crate::riff::{ChunkId, ChunkValue};
-
-use super::header::AconHeader;
+use crate::header::AconHeader;
 
 pub trait ChunkIdAconExt {
   const ACON: ChunkId = ChunkId(*b"ACON");

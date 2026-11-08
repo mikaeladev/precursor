@@ -4,7 +4,7 @@ use precursor_config::cursors::*;
 use precursor_cursor::{AnimationFrame, CursorData, CursorFrames, CursorImage};
 use precursor_error::{ErrorMessage, Result};
 use precursor_filesys::{self as filesys, metapath::AsMetaPath};
-use precursor_formats::png::PngFile;
+use precursor_png::PngFile;
 
 use indexmap::IndexMap;
 use pixmap::Pixmap;

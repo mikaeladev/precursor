@@ -1,13 +1,13 @@
 mod args;
 mod config;
 
+use precursor_ani::AniFile;
+use precursor_cur::CurFile;
 use precursor_error::{ErrorMessage, Result};
 use precursor_filesys as filesys;
 use precursor_filesys::metapath::AsMetaPath;
-use precursor_formats::ani::AniFile;
-use precursor_formats::cur::CurFile;
-use precursor_formats::xcur::XcursorFile;
 use precursor_paths as paths;
+use precursor_xcur::XcursorFile;
 
 pub use args::*;
 

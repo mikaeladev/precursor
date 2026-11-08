@@ -4,7 +4,7 @@ use point::Point;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use super::error::{ReadError, ReadResult};
+use crate::error::{ReadError, ReadResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum XcursorChunk {

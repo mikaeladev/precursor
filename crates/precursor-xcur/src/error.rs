@@ -3,8 +3,8 @@ use std::string::FromUtf8Error;
 
 use thiserror::Error;
 
-use super::chunk::XcursorChunk;
-use super::file::XcursorFile;
+use crate::chunk::XcursorChunk;
+use crate::file::XcursorFile;
 
 const FILE_MAGIC: &[u8] = XcursorFile::MAGIC;
 const FILE_HEADER_SIZE: usize = XcursorFile::HEADER_SIZE;
