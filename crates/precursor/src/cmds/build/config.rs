@@ -13,35 +13,22 @@ use pixmap::Pixmap;
 use super::debug_help;
 
 pub fn make_bitmap_cursor(config: &CursorConfig) -> Result<BitmapCursor> {
-  if let orphans = config.find_orphaned_bitmaps()
-    && !orphans.is_empty()
-  {
-    log::warn!(
-      "found {} orphaned bitmaps(s) in '{}' cursor: {}",
-      orphans.len(),
-      &config.name,
-      orphans
-        .into_iter()
-        .map(|i| i.to_string())
-        .collect::<Vec<_>>()
-        .join(", ")
-    );
-  }
+  log_orphans(config);
 
   let mut images = IndexMap::new();
 
   let frames = match config.get_frames().as_ref() {
-    FramesConfig::Static(bitmap_indexes) => {
-      let image_indexes =
-        make_and_insert_images(&mut images, &config.bitmaps, &bitmap_indexes)?;
+    FramesConfig::Static { bitmaps } => {
+      let indexes =
+        make_and_insert_images(&mut images, &config.bitmaps, &bitmaps)?;
 
-      CursorFrames::Static(image_indexes)
+      CursorFrames::Static(indexes)
     }
     FramesConfig::Animated(config_frames) => {
       let mut animation_frames = Vec::with_capacity(config_frames.len());
 
       for config_frame in config_frames {
-        let image_indexes = make_and_insert_images(
+        let indexes = make_and_insert_images(
           &mut images,
           &config.bitmaps,
           &config_frame.bitmaps,
@@ -49,7 +36,7 @@ pub fn make_bitmap_cursor(config: &CursorConfig) -> Result<BitmapCursor> {
 
         animation_frames.push(AnimationFrame {
           duration: config_frame.duration,
-          indexes: image_indexes,
+          indexes,
         });
       }
 
@@ -62,6 +49,23 @@ pub fn make_bitmap_cursor(config: &CursorConfig) -> Result<BitmapCursor> {
   Ok(BitmapCursor { images, frames })
 }
 
+fn log_orphans(config: &CursorConfig) {
+  let orphaned_bitmaps = config.find_orphaned_bitmaps();
+
+  if !orphaned_bitmaps.is_empty() {
+    log::warn!(
+      "found {} orphaned bitmap(s) in '{}' cursor: {}",
+      orphaned_bitmaps.len(),
+      &config.name,
+      orphaned_bitmaps
+        .into_iter()
+        .map(|i| i.to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
+    );
+  }
+}
+
 fn make_and_insert_images(
   images: &mut IndexMap<AssetIndex, BitmapCursorImage>,
   bitmap_configs: &[AssetConfig],
@@ -70,24 +74,18 @@ fn make_and_insert_images(
   let mut image_indexes = Vec::with_capacity(bitmap_indexes.len());
 
   for bitmap_index in bitmap_indexes {
-    let bitmap_index = bitmap_index.into_struct();
-
-    if let Some(image_index) = images.get_index_of(&bitmap_index) {
+    if let Some(image_index) = images.get_index_of(bitmap_index) {
       image_indexes.push(image_index);
     } else {
-      let AssetIndex::Struct { index, scale } = bitmap_index else {
-        unreachable!() // into_struct() was called
-      };
+      let mut image = make_image(&bitmap_configs[bitmap_index.index])?;
 
-      let mut image = make_image(&bitmap_configs[index])?;
-
-      if let prim_scale = scale.get()
-        && prim_scale != 1
+      if let scale = bitmap_index.scale.get()
+        && scale != 1
       {
-        image.scale_up(prim_scale);
+        image.scale_up(scale);
       }
 
-      let (image_index, _) = images.insert_full(bitmap_index, image);
+      let (image_index, _) = images.insert_full(*bitmap_index, image);
       image_indexes.push(image_index);
     }
   }

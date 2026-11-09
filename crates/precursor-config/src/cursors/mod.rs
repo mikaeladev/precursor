@@ -8,8 +8,6 @@ use serde::Deserialize;
 pub use assets::*;
 pub use frames::*;
 
-pub(crate) type Cursors = Vec<CursorConfig>;
-
 #[derive(Debug, Deserialize)]
 pub struct CursorConfig {
   pub name: String,
@@ -24,9 +22,9 @@ impl CursorConfig {
   pub fn get_frames(&self) -> Cow<'_, FramesConfig> {
     match self.frames.as_ref() {
       Some(frames) => Cow::Borrowed(frames),
-      None => Cow::Owned(FramesConfig::Static(
-        (0..self.bitmaps.len()).map(From::from).collect(),
-      )),
+      None => Cow::Owned(FramesConfig::Static {
+        bitmaps: (0..self.bitmaps.len()).map(From::from).collect(),
+      }),
     }
   }
 
@@ -44,7 +42,7 @@ impl CursorConfig {
         |i: usize, bitmaps: &AssetIndexes| !bitmaps.contains(&i.into());
 
       match frames {
-        FramesConfig::Static(bitmaps) => {
+        FramesConfig::Static { bitmaps } => {
           orphans.retain(|i| retain_fn(*i, bitmaps))
         }
         FramesConfig::Animated(frames) => {
@@ -61,6 +59,8 @@ impl CursorConfig {
     }
   }
 }
+
+pub(crate) type CursorConfigs = Vec<CursorConfig>;
 
 #[cfg(test)]
 mod tests {
@@ -82,14 +82,16 @@ mod tests {
   fn get_frames() {
     let cursor = CursorConfig {
       name: String::new(),
+      aliases: vec![],
       bitmaps: vec![DEFAULT_ASSET, DEFAULT_ASSET, DEFAULT_ASSET],
       frames: None,
-      aliases: vec![],
     };
 
     assert_eq!(
       cursor.get_frames().as_ref(),
-      &FramesConfig::Static(vec![0.into(), 1.into(), 2.into()])
+      &FramesConfig::Static {
+        bitmaps: vec![0.into(), 1.into(), 2.into()]
+      }
     );
   }
 
@@ -97,9 +99,9 @@ mod tests {
   fn get_bitmap_indexes() {
     let cursor = CursorConfig {
       name: String::new(),
+      aliases: vec![],
       bitmaps: vec![DEFAULT_ASSET, DEFAULT_ASSET, DEFAULT_ASSET],
       frames: None,
-      aliases: vec![],
     };
 
     assert_eq!({ cursor }.get_bitmap_indexes(), vec![0, 1, 2]);
@@ -109,24 +111,27 @@ mod tests {
   fn find_orphaned_bitmaps() {
     let empty_frames_cursor = CursorConfig {
       name: String::new(),
+      aliases: vec![],
       bitmaps: vec![DEFAULT_ASSET, DEFAULT_ASSET, DEFAULT_ASSET],
       frames: None,
-      aliases: vec![],
     };
 
     assert_eq!({ empty_frames_cursor }.find_orphaned_bitmaps(), vec![]);
 
     let static_frames_cursor = CursorConfig {
       name: String::new(),
-      bitmaps: vec![DEFAULT_ASSET, DEFAULT_ASSET, DEFAULT_ASSET],
-      frames: Some(FramesConfig::Static(vec![0.into(), 2.into()])),
       aliases: vec![],
+      bitmaps: vec![DEFAULT_ASSET, DEFAULT_ASSET, DEFAULT_ASSET],
+      frames: Some(FramesConfig::Static {
+        bitmaps: vec![0.into(), 2.into()],
+      }),
     };
 
     assert_eq!({ static_frames_cursor }.find_orphaned_bitmaps(), vec![1]);
 
     let animation_frames_cursor = CursorConfig {
       name: String::new(),
+      aliases: vec![],
       bitmaps: vec![
         DEFAULT_ASSET,
         DEFAULT_ASSET,
@@ -144,7 +149,6 @@ mod tests {
           bitmaps: vec![2.into(), 3.into()],
         },
       ])),
-      aliases: vec![],
     };
 
     assert_eq!({ animation_frames_cursor }.find_orphaned_bitmaps(), vec![4]);
