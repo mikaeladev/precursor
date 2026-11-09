@@ -4,12 +4,12 @@
 name = "wait"
 aliases = ["watch"]
 
-[[cursors.assets]]
+[[cursors.bitmaps]]
 path = "assets/wait.png"
 nominal = 12
 hotspot = [4, 5]
 
-[[cursors.assets]]
+[[cursors.bitmaps]]
 path = "assets/wait.png"
 nominal = 12
 hotspot = [5, 4]
@@ -17,7 +17,7 @@ transforms.rotate = 90
 
 [[cursors.frames]]
 duration = 200
-assets = [
+bitmaps = [
   { index = 0, scale = 1 },  # 12
   { index = 0, scale = 2 },  # 24
   { index = 0, scale = 3 },  # 36
@@ -25,7 +25,7 @@ assets = [
 
 [[cursors.frames]]
 duration = 200
-assets = [
+bitmaps = [
   { index = 1, scale = 1 },  # 12
   { index = 1, scale = 2 },  # 24
   { index = 1, scale = 3 },  # 36

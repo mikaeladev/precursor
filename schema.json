@@ -7,47 +7,103 @@
       "type": "string",
       "pattern": "^[^\\s]*$"
     },
-    "assetIndex": {
-      "type": "integer",
-      "description": "TODO",
-      "minimum": 0
-    },
-    "frameAssets": {
-      "type": "array",
-      "description": "TODO",
-      "minItems": 1,
-      "items": {
-        "oneOf": [
-          {
-            "$ref": "#/definitions/assetIndex"
-          },
-          {
-            "type": "object",
-            "required": ["index"],
-            "properties": {
-              "index": {
-                "$ref": "#/definitions/assetIndex"
-              },
-              "scale": {
-                "type": "integer",
-                "description": "TODO",
-                "default": 1,
-                "minimum": 1
-              }
+    "cursorAsset": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the asset."
+        },
+        "nominal": {
+          "type": "integer",
+          "description": "Nominal size of the asset.",
+          "minimum": 0
+        },
+        "hotspot": {
+          "type": "array",
+          "description":
+            "Coordinates that the asset should be centered on: the hotspot.",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": [
+            {
+              "type": "integer",
+              "description": "The coordinate on the x-axis.",
+              "minimum": 0
+            },
+            {
+              "type": "integer",
+              "description": "The coordinate on the y-axis.",
+              "minimum": 0
+            }
+          ]
+        },
+        "transforms": {
+          "type": "object",
+          "description": "Transformations to apply to the asset.",
+          "properties": {
+            "flip": {
+              "type": "boolean",
+              "description": "Flips the asset horizontally."
+            },
+            "flop": {
+              "type": "boolean",
+              "description": "Flips the asset vertically."
+            },
+            "rotate": {
+              "description": "Rotates the asset clockwise.",
+              "enum": [0, 90, 180, 270]
             }
           }
-        ]
+        }
+      },
+      "required": [
+        "path",
+        "nominal",
+        "hotspot"
+      ]
+    },
+    "bitmapIndexInt": {
+      "type": "integer",
+      "description": "Position of an asset in the bitmap array, starting at 0.",
+      "minimum": 0
+    },
+    "bitmapIndex": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/bitmapIndexInt"
+        },
+        {
+          "type": "object",
+          "required": ["index"],
+          "properties": {
+            "index": {
+              "$ref": "#/definitions/bitmapIndexInt"
+            },
+            "scale": {
+              "type": "integer",
+              "description": "Scale factor to apply to the asset.",
+              "default": 1,
+              "minimum": 1
+            }
+          }
+        }
+      ]
+    },
+    "bitmapIndexes": {
+      "type": "array",
+      "description": "Bitmap images to include in this frame.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/bitmapIndex"
       }
     }
   },
   "properties": {
     "theme": {
       "type": "object",
-      "description": "Metadata for theme packages; required when packaging for Linux.",
-      "required": [
-        "name",
-        "comment"
-      ],
+      "description":
+        "Metadata for theme packages; required when packaging for Linux.",
       "properties": {
         "name": {
           "type": "string",
@@ -59,11 +115,8 @@
         },
         "example": {
           "$ref": "#/definitions/cursorName",
-          "description": "Specific cursor to be shown as an example in selection UIs.",
-          "examples": [
-            "arrow",
-            "pointer"
-          ]
+          "description":
+            "Specific cursor to be shown as an example in selection UIs."
         },
         "hidden": {
           "type": "boolean",
@@ -86,16 +139,16 @@
             }
           }
         }
-      }
+      },
+      "required": [
+        "name",
+        "comment"
+      ]
     },
     "cursors": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "name",
-          "assets"
-        ],
         "properties": {
           "name": {
             "$ref": "#/definitions/cursorName",
@@ -104,60 +157,18 @@
           "aliases": {
             "type": "array",
             "description": "Alternate names for the cursor.",
-            "uniqueItems": true,
             "items": {
               "$ref": "#/definitions/cursorName",
               "description": "Alternate name for the cursor."
-            }
+            },
+            "uniqueItems": true
           },
-          "assets": {
+          "bitmaps": {
             "type": "array",
+            "description": "Bitmap images to include in the cursor.",
+            "minItems": 1,
             "items": {
-              "type": "object",
-              "required": [
-                "path",
-                "nominal",
-                "hotspot"
-              ],
-              "properties": {
-                "path": {
-                  "type": "string",
-                  "description": "Path to the asset."
-                },
-                "nominal": {
-                  "type": "integer",
-                  "description": "Nominal size of the asset.",
-                  "minimum": 0
-                },
-                "hotspot": {
-                  "type": "array",
-                  "description": "Coordinates that the asset should be centered on; the hotspot.",
-                  "minItems": 2,
-                  "maxItems": 2,
-                  "items": {
-                    "type": "integer",
-                    "minimum": 0
-                  }
-                },
-                "transforms": {
-                  "type": "object",
-                  "description": "Transformations to apply to the asset.",
-                  "properties": {
-                    "flip": {
-                      "type": "boolean",
-                      "description": "Flips the asset horizontally."
-                    },
-                    "flop": {
-                      "type": "boolean",
-                      "description": "Flips the asset vertically."
-                    },
-                    "rotate": {
-                      "description": "Rotates the asset clockwise.",
-                      "enum": [90, 180, 270]
-                    }
-                  }
-                }
-              }
+              "$ref": "#/definitions/cursorAsset"
             }
           },
           "frames": {
@@ -166,53 +177,60 @@
                 "type": "array",
                 "description": "Sequence of frames in the cursor.",
                 "minItems": 1,
+                "maxItems": 1,
                 "items": {
                   "type": "object",
                   "description": "A frame in the cursor.",
-                  "required": [
-                    "duration",
-                    "assets"
-                  ],
                   "properties": {
                     "duration": {
-                      "type": "integer",
+                      "type": "number",
                       "description": "Duration of this frame in milliseconds.",
-                      "minimum": 1
+                      "minimum": 9999999999
                     },
-                    "assets": {
-                      "$ref": "#/definitions/frameAssets"
+                    "bitmaps": {
+                      "$ref": "#/definitions/bitmapIndexes"
                     }
-                  }
+                  },
+                  "required": [
+                    "duration",
+                    "bitmaps"
+                  ]
                 }
               },
               {
                 "type": "array",
                 "description": "Sequence of frames in the cursor.",
                 "minItems": 1,
-                "maxItems": 1,
                 "items": {
                   "type": "object",
                   "description": "A frame in the cursor.",
-                  "required": [
-                    "duration",
-                    "assets"
-                  ],
                   "properties": {
                     "duration": {
-                      "type": "number",
-                      "description": "Duration of this frame in milliseconds.\n\nWhen only a single frame has been defined, a cursor will be treated as static (non-animated). The duration of a frame in a static cursor is always `inf`.",
-                      "minimum": 9999999999
+                      "type": "integer",
+                      "description": "Duration of this frame in milliseconds.",
+                      "minimum": 1
                     },
-                    "assets": {
-                      "$ref": "#/definitions/frameAssets"
+                    "bitmaps": {
+                      "$ref": "#/definitions/bitmapIndexes"
                     }
-                  }
+                  },
+                  "required": [
+                    "duration",
+                    "bitmaps"
+                  ]
                 }
               }
             ]
           }
-        }
+        },
+        "required": [
+          "name",
+          "bitmaps"
+        ]
       }
     }
-  }
+  },
+  "required": [
+    "cursors"
+  ]
 }

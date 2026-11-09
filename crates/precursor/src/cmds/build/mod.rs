@@ -62,15 +62,15 @@ pub fn build(
   let config = filesys::get_config(config_file_input)?;
 
   for cursor_config in config.cursors {
-    let cursor = config::make_cursor(&cursor_config)?;
+    let bitmap_cursor = config::make_bitmap_cursor(&cursor_config)?;
 
     if target_types.includes_scalable() {
       todo!("SVG cursors not yet implemented")
     }
 
     if target_types.includes_windows() {
-      if cursor.frames.is_animated() {
-        let ani = cursor.to_ani_file().map_err(|src| {
+      if bitmap_cursor.frames.is_animated() {
+        let ani = bitmap_cursor.to_ani_file().map_err(|src| {
           ErrorMessage::new("failed to construct ANI cursor")
             .with_help::<&str>(debug_help())
             .with_context([("name", &cursor_config.name)])
@@ -80,7 +80,7 @@ pub fn build(
 
         write_ani_file(&cursor_config.name, ani, force)?;
       } else {
-        let cur = cursor.to_cur_file().map_err(|src| {
+        let cur = bitmap_cursor.to_cur_file().map_err(|src| {
           ErrorMessage::new("failed to construct CUR cursor")
             .with_help::<&str>(debug_help())
             .with_context([("name", &cursor_config.name)])
@@ -93,7 +93,9 @@ pub fn build(
     }
 
     if target_types.includes_xcursor() {
-      write_xcur_file(&cursor_config.name, cursor.to_xcursor_file(), force)?;
+      let xcur = bitmap_cursor.to_xcursor_file();
+
+      write_xcur_file(&cursor_config.name, xcur, force)?;
 
       #[cfg(target_family = "unix")]
       for alias in cursor_config.aliases {

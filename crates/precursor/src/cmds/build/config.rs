@@ -1,7 +1,8 @@
 use std::io::{BufRead, BufReader};
 
 use precursor_config::cursors::*;
-use precursor_cursor::{AnimationFrame, CursorData, CursorFrames, CursorImage};
+use precursor_cursor::bitmap::{BitmapCursor, BitmapCursorImage};
+use precursor_cursor::frames::{AnimationFrame, CursorFrames};
 use precursor_error::{ErrorMessage, Result};
 use precursor_filesys::{self as filesys, metapath::AsMetaPath};
 use precursor_png::PngFile;
@@ -11,12 +12,12 @@ use pixmap::Pixmap;
 
 use super::debug_help;
 
-pub fn make_cursor(config: &CursorConfig) -> Result<CursorData> {
-  if let orphans = config.find_orphans()
+pub fn make_bitmap_cursor(config: &CursorConfig) -> Result<BitmapCursor> {
+  if let orphans = config.find_orphaned_bitmaps()
     && !orphans.is_empty()
   {
     log::warn!(
-      "found {} orphaned asset(s) in '{}' cursor: {}",
+      "found {} orphaned bitmaps(s) in '{}' cursor: {}",
       orphans.len(),
       &config.name,
       orphans
@@ -27,12 +28,12 @@ pub fn make_cursor(config: &CursorConfig) -> Result<CursorData> {
     );
   }
 
-  let mut image_map = IndexMap::new();
+  let mut images = IndexMap::new();
 
-  let cursor_frames = match config.get_frames().as_ref() {
-    FramesConfig::Static(asset_indexes) => {
+  let frames = match config.get_frames().as_ref() {
+    FramesConfig::Static(bitmap_indexes) => {
       let image_indexes =
-        insert_images(&mut image_map, &config.assets, &asset_indexes)?;
+        make_and_insert_images(&mut images, &config.bitmaps, &bitmap_indexes)?;
 
       CursorFrames::Static(image_indexes)
     }
@@ -40,8 +41,11 @@ pub fn make_cursor(config: &CursorConfig) -> Result<CursorData> {
       let mut animation_frames = Vec::with_capacity(config_frames.len());
 
       for config_frame in config_frames {
-        let image_indexes =
-          insert_images(&mut image_map, &config.assets, &config_frame.assets)?;
+        let image_indexes = make_and_insert_images(
+          &mut images,
+          &config.bitmaps,
+          &config_frame.bitmaps,
+        )?;
 
         animation_frames.push(AnimationFrame {
           duration: config_frame.duration,
@@ -53,30 +57,29 @@ pub fn make_cursor(config: &CursorConfig) -> Result<CursorData> {
     }
   };
 
-  Ok(CursorData {
-    images: image_map.into_values().collect(),
-    frames: cursor_frames,
-  })
+  let images = images.into_values().collect();
+
+  Ok(BitmapCursor { images, frames })
 }
 
-fn insert_images(
-  map: &mut IndexMap<AssetIndex, CursorImage>,
-  assets: &[AssetConfig],
-  asset_indexes: &[AssetIndex],
+fn make_and_insert_images(
+  images: &mut IndexMap<AssetIndex, BitmapCursorImage>,
+  bitmap_configs: &[AssetConfig],
+  bitmap_indexes: &[AssetIndex],
 ) -> Result<Vec<usize>> {
-  let mut image_indexes = Vec::with_capacity(asset_indexes.len());
+  let mut image_indexes = Vec::with_capacity(bitmap_indexes.len());
 
-  for asset_index in asset_indexes {
-    let asset_index = asset_index.into_struct();
+  for bitmap_index in bitmap_indexes {
+    let bitmap_index = bitmap_index.into_struct();
 
-    if let Some(image_index) = map.get_index_of(&asset_index) {
+    if let Some(image_index) = images.get_index_of(&bitmap_index) {
       image_indexes.push(image_index);
     } else {
-      let AssetIndex::Struct { index, scale } = asset_index else {
+      let AssetIndex::Struct { index, scale } = bitmap_index else {
         unreachable!() // into_struct() was called
       };
 
-      let mut image = make_cursor_image(&assets[index])?;
+      let mut image = make_image(&bitmap_configs[index])?;
 
       if let prim_scale = scale.get()
         && prim_scale != 1
@@ -84,7 +87,7 @@ fn insert_images(
         image.scale_up(prim_scale);
       }
 
-      let (image_index, _) = map.insert_full(asset_index, image);
+      let (image_index, _) = images.insert_full(bitmap_index, image);
       image_indexes.push(image_index);
     }
   }
@@ -92,20 +95,20 @@ fn insert_images(
   Ok(image_indexes)
 }
 
-fn make_cursor_image(
+fn make_image(
   AssetConfig {
     path,
     nominal,
     hotspot,
     transforms,
   }: &AssetConfig,
-) -> Result<CursorImage> {
+) -> Result<BitmapCursorImage> {
   let file = filesys::read_file(path.as_meta_path("asset file"))?;
 
   let mut reader = BufReader::new(file);
 
   let buffer = reader.fill_buf().map_err(|src| {
-    ErrorMessage::new("failed to fill icon buffer for asset")
+    ErrorMessage::new("failed to fill buffer for asset")
       .with_subheading(src.kind())
       .with_context([("path", path.display())])
       .into_error()
@@ -114,7 +117,7 @@ fn make_cursor_image(
 
   let mut pixmap = if buffer.starts_with(PngFile::MAGIC) {
     let png = PngFile::read(&mut reader).map_err(|src| {
-      ErrorMessage::new("failed to decode asset")
+      ErrorMessage::new("failed to decode bitmap")
         .with_help::<&str>(debug_help())
         .with_context([("path", path.display())])
         .into_error()
@@ -145,7 +148,7 @@ fn make_cursor_image(
     }
   }
 
-  Ok(CursorImage {
+  Ok(BitmapCursorImage {
     pixmap,
     nominal: *nominal,
     hotspot: *hotspot,

@@ -15,7 +15,7 @@ pub enum FramesConfig {
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub struct AnimatedFrameConfig {
   pub duration: NonZero<u32>,
-  pub assets: AssetIndexes,
+  pub bitmaps: AssetIndexes,
 }
 
 impl<'de> Deserialize<'de> for FramesConfig {
@@ -54,8 +54,8 @@ impl<'de> Deserialize<'de> for FramesConfig {
             Frame::Static(indexes) => {
               value = Some(FramesConfig::Static(indexes))
             }
-            Frame::Animated { duration, assets } => {
-              let frame = AnimatedFrameConfig { duration, assets };
+            Frame::Animated { duration, bitmaps } => {
+              let frame = AnimatedFrameConfig { duration, bitmaps };
 
               if let Some(FramesConfig::Animated(frames)) = &mut value {
                 frames.push(frame);
@@ -82,7 +82,7 @@ enum Frame {
   Static(AssetIndexes),
   Animated {
     duration: NonZero<u32>,
-    assets: AssetIndexes,
+    bitmaps: AssetIndexes,
   },
 }
 
@@ -111,13 +111,13 @@ impl<'de> Deserialize<'de> for Frame {
         }
 
         let mut duration: Option<Duration> = None;
-        let mut assets: Option<AssetIndexes> = None;
+        let mut bitmaps: Option<AssetIndexes> = None;
 
         #[derive(Deserialize)]
         #[serde(field_identifier, rename_all = "lowercase")]
         enum Field {
           Duration,
-          Assets,
+          Bitmaps,
         }
 
         while let Some(key) = map.next_key()? {
@@ -128,21 +128,21 @@ impl<'de> Deserialize<'de> for Frame {
               }
               duration = Some(map.next_value()?)
             }
-            Field::Assets => {
-              if assets.is_some() {
-                return Err(de::Error::duplicate_field("assets"));
+            Field::Bitmaps => {
+              if bitmaps.is_some() {
+                return Err(de::Error::duplicate_field("bitmaps"));
               }
-              assets = Some(map.next_value()?)
+              bitmaps = Some(map.next_value()?)
             }
           }
         }
 
         let duration = duration.ok_or(de::Error::missing_field("duration"))?;
-        let assets = assets.ok_or(de::Error::missing_field("assets"))?;
+        let bitmaps = bitmaps.ok_or(de::Error::missing_field("bitmaps"))?;
 
         Ok(match duration {
-          Duration::Infinity(_) => Frame::Static(assets),
-          Duration::Integer(duration) => Frame::Animated { duration, assets },
+          Duration::Infinity(_) => Frame::Static(bitmaps),
+          Duration::Integer(duration) => Frame::Animated { duration, bitmaps },
         })
       }
     }

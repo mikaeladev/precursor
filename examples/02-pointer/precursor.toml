@@ -10,14 +10,14 @@ aliases = [
   "e29285e634086352946a0e7090d73106",
 ]
 
-[[cursors.assets]]
+[[cursors.bitmaps]]
 path = "assets/hand.png"
 nominal = 12
 hotspot = [4, 2]
 
 [[cursors.frames]]
 duration = inf
-assets = [
+bitmaps = [
   { index = 0, scale = 1 },  # 12
   { index = 0, scale = 2 },  # 24
   { index = 0, scale = 3 },  # 36
