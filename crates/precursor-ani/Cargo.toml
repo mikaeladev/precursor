@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 precursor-cur.workspace = true
+precursor-error.workspace = true
 precursor-ico.workspace = true
 precursor-riff.workspace = true
 thiserror.workspace = true

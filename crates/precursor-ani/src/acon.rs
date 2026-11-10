@@ -1,11 +1,9 @@
 use std::io::Cursor;
 
 use precursor_cur::CurFile;
-use precursor_ico::ReadError;
 use precursor_riff::{ChunkId, ChunkValue};
 
-use thiserror::Error;
-
+use crate::error::{FromChunkError, FromChunkResult};
 use crate::header::AconHeader;
 
 pub trait ChunkIdAconExt {
@@ -26,65 +24,14 @@ pub struct AconChunk {
   pub frames: Vec<CurFile>,
 }
 
-// pub struct AconInfo {
-//   title: Option<String>,
-//   author: Option<String>,
-// }
-
-/// The error type for [`AconChunk::from_chunk`].
-#[derive(Debug, Error)]
-pub enum FromChunkError {
-  /// Error reading an embedded ICO frame.
-  #[error("{0}")]
-  ReadError(#[from] ReadError),
-
-  /// Chunk was not a [`Parent`][ChunkValue::Parent].
-  #[error("not a parent chunk")]
-  NotAParent,
-
-  /// Chunk was not a [`Child`][ChunkValue::Child].
-  #[error("not a child chunk")]
-  NotAChild,
-
-  /// Missing a specific chunk.
-  #[error("missing \"{0}\" chunk")]
-  MissingChunk(ChunkId),
-
-  /// Expected a specific chunk and received another.
-  #[error(r#"unexpected chunk; expected "{0}", received "{1}""#)]
-  UnexpectedChunk(ChunkId, ChunkId),
-
-  /// Expected a specific number of bytes and received more or less.
-  #[error("invalid chunk length; expected {0} bytes, received {1}")]
-  InvalidChunkLength(usize, usize),
-
-  /// Header size field was not `36`.
-  #[error("invalid header size field; expected 36, received {0}")]
-  InvalidHeaderSize(u32),
-}
-
-pub type FromChunkResult<T> = Result<T, FromChunkError>;
-
 impl AconChunk {
   /// Constructs a new `AconChunk` from a [`ChunkValue`].
   ///
   /// # Errors
   ///
-  /// Fails with a [`FromChunkError`] in the following situations:
+  /// Fails with a [`FromChunkError`] if the chunk is not valid [`ACON`].
   ///
-  /// - Chunk is not a [`Parent`][ChunkValue::Parent];
-  /// - Chunk kind is not [`RIFF`];
-  /// - Chunk ID is not [`ACON`];
-  /// - Required chunks are missing ([`anih`], [`fram`]);
-  /// - The [`anih`] chunk has the incorrect size;
-  /// - The [`fram`] chunk has non-[`icon`] children;
-  /// - Any [`icon`] chunk fails to decode.
-  ///
-  /// [`RIFF`]: ChunkId::RIFF
   /// [`ACON`]: ChunkId::ACON
-  /// [`anih`]: ChunkId::ANIH
-  /// [`fram`]: ChunkId::FRAM
-  /// [`icon`]: ChunkId::ICON
   pub fn from_chunk(chunk: ChunkValue) -> FromChunkResult<Self> {
     match chunk {
       ChunkValue::Parent(kind, _, _) if kind != ChunkId::RIFF => {
@@ -124,16 +71,20 @@ impl AconChunk {
 
         let rates = match rates_data {
           None => None,
-          Some(bytes) => {
-            Some(vec8_to_vec32(header.step_count as usize, bytes)?)
-          }
+          Some(bytes) => Some(vec8_to_vec32(
+            ChunkId::RATE,
+            header.step_count as usize,
+            bytes,
+          )?),
         };
 
         let sequence = match sequence_data {
           None => None,
-          Some(bytes) => {
-            Some(vec8_to_vec32(header.step_count as usize, bytes)?)
-          }
+          Some(bytes) => Some(vec8_to_vec32(
+            ChunkId::SEQ_,
+            header.step_count as usize,
+            bytes,
+          )?),
         };
 
         let frame_chunks =
@@ -166,36 +117,56 @@ impl AconChunk {
     }
   }
 
-  /// Converts this value into a [`ChunkValue`].
+  /// Converts this type into a [`ChunkValue`].
   pub fn into_chunk(self) -> ChunkValue {
-    let mut chunks = Vec::with_capacity(
-      2 + (if self.rates.is_some() { 1 } else { 0 })
-        + (if self.sequence.is_some() { 1 } else { 0 }),
-    );
+    let mut chunks = Vec::with_capacity(self.calc_subchunks_capacity());
 
     chunks.push(self.header.into_chunk());
 
     if let Some(rates) = self.rates {
       chunks.push(ChunkValue::Child(ChunkId::RATE, vec32_to_vec8(rates)));
     }
+
     if let Some(sequence) = self.sequence {
       chunks.push(ChunkValue::Child(ChunkId::SEQ_, vec32_to_vec8(sequence)));
     }
 
-    chunks.push(frames_chunk(self.frames));
+    chunks.push(make_frames_chunk(self.frames));
 
     ChunkValue::Parent(ChunkId::RIFF, ChunkId(*b"ACON"), chunks)
   }
+
+  /// Calculates the capacity for subchunks needed to convert this into a
+  /// [`ChunkValue`].
+  ///
+  /// As the [`anih`] and [`fram`] subchunks are required in any [`ACON`] chunk,
+  /// this will always return at least `2`.
+  ///
+  /// [`anih`]: ChunkId::ANIH
+  /// [`fram`]: ChunkId::FRAM
+  /// [`ACON`]: ChunkId::ACON
+  const fn calc_subchunks_capacity(&self) -> usize {
+    2 + (if self.rates.is_some() { 1 } else { 0 })
+      + (if self.sequence.is_some() { 1 } else { 0 })
+  }
 }
 
-fn vec8_to_vec32(length: usize, vec: Vec<u8>) -> FromChunkResult<Vec<u32>> {
+fn vec8_to_vec32(
+  chunk_id: ChunkId,
+  length: usize,
+  vec: Vec<u8>,
+) -> FromChunkResult<Vec<u32>> {
   const N: usize = size_of::<u32>();
 
   if let expected_len = length * N
     && let actual_len = vec.len()
     && actual_len != expected_len
   {
-    return Err(FromChunkError::InvalidChunkLength(expected_len, actual_len));
+    return Err(FromChunkError::WrongSize(
+      chunk_id,
+      expected_len,
+      actual_len,
+    ));
   }
 
   let (chunks, []) = vec.as_chunks::<N>() else {
@@ -214,18 +185,17 @@ fn vec32_to_vec8(vec: Vec<u32>) -> Vec<u8> {
   vec.into_iter().flat_map(|int| int.to_le_bytes()).collect()
 }
 
-fn frames_chunk(icons: Vec<CurFile>) -> ChunkValue {
+fn make_frames_chunk(icons: Vec<CurFile>) -> ChunkValue {
+  let f = |file: CurFile| {
+    let mut buf = Vec::with_capacity(file.exact_size());
+    file.write(&mut buf).expect("exact size should be accurate");
+
+    ChunkValue::Child(ChunkId::ICON, buf)
+  };
+
   ChunkValue::Parent(
     ChunkId::LIST,
     ChunkId::FRAM,
-    icons
-      .into_iter()
-      .map(|icon| {
-        let mut buffer = Vec::with_capacity(icon.exact_size());
-        icon.write(&mut buffer).unwrap(); // writing to memory, should be fine?
-
-        ChunkValue::Child(ChunkId::ICON, buffer)
-      })
-      .collect(),
+    icons.into_iter().map(f).collect(),
   )
 }

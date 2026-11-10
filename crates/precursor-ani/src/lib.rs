@@ -1,4 +1,5 @@
 mod acon;
+mod error;
 mod file;
 mod header;
 

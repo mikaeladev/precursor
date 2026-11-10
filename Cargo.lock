@@ -311,6 +311,7 @@ name = "precursor-ani"
 version = "0.1.0"
 dependencies = [
  "precursor-cur",
+ "precursor-error",
  "precursor-ico",
  "precursor-riff",
  "thiserror",

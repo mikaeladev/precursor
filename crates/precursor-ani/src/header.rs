@@ -1,6 +1,7 @@
 use precursor_riff::{ChunkId, ChunkValue};
 
-use crate::acon::{ChunkIdAconExt, FromChunkError, FromChunkResult};
+use crate::acon::ChunkIdAconExt;
+use crate::error::{FromChunkError, FromChunkResult};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct AconHeader {
@@ -21,7 +22,8 @@ impl AconHeader {
     if let actual_len = bytes.len()
       && actual_len != Self::HEADER_SIZE as usize
     {
-      return Err(FromChunkError::InvalidChunkLength(
+      return Err(FromChunkError::WrongSize(
+        ChunkId::ANIH,
         Self::HEADER_SIZE as usize,
         actual_len,
       ));
@@ -31,7 +33,11 @@ impl AconHeader {
       u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
       && header_size != Self::HEADER_SIZE
     {
-      return Err(FromChunkError::InvalidHeaderSize(header_size));
+      return Err(FromChunkError::WrongSizeField(
+        ChunkId::ANIH,
+        Self::HEADER_SIZE,
+        header_size,
+      ));
     }
 
     let frame_count =
@@ -106,7 +112,8 @@ mod tests {
       AconHeader::from_bytes(&invalid_bytes)
         .unwrap_err()
         .to_string(),
-      FromChunkError::InvalidHeaderSize(0).to_string()
+      FromChunkError::WrongSizeField(ChunkId::ANIH, AconHeader::HEADER_SIZE, 0)
+        .to_string()
     )
   }
 
@@ -114,7 +121,7 @@ mod tests {
   fn from_empty_bytes() {
     assert_eq!(
       AconHeader::from_bytes(&[]).unwrap_err().to_string(),
-      FromChunkError::InvalidChunkLength(36, 0).to_string()
+      FromChunkError::WrongSize(ChunkId::ANIH, 36, 0).to_string()
     )
   }
 

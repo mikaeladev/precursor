@@ -5,8 +5,8 @@ use crate::ErrorMessage;
 
 #[derive(Debug)]
 pub struct Error {
-  pub(crate) message: ErrorMessage,
-  pub(crate) source: Option<Box<dyn StdError + 'static>>,
+  pub message: ErrorMessage,
+  pub source: Option<Box<dyn StdError + 'static>>,
 }
 
 impl Error {

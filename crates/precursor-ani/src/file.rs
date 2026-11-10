@@ -1,23 +1,11 @@
-use std::io::{self, Read, Seek, Write};
+use std::io::{Read, Seek, Write};
 
 use precursor_cur::CurFile;
+use precursor_error::{ErrorMessage, Result};
 use precursor_riff::ChunkValue;
 
-use thiserror::Error;
-
-use crate::acon::{AconChunk, FromChunkError};
+use crate::acon::AconChunk;
 use crate::header::AconHeader;
-
-#[derive(Debug, Error)]
-pub enum ReadError {
-  #[error("{0}")]
-  IoError(#[from] io::Error),
-
-  #[error("{0}")]
-  FromChunkError(#[from] FromChunkError),
-}
-
-pub type ReadResult<T> = Result<T, ReadError>;
 
 pub struct AniFile(AconChunk);
 
@@ -26,7 +14,7 @@ impl AniFile {
   ///
   /// # Panics
   ///
-  /// Panics if there are more `icons` than indices in `sequence`.
+  /// Panics if there are more images in `frames` than indexes in `sequence`.
   pub fn new(
     frames: Vec<CurFile>,
     rates: Vec<u32>,
@@ -58,34 +46,46 @@ impl AniFile {
   ///
   /// # Errors
   ///
-  /// This method returns a [`ReadError`] that wraps the following:
+  /// Fails with a user-friendly [`Error`].
   ///
-  /// - [`ChunkValue::read`]
-  /// - [`AconChunk::from_chunk`]
-  pub fn read<R: Read>(reader: &mut R) -> ReadResult<Self> {
-    let chunk = ChunkValue::read(reader)?;
-    let acon = AconChunk::from_chunk(chunk)?;
-    Ok(Self(acon))
+  /// [`Error`]: precursor_error::Error
+  pub fn read<R: Read>(reader: &mut R) -> Result<Self> {
+    let chunk = ChunkValue::read(reader).map_err(|src| {
+      ErrorMessage::new("failed to read ANI file")
+        .with_subheading(src.kind())
+        .into_error()
+        .with_source(src)
+    })?;
+
+    Ok(Self(AconChunk::from_chunk(chunk)?))
   }
 
   /// Writes an ANI file to `writer`, returning how many bytes were written.
   ///
   /// # Errors
   ///
-  /// This method returns the same errors as [`Write::write_all`].
-  pub fn write<W: Write + Seek>(self, writer: &mut W) -> io::Result<usize> {
+  /// Fails with a user-friendly [`Error`].
+  ///
+  /// [`Error`]: precursor_error::Error
+  pub fn write<W: Write + Seek>(self, writer: &mut W) -> Result<usize> {
     let chunk = self.into_chunk();
-    chunk.write(writer)
+
+    chunk.write(writer).map_err(|src| {
+      ErrorMessage::new("failed to write ANI file")
+        .with_subheading(src.kind())
+        .into_error()
+        .with_source(src)
+    })
   }
 
-  // TODO
+  // TODO: doc
   pub fn into_frames(self) -> Vec<CurFile> {
     let Self(acon) = self;
     acon.frames
   }
 
   /// Converts this value into a [`ChunkValue`].
-  pub(crate) fn into_chunk(self) -> ChunkValue {
+  fn into_chunk(self) -> ChunkValue {
     let Self(acon) = self;
     acon.into_chunk()
   }

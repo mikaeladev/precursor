@@ -133,16 +133,12 @@ fn write_ani_file(name: &str, ani: AniFile, force: bool) -> Result<()> {
     filesys::create_new_file(meta_path)
   }?;
 
-  ani.write(&mut file).map_err(|src| {
-    ErrorMessage::new("failed to write ANI file")
-      .with_subheading(src.kind())
-      .with_help::<&str>(debug_help())
-      .with_context([
-        ("name", name.to_string()),
-        ("path", path.display().to_string()),
-      ])
-      .into_error()
-      .with_source(src)
+  ani.write(&mut file).map_err(|mut err| {
+    err.message = err.message.with_help::<&str>(debug_help()).with_context([
+      ("name", name.to_string()),
+      ("path", path.display().to_string()),
+    ]);
+    err
   })?;
 
   Ok(())

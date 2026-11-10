@@ -3,7 +3,6 @@ mod args;
 use std::io::{Read, Seek, Write};
 use std::path::Path;
 
-use precursor_ani as ani;
 use precursor_ani::AniFile;
 use precursor_cur as cur;
 use precursor_cur::{CurFile, CurImage};
@@ -17,11 +16,6 @@ use precursor_png::PngFile;
 use log::info;
 
 pub use args::*;
-
-const CONSIDER_KIND_ARG: &str = "consider passing the '--kind' argument";
-
-const CONSIDER_DEBUG_FLAG: &str =
-  "consider passing the '--debug' flag to see the underlying error";
 
 // TODO: create symlinks for frames that reuse earlier images
 
@@ -64,7 +58,7 @@ pub fn extract(
     if kind.is_none() {
       return Err(
         ErrorMessage::new("unrecognised cursor format")
-          .with_help(CONSIDER_KIND_ARG)
+          .with_help("consider passing the '--kind' argument")
           .into_error(),
       );
     }
@@ -93,22 +87,7 @@ fn extract_ani<R: Read>(reader: &mut R, force: bool) -> Result<usize> {
   let mut total_icons = 0;
   let mut frame_index = 0;
 
-  let ani_file = AniFile::read(reader).map_err(|src| {
-    let message = ErrorMessage::new("failed to read ANI file");
-
-    match &src {
-      ani::ReadError::IoError(inner) => message.with_subheading(inner.kind()),
-      ani::ReadError::FromChunkError(_) => message
-        .with_subheading("malformed or invalid chunk(s)")
-        .with_help::<&str>(if log::max_level() < log::LevelFilter::Debug {
-          Some(CONSIDER_DEBUG_FLAG)
-        } else {
-          None
-        }),
-    }
-    .into_error()
-    .with_source(src)
-  })?;
+  let ani_file = AniFile::read(reader)?;
 
   for frame in ani_file.into_frames() {
     let mut icon_index = 0;
